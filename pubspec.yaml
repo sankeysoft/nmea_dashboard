@@ -1,0 +1,77 @@
+# Copyright 2022 Jody Sankey
+# This software may be modified and distributed under the terms
+# of the MIT license. See the LICENCE.md file for details.
+
+name: nmea_dashboard
+description: A viewer for real time NMEA network data.
+
+# The following line prevents the package from being accidentally published to
+# pub.dev using `flutter pub publish`. This is preferred for private packages.
+publish_to: 'none'
+
+# The following defines the version and build number for your application.
+# A version number is three numbers separated by dots, like 1.2.43
+# followed by an optional build number separated by a +.
+# In Android, build-name is used as versionName while build-number used as versionCode.
+# Read more about Android versioning at https://developer.android.com/studio/publish/versioning
+# In iOS, build-name is used as CFBundleShortVersionString while build-number is used as CFBundleVersion.
+# Read more about iOS versioning at
+# https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
+# In Windows, build-name is used as the major, minor, and patch parts
+# of the product and file versions while build-number is used as the build suffix.
+version: 0.1.6
+
+environment:
+  sdk: '>=2.18.2 <3.0.0'
+
+# Run `flutter pub upgrade --major-versions` to automatically upgrade.
+# To see which dependencies have newer run `flutter pub outdated`.
+dependencies:
+  flutter:
+    sdk: flutter
+
+  async: ^2.9.0
+  cupertino_icons: ^1.0.2
+  logging: ^1.1.0
+  intl: ^0.17.0
+  json_annotation: ^4.7.0
+  shared_preferences: ^2.0.15
+  sprintf: ^7.0.0
+  package_info_plus: ^3.0.2
+  provider: ^6.0.4
+  udp: ^5.0.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  build_runner: ^2.3.2
+  json_serializable: ^6.5.4
+  flutter_lints: ^2.0.0
+
+flutter:
+  # Ensure that the Material Icons font is included.
+  uses-material-design: true
+  # Add assets for the hardcoded list of additional fonts we support.
+  fonts:
+    - family: FredokaOne
+      fonts:
+        - asset: fonts/FredokaOne-Regular.ttf
+    - family: Inter
+      fonts:
+        - asset: fonts/Inter-Regular.ttf
+    - family: Kanit
+      fonts:
+        - asset: fonts/Kanit-Regular.ttf
+    - family: Lexend
+      fonts:
+        - asset: fonts/Lexend-Regular.ttf
+    - family: Manrope
+      fonts:
+        - asset: fonts/Manrope-Regular.ttf
+    - family: Orbitron
+      fonts:
+        - asset: fonts/Orbitron-Regular.ttf
+    - family: Sniglet
+      fonts:
+        - asset: fonts/Sniglet-Regular.ttf
