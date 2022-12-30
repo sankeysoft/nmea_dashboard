@@ -47,7 +47,7 @@ ThemeData createThemeData(UiSettings settings) {
           TextStyle(fontFamily: settings.valueFont, color: palette.primary),
       // Used by the headings and units.
       headlineMedium:
-          TextStyle(fontFamily: settings.headingFont, color: palette.midPrimary),
+          TextStyle(fontFamily: settings.headingFont, color: palette.midPrimary, height: 1),
     ),
   );
 }

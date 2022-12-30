@@ -26,7 +26,10 @@ class DataTablePage extends StatelessWidget {
     final pageSpec = Provider.of<KeyedDataPageSpec>(context);
 
     return Scaffold(
-      appBar: AppBar(title: Text(pageSpec.name), actions: [_EditPageButton()],),
+      appBar: AppBar(
+        title: Text(pageSpec.name),
+        actions: [_EditPageButton()],
+      ),
       drawer: Drawer(child: _DrawerContent()),
       body: LayoutBuilder(builder: (context, constraints) {
         return SizedBox.expand(
@@ -205,6 +208,12 @@ class _Grid extends StatelessWidget {
   }
 }
 
+enum _Component {
+  heading,
+  units,
+  value,
+}
+
 // A single data cell used to display an element of data, if displayable is
 // not supplied the cell will be empty but cover the space space.
 class _Cell extends StatelessWidget {
@@ -237,13 +246,12 @@ class _Cell extends StatelessWidget {
             ),
             margin: const EdgeInsets.all(6.0),
             padding: const EdgeInsets.all(6.0),
-            child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                mainAxisSize: MainAxisSize.max,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _CellHeading(),
-                  Expanded(child: _CellValue()),
+            child: CustomMultiChildLayout(
+                delegate: _CellContentLayoutDelegate(),
+                children: <Widget>[
+                  LayoutId(id: _Component.heading, child: _CellHeading()),
+                  LayoutId(id: _Component.units, child: _CellUnits()),
+                  LayoutId(id: _Component.value, child: _CellValue()),
                 ]),
           ),
         ),
@@ -252,31 +260,78 @@ class _Cell extends StatelessWidget {
   }
 }
 
+class _CellContentLayoutDelegate extends MultiChildLayoutDelegate {
+  // The minimum aspect ratio of the header line.
+  static const _aspectRatio = 6 / 1;
+  // The maximum height of the header line as a fraction of cell height.
+  static const _heightFraction = 1 / 5;
+
+  @override
+  Size getSize(BoxConstraints constraints) {
+    //print("Incoming constraints $constraints");
+    // Always use the maximum space available.
+    return Size(constraints.maxWidth, constraints.maxHeight);
+  }
+
+  @override
+  void performLayout(Size size) {
+    Size headerSize;
+    if (size.width / (size.height * _heightFraction) < _aspectRatio) {
+      // The cell is high. If we used the max header height the aspect ratio
+      // would be too stubby. Use less height to maintain aspect ratio.
+      headerSize = Size(size.width, size.width / _aspectRatio);
+    } else {
+      // The cell is wide. If we used the ideal aspect ratio the header would
+      // take up too much height so cap to the max height fraction.
+      headerSize = Size(size.width, size.height * _heightFraction);
+    }
+
+    // Let the units choose its width first since its least likely to overflow.
+    final unitsSize = layoutChild(_Component.units,
+        BoxConstraints.loose(headerSize).tighten(height: headerSize.height));
+    final headingMaxSize =
+        Size(size.width - unitsSize.width, headerSize.height);
+    positionChild(_Component.units, Offset(headingMaxSize.width, 0));
+    // Let the heading take the remainder of the top row.
+    layoutChild(
+        _Component.heading,
+        BoxConstraints.loose(headingMaxSize)
+            .tighten(height: headerSize.height));
+    positionChild(_Component.heading, Offset.zero);
+
+    // And give the rest of the height to the value.
+    Size valueSize = Size(size.width, size.height - headerSize.height);
+    layoutChild(_Component.value, BoxConstraints.tight(valueSize));
+    positionChild(_Component.value, Offset(0, headerSize.height));
+  }
+
+  @override
+  bool shouldRelayout(covariant MultiChildLayoutDelegate oldDelegate) {
+    // The class is stateless so a change in instance never leads to relayout.
+    return false;
+  }
+}
+
+class _CellUnits extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final displayable = Provider.of<Displayable>(context);
+    final style = Theme.of(context).textTheme.headlineMedium!;
+    return FittedBox(
+      fit: BoxFit.contain,
+      child: Text(displayable.units ?? ' ', style: style),
+    );
+  }
+}
+
 class _CellHeading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final displayable = Provider.of<Displayable>(context);
-
-    return DefaultTextStyle(
-      style: Theme.of(context).textTheme.headlineMedium!,
-      // Fixed aspect ratio helps ensure the titles fit on the one line
-      // that we give them.
-      child: AspectRatio(
-        aspectRatio: 6 / 1,
-        child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              FittedBox(
-                fit: BoxFit.contain,
-                child: Text(displayable.heading ?? ' '),
-              ),
-              FittedBox(
-                fit: BoxFit.contain,
-                child: Text(displayable.units ?? ' '),
-              )
-            ]),
-      ),
+    final style = Theme.of(context).textTheme.headlineMedium!;
+    return FittedBox(
+      fit: BoxFit.contain,
+      child: Text(displayable.heading ?? ' ', style: style),
     );
   }
 }
