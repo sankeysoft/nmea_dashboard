@@ -10,10 +10,21 @@ import 'state/settings.dart';
 import 'ui/theme.dart';
 import 'ui/page_data_table.dart';
 
+/// The minimum time for which we display the loading screen.
+const Duration loadingScreenTime = Duration(seconds: 1);
+
+/// A standard overlay used before and after loading.
+const SystemUiOverlayStyle overlayStyle = SystemUiOverlayStyle(
+  statusBarBrightness: Brightness.dark,
+  statusBarIconBrightness: Brightness.light,
+  statusBarColor: Colors.transparent,
+  systemNavigationBarColor: Colors.black,
+  systemNavigationBarIconBrightness: Brightness.light,
+);
+
 void main() {
   runApp(const NmeaDashboardApp());
 }
-
 
 /// The root widget for the application.
 class NmeaDashboardApp extends StatelessWidget {
@@ -23,11 +34,14 @@ class NmeaDashboardApp extends StatelessWidget {
   // before deciding the theme and delegating the to a themed application.
   @override
   Widget build(BuildContext context) {
+    /// Display the loading screen for at least the minimum time, potentially
+    /// it could be diplayed longer if loading the setting takes a while.
     return FutureBuilder(
-        future: Settings.create(),
+        future:
+            Future.wait([Settings.create(), Future.delayed(loadingScreenTime)]),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.done) {
-            final settings = snapshot.data!;
+            final settings = snapshot.data![0];
             return MultiProvider(providers: [
               ChangeNotifierProvider<Settings>(create: (_) => settings),
               ChangeNotifierProvider<NetworkSettings>(
@@ -51,11 +65,27 @@ class NmeaDashboardApp extends StatelessWidget {
 class _LoadingPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    //TODO: Make this not ugly
-    return MaterialApp(
-        title: 'NMEA Dashboard',
-        theme: ThemeData.dark(),
-        home: const Text("Loading..."));
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+        value: overlayStyle,
+        child: MaterialApp(
+          title: 'NMEA Dashboard',
+          theme: ThemeData.dark(),
+          home: Scaffold(
+            body: Center(
+              child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text("NMEA Dashboard",
+                        style: TextStyle(fontSize: 40)),
+                    const SizedBox(height: 30),
+                    Image.asset("assets/rounded_icon.png"),
+                    const SizedBox(height: 60),
+                    const SizedBox(
+                        width: 250, child: LinearProgressIndicator()),
+                  ]),
+            ),
+          ),
+        ));
   }
 }
 
@@ -65,13 +95,7 @@ class _ThemedApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final uiSettings = Provider.of<UiSettings>(context);
     return AnnotatedRegion<SystemUiOverlayStyle>(
-        value: const SystemUiOverlayStyle(
-          statusBarBrightness: Brightness.dark,
-          statusBarIconBrightness: Brightness.light,
-          statusBarColor: Colors.transparent,
-          systemNavigationBarColor: Colors.black,
-          systemNavigationBarIconBrightness: Brightness.light,
-        ),
+        value: overlayStyle,
         child: MaterialApp(
           title: 'NMEA Dashboard',
           theme: createThemeData(uiSettings),
@@ -139,8 +163,7 @@ class _HomePage extends StatelessWidget {
                   controller: controller,
                   children: dataSettings.dataPageSpecs.map((pageSpec) {
                     return ChangeNotifierProvider<KeyedDataPageSpec>.value(
-                        value: pageSpec,
-                        child: const DataTablePage());
+                        value: pageSpec, child: const DataTablePage());
                   }).toList()),
             )));
   }

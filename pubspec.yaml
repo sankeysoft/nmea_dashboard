@@ -52,6 +52,8 @@ dev_dependencies:
 flutter:
   # Ensure that the Material Icons font is included.
   uses-material-design: true
+  assets:
+    - assets/rounded_icon.png
   # Add assets for the hardcoded list of additional fonts we support.
   fonts:
     - family: FredokaOne
