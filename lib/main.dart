@@ -8,7 +8,7 @@ import 'package:provider/provider.dart';
 import 'state/data_set.dart';
 import 'state/settings.dart';
 import 'ui/theme.dart';
-import 'ui/page_data_table.dart';
+import 'ui/pages/data_table.dart';
 
 /// The minimum time for which we display the loading screen.
 const Duration loadingScreenTime = Duration(seconds: 1);

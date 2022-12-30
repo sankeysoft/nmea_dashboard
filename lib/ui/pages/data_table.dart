@@ -4,16 +4,16 @@
 
 import 'package:flutter/material.dart';
 import 'package:nmea_dashboard/state/settings.dart';
-import 'package:nmea_dashboard/ui/form_edit_derived_elements.dart';
-import 'package:nmea_dashboard/ui/form_edit_ui.dart';
-import 'package:nmea_dashboard/ui/form_network_settings.dart';
+import 'package:nmea_dashboard/ui/forms/edit_derived_elements.dart';
+import 'package:nmea_dashboard/ui/forms/ui_settings.dart';
+import 'package:nmea_dashboard/ui/forms/network_settings.dart';
 import 'package:provider/provider.dart';
 
-import '../state/data_set.dart';
-import '../state/displayable.dart';
-import 'form_edit_cell.dart';
-import 'form_edit_page.dart';
-import 'form_edit_pages.dart';
+import '../../state/data_set.dart';
+import '../../state/displayable.dart';
+import '../forms/edit_cell.dart';
+import '../forms/edit_page.dart';
+import '../forms/edit_pages.dart';
 
 /// A page that fills the available space with a table of
 /// displayable data created from the supplied specs.
@@ -149,7 +149,7 @@ class _DrawerContent extends StatelessWidget {
             Navigator.pop(context);
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) => EditUiSettingsPage(settings: uiSettings),
+                builder: (context) => UiSettingsPage(settings: uiSettings),
               ),
             );
           },

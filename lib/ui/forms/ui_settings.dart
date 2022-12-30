@@ -4,32 +4,32 @@
 
 import 'package:flutter/material.dart';
 
-import '../state/settings.dart';
-import 'form.dart';
+import '../../state/settings.dart';
+import 'abstract.dart';
 
 
 /// A form that lets the user edit user interface settings.
-class EditUiSettingsPage extends StatefulFormPage {
-  EditUiSettingsPage({required UiSettings settings, key})
+class UiSettingsPage extends StatefulFormPage {
+  UiSettingsPage({required UiSettings settings, key})
       : super(
             key: key,
             title: 'User interface settings',
-            child: _EditUiSettingsForm(settings));
+            child: _UiSettingsForm(settings));
 }
 
 /// The stateful form itself
-class _EditUiSettingsForm extends StatefulWidget {
+class _UiSettingsForm extends StatefulWidget {
   // Pass settings explicitly since we don't have
   // a build context when initializing state.
   final UiSettings _settings;
 
-  const _EditUiSettingsForm(this._settings);
+  const _UiSettingsForm(this._settings);
 
   @override
-  State<_EditUiSettingsForm> createState() => _EditUiSettingsFormState();
+  State<_UiSettingsForm> createState() => _UiSettingsFormState();
 }
 
-class _EditUiSettingsFormState extends StatefulFormState<_EditUiSettingsForm> {
+class _UiSettingsFormState extends StatefulFormState<_UiSettingsForm> {
   late String _valueFont;
   late String _headingFont;
 

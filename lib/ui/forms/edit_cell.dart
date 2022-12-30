@@ -6,11 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:provider/provider.dart';
 
-import '../state/data_element.dart';
-import '../state/data_set.dart';
-import '../state/settings.dart';
-import '../state/common.dart';
-import 'form.dart';
+import '../../state/data_element.dart';
+import '../../state/data_set.dart';
+import '../../state/settings.dart';
+import '../../state/common.dart';
+import 'abstract.dart';
 
 /// A form that lets the user edit a data cell.
 class EditCellPage extends StatefulFormPage {

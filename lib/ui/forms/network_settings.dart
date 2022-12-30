@@ -6,8 +6,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
-import '../state/settings.dart';
-import 'form.dart';
+import '../../state/settings.dart';
+import 'abstract.dart';
 
 /// A form that lets the user edit network settings.
 class NetworkSettingsPage extends StatefulFormPage {

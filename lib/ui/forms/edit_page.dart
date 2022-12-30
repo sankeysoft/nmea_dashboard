@@ -4,9 +4,9 @@
 
 import 'package:flutter/material.dart';
 
-import '../state/common.dart';
-import '../state/settings.dart';
-import 'form.dart';
+import '../../state/common.dart';
+import '../../state/settings.dart';
+import 'abstract.dart';
 
 /// The initial spec for freshly created cells.
 final _defaultCellSpec = DataCellSpec(Source.unset.name, "", "");
