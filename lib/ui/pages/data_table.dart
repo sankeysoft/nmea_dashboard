@@ -245,7 +245,7 @@ class _Cell extends StatelessWidget {
               color: theme.colorScheme.background,
             ),
             margin: const EdgeInsets.all(6.0),
-            padding: const EdgeInsets.all(6.0),
+            padding: const EdgeInsets.all(10.0),
             child: CustomMultiChildLayout(
                 delegate: _CellContentLayoutDelegate(),
                 children: <Widget>[

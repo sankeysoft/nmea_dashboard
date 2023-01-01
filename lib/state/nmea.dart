@@ -2,10 +2,12 @@
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
+import 'dart:collection';
+
 import 'common.dart';
 
 /// The list of message types that are silently ignored.
-const _ignoredMessages = {
+const _unsupportedMessages = {
   // Ignore everything waypoint related
   'AAM', 'BOD', 'BWC', 'BRW', 'BWW', 'R00', 'RTE',
   'WCV', 'WNC', 'WPL', 'XTE', 'XTR', 'WDC', 'WDR',
@@ -18,39 +20,84 @@ const _ignoredMessages = {
   'MDA', 'DBK', 'DBS', 'DBT', 'HDM', 'HDT', 'VWT', 'VWR',
 };
 
-/// Attempts to parse the supplied string as a NMEA0183 message, returning one or more
-/// values if parsing the message contents was successful or throwing a FormatException
-/// if not. Certain boring messages led to returning an empty list.
-/// If requireChecksum is true, and messages without a checksum are discarded.
-List<Value> parseNmeaString(String string, bool requireChecksum) {
-  if (string.startsWith('!')) {
-    // Silently discard the encapsulated sentences which are often on the netwwork.
-    return [];
-  } else if (!string.startsWith('\$')) {
-    // Thow an exception for anything else, its potentially a network parsing problem.
-    throw const FormatException('Message is not marked with \$');
-  }
+/// The number of times to throw an exception for each new unknown type.
+const int _logUnknownCount = 3;
 
-  // Try to validate a checksum if there is one, optionally throw an error if there isn't
-  if (string.length > 3 && string[string.length - 3] == '*') {
-    _validateChecksum(string.substring(1, string.length - 3),
-        string.substring(string.length - 2));
-    string = string.substring(0, string.length - 3);
-  } else if (requireChecksum) {
-    throw const FormatException('Message did not end in a checksum');
-  }
+/// Tracks the count for some set of message types.
+class _MessageCounts {
+  final _map = SplayTreeMap<String, int>();
 
-  // Pull out the salient peices of whats left.
-  if (string.length < 7) {
-    throw const FormatException('Message is truncated');
+  /// Increments the count of the supplied type, returning the new count.
+  int increment(String type) {
+    final count = (_map[type] ?? 0) + 1;
+    _map[type] = count;
+    return count;
   }
-  final type = string.substring(3, 6);
-  final fields = string.substring(7).split(',');
-  if (_ignoredMessages.contains(type)) {
-    return [];
-  }
+}
 
-  return _createNmeaValues(type, fields);
+/// Parses strings into nmea messages, keeping track of the count for each
+/// message type.
+class NmeaParser {
+  final _unsupportedCounts = _MessageCounts();
+  final _unknownCounts = _MessageCounts();
+  final _successCounts = _MessageCounts();
+  final bool _requireChecksum;
+
+  /// Constructs a new parser for NMEA messages
+  NmeaParser(this._requireChecksum);
+
+  /// Attempts to parse the supplied string as a NMEA0183 message, returning
+  /// one or more values if parsing the message contents was successful and
+  /// the message type is supported. Throws an exception if parsing errors
+  /// were encountered and the first few times a new unknown message is
+  /// received. Returns an empty list for unsupported message types.
+  /// If requireChecksum is true messages without a checksum are rejected.
+  List<Value> parseString(String string) {
+    if (string.startsWith('!')) {
+      // Silently discard the encapsulated sentences which are often on the
+      // netwwork.
+      return [];
+    } else if (!string.startsWith('\$')) {
+      // Thow an exception for anything else, its potentially a network
+      // parsing problem.
+      throw const FormatException('Message is not marked with \$');
+    }
+
+    // Try to validate a checksum if there is one, throw an error if there
+    // isn't but we require checksums.
+    if (string.length > 3 && string[string.length - 3] == '*') {
+      _validateChecksum(string.substring(1, string.length - 3),
+          string.substring(string.length - 2));
+      string = string.substring(0, string.length - 3);
+    } else if (_requireChecksum) {
+      throw const FormatException('Message did not end in a checksum');
+    }
+
+    // Pull out the salient peices of whats left.
+    if (string.length < 7) {
+      throw const FormatException('Message is truncated');
+    }
+    final type = string.substring(3, 6);
+    final fields = string.substring(7).split(',');
+
+    // Skip unsupported messages, pass everything else to the helper.
+    if (_unsupportedMessages.contains(type)) {
+      _unsupportedCounts.increment(type);
+      return [];
+    }
+
+    final values = _createNmeaValues(type, fields);
+    if (values == null) {
+      final count = _unknownCounts.increment(type);
+      // Only cause logging of unknown types a few times each.
+      if (count <= _logUnknownCount) {
+        throw const FormatException('Unsupported message type');
+      }
+      return [];
+    }
+    _successCounts.increment(type);
+    return values;
+  }
 }
 
 /// Validates that the supplied payload matches the expected ASCII checksum, throwing
@@ -66,9 +113,10 @@ void _validateChecksum(payload, checksumString) {
   }
 }
 
-/// Attempts to create one or more value containing NMEA0183 message contents from
-/// the supplied type string and field list, throwing a FormatException if unsuccessful.
-List<Value> _createNmeaValues(type, fields) {
+/// Attempts to create zero or more value containing NMEA0183 message contents
+/// from the supplied type string and field list, throwing a FormatException
+/// if unsuccessful or null if the type is not recognized.
+List<Value>? _createNmeaValues(type, fields) {
   switch (type) {
     case 'DPT':
       _validateMinFieldCount(fields, 2);
@@ -201,7 +249,7 @@ List<Value> _createNmeaValues(type, fields) {
       final dt = DateTime.utc(year, month, day, hour, minute, second);
       return [SingleValue(dt, Source.network, Property.utcTime)];
     default:
-      throw const FormatException('Unsupported message type');
+      return null;
   }
 }
 

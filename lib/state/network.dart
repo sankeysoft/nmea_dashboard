@@ -22,12 +22,12 @@ const _networkErrorRetry = Duration(seconds: 15);
 /// at least every _timeout seconds even if no network traffic is present to enable
 /// cancelling.
 Stream<Value?> valuesFromNetwork(NetworkSettings settings) {
+  NmeaParser parser = NmeaParser(settings.requireChecksum);
   switch (settings.mode) {
     case NetworkMode.tcpConnect:
-      return _valuesFromTcpConnect(
-          settings.ipAddress, settings.port, settings.requireChecksum);
+      return _valuesFromTcpConnect(settings.ipAddress, settings.port, parser);
     case NetworkMode.udpListen:
-      return _valuesFromUdpListen(settings.port, settings.requireChecksum);
+      return _valuesFromUdpListen(settings.port, parser);
   }
 }
 
@@ -35,14 +35,13 @@ Stream<Value?> valuesFromNetwork(NetworkSettings settings) {
 /// guaranteed to return (potentially null) values at least every _timeout seconds even if no network
 /// traffic is present to enable cancelling.
 Stream<Value?> _valuesFromTcpConnect(
-    InternetAddress ipAddress, int portNum, bool requireChecksum) async* {
-  log('Starting TCP stream on $ipAddress:$portNum, checksum=$requireChecksum',
-      level: Level.INFO.value);
+    InternetAddress ipAddress, int portNum, NmeaParser parser) async* {
+  log('Starting TCP stream on $ipAddress:$portNum', level: Level.INFO.value);
   try {
     while (true) {
       try {
         var socket = await Socket.connect(ipAddress, portNum);
-        await for (final value in _valuesFromPackets(socket, requireChecksum)) {
+        await for (final value in _valuesFromPackets(socket, parser)) {
           yield value;
         }
         socket.close();
@@ -60,16 +59,14 @@ Stream<Value?> _valuesFromTcpConnect(
 /// Returns an infinite stream of valid values read from the supplied network port, logging any errors,
 /// guaranteed to return (potentially null) values at least every _timeout seconds even if no network
 /// traffic is present to enable cancelling.
-Stream<Value?> _valuesFromUdpListen(int portNum, bool requireChecksum) async* {
-  log('Starting UDP listen stream on $portNum, checksum=$requireChecksum',
-      level: Level.INFO.value);
+Stream<Value?> _valuesFromUdpListen(int portNum, NmeaParser parser) async* {
+  log('Starting UDP listen stream on $portNum', level: Level.INFO.value);
   try {
     while (true) {
       try {
         var receiver = await UDP.bind(Endpoint.any(port: Port(portNum)));
         await for (final value in _valuesFromPackets(
-            receiver.asStream().map((d) => d?.data ?? _emptyPacket),
-            requireChecksum)) {
+            receiver.asStream().map((d) => d?.data ?? _emptyPacket), parser)) {
           yield value;
         }
       } on SocketException catch (e) {
@@ -94,7 +91,7 @@ Stream<Uint8List> _periodicEmptyPackets() {
 /// guaranteed to return (potentially null) values at least every _timeout seconds even if no network
 /// traffic is present to enable cancelling.
 Stream<Value?> _valuesFromPackets(
-    Stream<Uint8List> packetStream, bool requireChecksum) async* {
+    Stream<Uint8List> packetStream, NmeaParser parser) async* {
   var remaining = '';
   await for (final packet
       in StreamGroup.merge([packetStream, _periodicEmptyPackets()])) {
@@ -115,8 +112,7 @@ Stream<Value?> _valuesFromPackets(
 
         if (potentialMessage.isNotEmpty) {
           try {
-            for (final value
-                in parseNmeaString(potentialMessage, requireChecksum)) {
+            for (final value in parser.parseString(potentialMessage)) {
               yield value;
             }
           } on FormatException catch (e) {
