@@ -4,6 +4,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:logging/logging.dart';
+import 'package:nmea_dashboard/state/logger.dart';
 import 'package:provider/provider.dart';
 import 'state/data_set.dart';
 import 'state/settings.dart';
@@ -23,6 +25,9 @@ const SystemUiOverlayStyle overlayStyle = SystemUiOverlayStyle(
 );
 
 void main() {
+  final logSet = LogSet();
+  Logger.root.onRecord.listen((record) => logSet.add(record));
+  //print('${record.level.name}: ${record.time}: ${record.message}');
   runApp(const NmeaDashboardApp());
 }
 

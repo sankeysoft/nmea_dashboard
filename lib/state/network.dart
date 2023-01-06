@@ -17,6 +17,8 @@ import 'common.dart';
 
 const _networkErrorRetry = Duration(seconds: 15);
 
+final _log = Logger('Network');
+
 /// Returns an infinite stream of valid values read from a port specified in the supplied
 /// network settings, logging any errors. Guaranteed to return (potentially null) values
 /// at least every _timeout seconds even if no network traffic is present to enable
@@ -36,7 +38,7 @@ Stream<Value?> valuesFromNetwork(NetworkSettings settings) {
 /// traffic is present to enable cancelling.
 Stream<Value?> _valuesFromTcpConnect(
     InternetAddress ipAddress, int portNum, NmeaParser parser) async* {
-  log('Starting TCP stream on $ipAddress:$portNum', level: Level.INFO.value);
+  _log.info('Starting TCP stream on $ipAddress:$portNum');
   try {
     while (true) {
       try {
@@ -46,13 +48,13 @@ Stream<Value?> _valuesFromTcpConnect(
         }
         socket.close();
       } on SocketException catch (e) {
-        log('Exception opening TCP stream on $ipAddress:$portNum: $e');
+        _log.warning('Exception opening TCP stream on $ipAddress:$portNum: $e');
         yield null;
         await Future.delayed(_networkErrorRetry);
       }
     }
   } finally {
-    log('Closing TCP stream to $ipAddress:$portNum', level: Level.INFO.value);
+    _log.info('Closing TCP stream to $ipAddress:$portNum');
   }
 }
 
@@ -60,7 +62,7 @@ Stream<Value?> _valuesFromTcpConnect(
 /// guaranteed to return (potentially null) values at least every _timeout seconds even if no network
 /// traffic is present to enable cancelling.
 Stream<Value?> _valuesFromUdpListen(int portNum, NmeaParser parser) async* {
-  log('Starting UDP listen stream on $portNum', level: Level.INFO.value);
+  _log.info('Starting UDP listen stream on $portNum');
   try {
     while (true) {
       try {
@@ -70,13 +72,13 @@ Stream<Value?> _valuesFromUdpListen(int portNum, NmeaParser parser) async* {
           yield value;
         }
       } on SocketException catch (e) {
-        log('Exception opening UDP listed on $portNum: $e');
+        _log.warning('Exception opening UDP listed on $portNum: $e');
         yield null;
         await Future.delayed(_networkErrorRetry);
       }
     }
   } finally {
-    log('Closing UDP listen to $portNum', level: Level.INFO.value);
+    _log.info('Closing UDP listen to $portNum');
   }
 }
 
@@ -87,17 +89,20 @@ Stream<Uint8List> _periodicEmptyPackets() {
   return Stream.periodic(const Duration(seconds: 3), (_) => _emptyPacket);
 }
 
-/// Returns an stream of valid values read from the supplied packet stream, logging any errors,
-/// guaranteed to return (potentially null) values at least every _timeout seconds even if no network
-/// traffic is present to enable cancelling.
+/// Returns an stream of valid values read from the supplied packet stream,
+/// logging any errors, guaranteed to return (potentially null) values at
+/// least every _timeout seconds even if no network traffic is present to
+/// enable cancelling.
 Stream<Value?> _valuesFromPackets(
     Stream<Uint8List> packetStream, NmeaParser parser) async* {
   var remaining = '';
   await for (final packet
       in StreamGroup.merge([packetStream, _periodicEmptyPackets()])) {
+    parser.logAndClearIfNeeded();
     if (packet.isEmpty) {
-      // Empty packet are included in the stream even if no traffic is present so we can return empty
-      // values that let a subscriber cancel the stream.
+      // Empty packets are included in the stream even if no traffic is
+      // present so we can return empty values that let a subscriber cancel
+      // the stream.
       yield null;
     } else {
       // Process whatever we left over plus the new packet.
@@ -116,8 +121,7 @@ Stream<Value?> _valuesFromPackets(
               yield value;
             }
           } on FormatException catch (e) {
-            log('Error parsing $potentialMessage ${e.message}',
-                level: Level.WARNING.value);
+            _log.warning('Error parsing $potentialMessage ${e.message}');
           }
         }
       }

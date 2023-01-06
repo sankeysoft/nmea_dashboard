@@ -3,7 +3,6 @@
 // of the MIT license. See the LICENCE.md file for details.
 
 import 'dart:convert';
-import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -17,6 +16,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// the generated file. The value for this is *.g.dart, where
 /// the star denotes the source file name.
 part 'settings.g.dart';
+
+final _log = Logger('Settings');
 
 /// Exposes all the basic settings for the application, and handles the
 /// persistence of these settings.
@@ -111,24 +112,22 @@ List<T>? _validateJsonList<T>(
     String input, T Function(Map<String, dynamic>) decoder, String target,
     {int minimumLength = 0}) {
   if (input.isEmpty) {
-    log('No $target found in shared preferences', level: Level.INFO.value);
+    _log.info('No $target found in shared preferences');
     return null;
   }
   final dynamic decodedJson;
   try {
     decodedJson = json.decode(input);
   } on FormatException catch (ex) {
-    log('Could not json decode $target: $ex', level: Level.WARNING.value);
+    _log.warning('Could not json decode $target: $ex');
     return null;
   }
   if (decodedJson is! List<dynamic>) {
-    log('$target did not decode to a json list: $input',
-        level: Level.WARNING.value);
+    _log.warning('$target did not decode to a json list: $input');
     return null;
   }
   if (decodedJson.length < minimumLength) {
-    log('$target did contained ${decodedJson.length} entries',
-        level: Level.WARNING.value);
+    _log.warning('$target did contained ${decodedJson.length} entries');
     return null;
   }
 
@@ -137,7 +136,7 @@ List<T>? _validateJsonList<T>(
     try {
       returnList.add(decoder(decodedEntry));
     } on TypeError catch (ex) {
-      log('$target entry did not decode: $ex', level: Level.WARNING.value);
+      _log.warning('$target entry did not decode: $ex');
       return null;
     }
   }
@@ -359,8 +358,7 @@ class DerivedDataSettings with ChangeNotifier {
       final keyedSpec = KeyedDerivedDataSpec.fromBareSpec(bareSpec);
       _derivedDataSpecs[keyedSpec.key] = keyedSpec;
     }
-    log('Loaded ${bareSpecs.length} derived elements from $source',
-        level: Level.INFO.value);
+    _log.info('Loaded ${bareSpecs.length} derived elements from $source');
     return true;
   }
 
@@ -528,8 +526,7 @@ class PageSettings with ChangeNotifier {
   void updateCell(DataCellKey cellKey, DataCellSpec cellSpec) {
     final page = _dataPageSpecs[cellKey.pageKey];
     if (page == null) {
-      log('Could not find page to update ${cellKey.pageKey}',
-          level: Level.WARNING.value);
+      _log.warning('Could not find page to update ${cellKey.pageKey}');
     } else {
       page.updateCell(cellKey, cellSpec);
       _save();
@@ -564,8 +561,7 @@ class PageSettings with ChangeNotifier {
       final keyedSpec = KeyedDataPageSpec.fromBareSpec(bareSpec);
       _dataPageSpecs[keyedSpec.key] = keyedSpec;
     }
-    log('Loaded ${barePageSpecs.length} pages from $source',
-        level: Level.INFO.value);
+    _log.info('Loaded ${barePageSpecs.length} pages from $source');
     return true;
   }
 
@@ -611,7 +607,7 @@ class KeyedDataPageSpec extends ChangeNotifier {
   void updateCell(DataCellKey cellKey, DataCellSpec cellSpec) {
     final cell = _cellMap[cellKey];
     if (cell == null) {
-      log('Could not find cell to update $cellKey', level: Level.WARNING.value);
+      _log.warning('Could not find cell to update $cellKey');
     } else {
       cell._spec = cellSpec;
       notifyListeners();

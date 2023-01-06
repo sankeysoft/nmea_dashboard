@@ -4,10 +4,13 @@
 
 import 'dart:collection';
 
+import 'package:intl/intl.dart';
+import 'package:logging/logging.dart';
+
 import 'common.dart';
 
 /// The list of message types that are silently ignored.
-const _unsupportedMessages = {
+const _ignoredMessages = {
   // Ignore everything waypoint related
   'AAM', 'BOD', 'BWC', 'BRW', 'BWW', 'R00', 'RTE',
   'WCV', 'WNC', 'WPL', 'XTE', 'XTR', 'WDC', 'WDR',
@@ -20,37 +23,98 @@ const _unsupportedMessages = {
   'MDA', 'DBK', 'DBS', 'DBT', 'HDM', 'HDT', 'VWT', 'VWR',
 };
 
-/// The number of times to throw an exception for each new unknown type.
-const int _logUnknownCount = 3;
+/// The number of times to throw an exception containing the input for each new
+/// unknown type for each logging interval.
+const int _logUnsupportedCount = 1;
+
+/// The time between count events.
+const Duration _logInterval = Duration(seconds: 10);
 
 /// Tracks the count for some set of message types.
 class _MessageCounts {
+  int _total = 0;
   final _map = SplayTreeMap<String, int>();
 
   /// Increments the count of the supplied type, returning the new count.
   int increment(String type) {
+    _total += 1;
     final count = (_map[type] ?? 0) + 1;
     _map[type] = count;
     return count;
+  }
+
+  /// Resets all message counts to zero.
+  void clear() {
+    _total = 0;
+    _map.clear();
+  }
+
+  /// Returns true iff no messages have been received.
+  bool get isEmpty {
+    return _total == 0;
+  }
+
+  /// Returns the total count across all types.
+  int get total {
+    return _total;
+  }
+
+  /// Returns a string description of the counts for each type.
+  String get summary {
+    return _map.entries.map((e) => '${e.key}:${e.value}').join(', ');
   }
 }
 
 /// Parses strings into nmea messages, keeping track of the count for each
 /// message type.
 class NmeaParser {
+  static final _log = Logger('NmeaParser');
+  final _ignoredCounts = _MessageCounts();
   final _unsupportedCounts = _MessageCounts();
-  final _unknownCounts = _MessageCounts();
   final _successCounts = _MessageCounts();
   final bool _requireChecksum;
+  DateTime _lastLog;
 
   /// Constructs a new parser for NMEA messages
-  NmeaParser(this._requireChecksum);
+  NmeaParser(this._requireChecksum) : _lastLog = DateTime.now();
+
+  /// Logs the current message counts then resets them if sufficient time has
+  /// passed since the last log.
+  void logAndClearIfNeeded() {
+    final now = DateTime.now();
+    if (now.difference(_lastLog) > _logInterval) {
+      logAndClearCounts();
+      _lastLog = now;
+    }
+  }
+
+  /// Logs the current message counts then resets them.
+  void logAndClearCounts() {
+    final lastLogString = DateFormat('Hms').format(_lastLog);
+    if (_successCounts.isEmpty) {
+      _log.info('No messages received since $lastLogString');
+    } else {
+      _log.info(
+          'Parsed ${_successCounts.total} messages: ${_successCounts.summary}');
+      _successCounts.clear();
+    }
+    if (!_unsupportedCounts.isEmpty) {
+      _log.info(
+          'Received ${_unsupportedCounts.total} unsupported messages: ${_unsupportedCounts.summary}');
+      _unsupportedCounts.clear();
+    }
+    if (!_ignoredCounts.isEmpty) {
+      _log.info(
+          'Received ${_ignoredCounts.total} ignored messages: ${_ignoredCounts.summary}');
+      _ignoredCounts.clear();
+    }
+  }
 
   /// Attempts to parse the supplied string as a NMEA0183 message, returning
   /// one or more values if parsing the message contents was successful and
   /// the message type is supported. Throws an exception if parsing errors
-  /// were encountered and the first few times a new unknown message is
-  /// received. Returns an empty list for unsupported message types.
+  /// were encountered and the first few times a new unsupported message is
+  /// received. Returns an empty list for ignored message types.
   /// If requireChecksum is true messages without a checksum are rejected.
   List<Value> parseString(String string) {
     if (string.startsWith('!')) {
@@ -80,17 +144,17 @@ class NmeaParser {
     final type = string.substring(3, 6);
     final fields = string.substring(7).split(',');
 
-    // Skip unsupported messages, pass everything else to the helper.
-    if (_unsupportedMessages.contains(type)) {
+    // Skip ignored messages, pass everything else to the helper.
+    if (_ignoredMessages.contains(type)) {
       _unsupportedCounts.increment(type);
       return [];
     }
 
     final values = _createNmeaValues(type, fields);
     if (values == null) {
-      final count = _unknownCounts.increment(type);
-      // Only cause logging of unknown types a few times each.
-      if (count <= _logUnknownCount) {
+      final count = _unsupportedCounts.increment(type);
+      // Only cause logging of unsupported types a few times each.
+      if (count <= _logUnsupportedCount) {
         throw const FormatException('Unsupported message type');
       }
       return [];

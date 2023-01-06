@@ -3,7 +3,6 @@
 // of the MIT license. See the LICENCE.md file for details.
 
 import 'dart:async';
-import 'dart:developer';
 
 import 'package:flutter/widgets.dart';
 import 'package:logging/logging.dart';
@@ -38,6 +37,9 @@ class DataSet with ChangeNotifier {
 
   /// A publicly assessible collections of data elements from the network.
   final Map<Source, Map<String, DataElement>> sources = {};
+
+  /// This class's logger.
+  static final _log = Logger('DataSet');
 
   DataSet(this._networkSettings, this._derivedDataSettings) {
     // Create all known data for primary sources.
@@ -106,23 +108,17 @@ class DataSet with ChangeNotifier {
       // cycles makes that a fair bit more complex and with the current set of operations (and the
       // choice to describe all values with a format) there would be very few use cases.
       if (source == Source.derived) {
-        log('Could not derive ${spec.name} from another derived value',
-            level: Level.WARNING.value);
+        _log.warning('Could not derive ${spec.name} from another derived value');
       } else if (inputElement == null) {
-        log('Could not find ${spec.inputSource}:${spec.inputElement} to create ${spec.name}',
-            level: Level.WARNING.value);
+        _log.warning('Could not find ${spec.inputSource}:${spec.inputElement} to create ${spec.name}');
       } else if (formatter == null) {
-        log('Could not find ${spec.inputFormat} format for ${inputElement.property.dimension}',
-            level: Level.WARNING.value);
+        _log.warning('Could not find ${spec.inputFormat} format for ${inputElement.property.dimension}');
       } else if (operation == null) {
-        log('Could not find operation ${spec.operation} to create ${spec.name}',
-            level: Level.WARNING.value);
+        _log.warning('Could not find operation ${spec.operation} to create ${spec.name}');
       } else if (inputElement is! DataElement<SingleValue<double>, Value>) {
-        log('Could not create ${spec.name} from non-double ${spec.inputSource}:${spec.inputElement}',
-            level: Level.WARNING.value);
+        _log.warning('Could not create ${spec.name} from non-double ${spec.inputSource}:${spec.inputElement}');
       } else if (formatter is! SimpleFormatter) {
-        log('Could not create ${spec.name} from non-simple format ${spec.inputFormat}',
-            level: Level.WARNING.value);
+        _log.warning('Could not create ${spec.name} from non-simple format ${spec.inputFormat}');
       } else {
         elementMap[spec.name] = DerivedDataElement(
             spec.name, inputElement, formatter, operation, spec.operand);
@@ -135,7 +131,7 @@ class DataSet with ChangeNotifier {
   /// any existing subscription if one exists.
   Future<void> _collectNetworkData() async {
     if (_networkSubscription != null) {
-      log('Cancelling previous network subcription', level: Level.INFO.value);
+      _log.info('Cancelling previous network subcription');
       await _networkSubscription?.cancel();
       _networkSubscription = null;
     }
@@ -149,8 +145,7 @@ class DataSet with ChangeNotifier {
       if (value != null) {
         final element = networkElements[value.property.name];
         if (element == null) {
-          log('Got unrecognized network value: ${value.property}',
-              level: Level.WARNING.value);
+          _log.warning('Got unrecognized network value: ${value.property}');
         } else {
           element.updateValue(value);
         }
@@ -162,12 +157,11 @@ class DataSet with ChangeNotifier {
   // on the supplied port, returning the stream subscription.
   void _collectLocalData() {
     final localElements = sources[Source.local]!;
-    log('Setting up new local value subcription');
+    _log.info('Setting up new local value subcription');
     valuesFromLocalDevice().listen((value) {
       final element = localElements[value.property.name];
       if (element == null) {
-        log('Got unrecognized local value: ${value.property}',
-            level: Level.WARNING.value);
+        _log.warning('Got unrecognized local value: ${value.property}');
       } else {
         element.updateValue(value);
       }
@@ -180,7 +174,7 @@ class DataSet with ChangeNotifier {
     final source = Source.fromString(spec.source);
     if (source == null) {
       if (spec.source.isNotEmpty) {
-        log('Invalid spec source ${spec.source}', level: Level.WARNING.value);
+        _log.warning('Invalid spec source ${spec.source}');
       }
       return NotFoundDisplay(spec);
     } else if (source == Source.unset) {
@@ -189,16 +183,14 @@ class DataSet with ChangeNotifier {
 
     final DataElement? dataElement = sources[source]?[spec.element];
     if (dataElement == null) {
-      log('Could not find ${spec.element} in source ${spec.source}',
-          level: Level.WARNING.value);
+      _log.warning('Could not find ${spec.element} in source ${spec.source}');
       return NotFoundDisplay(spec);
     }
 
     final Formatter? formatter =
         formattersFor(dataElement.property.dimension)[spec.format];
     if (formatter == null) {
-      log('Could not find ${spec.format} format for ${dataElement.property.dimension}',
-          level: Level.WARNING.value);
+      _log.warning('Could not find ${spec.format} format for ${dataElement.property.dimension}');
       return NotFoundDisplay(spec);
     }
 
