@@ -5,7 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
-import 'package:nmea_dashboard/state/logger.dart';
+import 'package:nmea_dashboard/state/logset.dart';
 import 'package:provider/provider.dart';
 import 'state/data_set.dart';
 import 'state/settings.dart';
@@ -28,12 +28,14 @@ void main() {
   final logSet = LogSet();
   Logger.root.onRecord.listen((record) => logSet.add(record));
   //print('${record.level.name}: ${record.time}: ${record.message}');
-  runApp(const NmeaDashboardApp());
+  runApp(NmeaDashboardApp(logSet));
 }
 
 /// The root widget for the application.
 class NmeaDashboardApp extends StatelessWidget {
-  const NmeaDashboardApp({super.key});
+  final LogSet _logSet;
+
+  const NmeaDashboardApp(this._logSet, {super.key});
 
   // The root of the application needs to asynchronously load setttings
   // before deciding the theme and delegating the to a themed application.
@@ -48,6 +50,7 @@ class NmeaDashboardApp extends StatelessWidget {
           if (snapshot.connectionState == ConnectionState.done) {
             final settings = snapshot.data![0];
             return MultiProvider(providers: [
+              ChangeNotifierProvider<LogSet>(create: (_) => _logSet),
               ChangeNotifierProvider<Settings>(create: (_) => settings),
               ChangeNotifierProvider<NetworkSettings>(
                   create: (_) => settings.network),

@@ -7,6 +7,7 @@ import 'package:nmea_dashboard/state/settings.dart';
 import 'package:nmea_dashboard/ui/forms/edit_derived_elements.dart';
 import 'package:nmea_dashboard/ui/forms/ui_settings.dart';
 import 'package:nmea_dashboard/ui/forms/network_settings.dart';
+import 'package:nmea_dashboard/ui/forms/view_log.dart';
 import 'package:provider/provider.dart';
 
 import '../../state/data_set.dart';
@@ -158,8 +159,16 @@ class _DrawerContent extends StatelessWidget {
           },
         ),
         ListTile(
-          leading: Icon(Icons.analytics_outlined, color: theme.disabledColor),
-          title: Text('Debug Log', style: disabledStyle),
+          leading: Icon(Icons.analytics_outlined, color: enabledColor),
+          title: Text('Debug Log', style: enabledStyle),
+          onTap: () {
+            Navigator.pop(context);
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => ViewLogPage(),
+              ),
+            );
+          },
         ),
         ListTile(
           leading: Icon(Icons.help_outlined, color: theme.disabledColor),

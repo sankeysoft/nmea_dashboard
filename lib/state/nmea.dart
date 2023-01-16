@@ -28,7 +28,7 @@ const _ignoredMessages = {
 const int _logUnsupportedCount = 1;
 
 /// The time between count events.
-const Duration _logInterval = Duration(seconds: 10);
+const Duration _logInterval = Duration(minutes: 5);
 
 /// Tracks the count for some set of message types.
 class _MessageCounts {

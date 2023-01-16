@@ -111,8 +111,11 @@ Widget buildStaticTile({
       ));
 }
 
-/// Builds a button to close the current form.
-Widget buildCloseButton(BuildContext context) {
+/// Builds a button with custom text and behavior.
+Widget buildOtherButton(
+    {required BuildContext context,
+    required VoidCallback onPressed,
+    required String text}) {
   return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
@@ -120,9 +123,17 @@ Widget buildCloseButton(BuildContext context) {
             backgroundColor: Theme.of(context).colorScheme.secondary,
             foregroundColor: Theme.of(context).colorScheme.onSecondary,
             padding: const EdgeInsets.all(20)),
-        onPressed: () => Navigator.of(context).pop(),
-        child: const Text('CLOSE'),
+        onPressed: onPressed,
+        child: Text(text),
       ));
+}
+
+/// Builds a button to close the current form.
+Widget buildCloseButton(BuildContext context) {
+  return buildOtherButton(
+    context: context,
+    onPressed: () => Navigator.of(context).pop(),
+    text: 'CLOSE');
 }
 
 /// Diplays a standard snack bar with the provided text.
@@ -155,8 +166,6 @@ AlertDialog buildConfirmationDialog(
             child: const Text('Cancel')),
       ]);
 }
-
-
 
 /// A standard page containing one of the forms in our application.
 class StatefulFormPage<T extends StatefulWidget> extends StatelessWidget {
@@ -272,6 +281,7 @@ abstract class StatefulFormState<T extends StatefulWidget> extends State<T> {
           expands: expands,
           maxLines: expands ? null : 1,
           autovalidateMode: AutovalidateMode.onUserInteraction,
+          textCapitalization: TextCapitalization.sentences,
           decoration: InputDecoration(
             icon: labelWidget,
             border: const OutlineInputBorder(),

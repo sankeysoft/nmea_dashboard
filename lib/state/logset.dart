@@ -4,10 +4,12 @@
 
 import 'dart:developer';
 
+import 'package:flutter/widgets.dart';
+import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
 
 /// The maximum number of log entries we store.
-const int _maxEntries = 100;
+const int _maxEntries = 250;
 
 /// A single entry tracked by the logger.
 class LogEntry {
@@ -16,17 +18,22 @@ class LogEntry {
   final String message;
 
   LogEntry(this.level, this.message): time = DateTime.now();
+
+  @override
+  String toString() {
+    return '${DateFormat('Hms').format(time)} $level $message';
+  }
 }
 
 /// A class to receive and store log records.
-class LogSet {
+class LogSet with ChangeNotifier {
   /// The actual entries in the log.
   final List<LogEntry> _entries = [];
 
   /// Returns the stored entry.
   List<LogEntry> get entries => _entries;
 
-  /// Adds a new `logger` record to the set.
+  /// Adds a new record to the set of logs.
   void add(LogRecord record) {
     final entry = LogEntry(record.level, record.message);
     // Make space in the array
@@ -37,5 +44,18 @@ class LogSet {
     _entries.add(entry);
     // And write to the developer log.
     log(record.message, level: record.level.value);
+
+    notifyListeners();
+  }
+
+  /// Removes all records.
+  void clear() {
+    _entries.clear();
+    notifyListeners();
+  }
+
+  @override
+  String toString() {
+    return _entries.map((e) => e.toString()).join('\n');
   }
 }

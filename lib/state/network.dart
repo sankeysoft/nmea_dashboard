@@ -3,7 +3,6 @@
 // of the MIT license. See the LICENCE.md file for details.
 
 import 'dart:async';
-import 'dart:developer';
 import 'dart:io';
 
 import 'package:async/async.dart';
