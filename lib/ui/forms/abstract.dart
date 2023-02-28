@@ -3,6 +3,7 @@
 // of the MIT license. See the LICENCE.md file for details.
 
 import 'package:flutter/material.dart';
+import 'package:nmea_dashboard/ui/forms/view_help.dart';
 
 typedef FormPostSaver = void Function();
 
@@ -131,9 +132,9 @@ Widget buildOtherButton(
 /// Builds a button to close the current form.
 Widget buildCloseButton(BuildContext context) {
   return buildOtherButton(
-    context: context,
-    onPressed: () => Navigator.of(context).pop(),
-    text: 'CLOSE');
+      context: context,
+      onPressed: () => Navigator.of(context).pop(),
+      text: 'CLOSE');
 }
 
 /// Diplays a standard snack bar with the provided text.
@@ -165,6 +166,24 @@ AlertDialog buildConfirmationDialog(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Cancel')),
       ]);
+}
+
+class HelpButton extends StatelessWidget {
+  final String _asset;
+
+  const HelpButton(this._asset, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+        icon: const Icon(Icons.help_outlined),
+        onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) =>
+                    ViewHelpPage(title: 'Help', filename: _asset),
+              ),
+            ));
+  }
 }
 
 /// A standard page containing one of the forms in our application.

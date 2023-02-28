@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/state/logset.dart';
+import 'package:nmea_dashboard/ui/forms/view_help.dart';
 import 'package:provider/provider.dart';
 import 'state/data_set.dart';
 import 'state/settings.dart';
@@ -136,12 +137,23 @@ class _HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dataSettings = Provider.of<PageSettings>(context);
+    final uiSettings = Provider.of<UiSettings>(context);
     final initialIdx = dataSettings.selectedPageIndex ?? 0;
     final controller = PageController(initialPage: initialIdx, keepPage: false);
-    // Even though we tell the controlled to not keep page it doesn't use the
+    // Even though we tell the controller to not keep page it doesn't use the
     // initialIdx correctly. Force a transition post-build.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       controller.jumpToPage(initialIdx);
+      if (uiSettings.firstRun) {
+        uiSettings.clearFirstRun();
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => ViewHelpPage(
+                title: 'Welcome to NMEA Dashboard',
+                filename: 'help_overview.md'),
+          ),
+        );
+      }
     });
     controller.addListener(() {
       // Record the page selection whenever we finish transitioning

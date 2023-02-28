@@ -14,6 +14,7 @@ class UiSettingsPage extends StatefulFormPage {
       : super(
             key: key,
             title: 'User interface settings',
+            actions: [const HelpButton('help_ui_settings.md')],
             child: _UiSettingsForm(settings));
 }
 

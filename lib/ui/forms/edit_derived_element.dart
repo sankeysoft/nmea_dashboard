@@ -13,8 +13,7 @@ import '../../state/settings.dart';
 import 'abstract.dart';
 
 /// The initial spec for a freshly created page.
-final _defaultDerivedDataSpec =
-    DerivedDataSpec('', 'network', '', '', '', 0);
+final _defaultDerivedDataSpec = DerivedDataSpec('', 'network', '', '', '', 0);
 
 /// A function called on successful creation of a DerivedDataSpec.
 typedef CreateDerivedDataFunction = void Function(DerivedDataSpec spec);
@@ -25,7 +24,10 @@ class EditDerivedDataPage extends StatefulFormPage {
       {DerivedDataSpec? spec,
       required CreateDerivedDataFunction onCreate,
       super.key})
-      : super(title: 'Edit derived element', child: _EditDerivedDataForm(spec, onCreate));
+      : super(
+            title: 'Edit derived element',
+            actions: [const HelpButton('help_edit_derived_element.md')],
+            child: _EditDerivedDataForm(spec, onCreate));
 }
 
 class _EditDerivedDataForm extends StatefulWidget {
@@ -84,18 +86,17 @@ class _EditDerivedDataFormState
             const Expanded(
               child: SizedBox(height: 50),
             ),
-            buildSaveButton(
-                postSaver: () {
-                  final spec = DerivedDataSpec(
-                      _name,
-                      _inputSource?.name ?? '',
-                      _inputName ?? '',
-                      _inputFormat ?? '',
-                      _operation.name,
-                      _operand);
-                  widget._onCreate(spec);
-                  Navigator.pop(context);
-                })
+            buildSaveButton(postSaver: () {
+              final spec = DerivedDataSpec(
+                  _name,
+                  _inputSource?.name ?? '',
+                  _inputName ?? '',
+                  _inputFormat ?? '',
+                  _operation.name,
+                  _operand);
+              widget._onCreate(spec);
+              Navigator.pop(context);
+            })
           ]),
     );
   }

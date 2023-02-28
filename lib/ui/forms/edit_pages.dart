@@ -15,7 +15,12 @@ class EditPagesPage extends StatelessFormPage {
   EditPagesPage({super.key})
       : super(
             title: 'Edit pages',
-            actions: [_CopyButton(), _PasteButton(), _ResetButton()],
+            actions: [
+              _CopyButton(),
+              _PasteButton(),
+              _ResetButton(),
+              const HelpButton('help_edit_pages.md')
+            ],
             content: _EditPagesContent());
 }
 

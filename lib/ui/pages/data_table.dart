@@ -15,6 +15,7 @@ import '../../state/displayable.dart';
 import '../forms/edit_cell.dart';
 import '../forms/edit_page.dart';
 import '../forms/edit_pages.dart';
+import '../forms/view_help.dart';
 
 /// A page that fills the available space with a table of
 /// displayable data created from the supplied specs.
@@ -79,7 +80,6 @@ class _DrawerContent extends StatelessWidget {
     final packageInfo = Provider.of<Settings>(context).packageInfo;
     final enabledColor = theme.colorScheme.onBackground;
     final enabledStyle = TextStyle(fontSize: 18, color: enabledColor);
-    final disabledStyle = enabledStyle.copyWith(color: theme.disabledColor);
 
     final headingStyle = TextStyle(
         color: enabledColor, fontWeight: FontWeight.bold, fontSize: 30);
@@ -137,7 +137,7 @@ class _DrawerContent extends StatelessWidget {
         ),
         ListTile(
             leading: Icon(Icons.hub_outlined, color: enabledColor),
-            title: Text('Data', style: enabledStyle),
+            title: Text('Derived Data', style: enabledStyle),
             onTap: () {
               Navigator.pop(context);
               Navigator.of(context).push(
@@ -171,8 +171,17 @@ class _DrawerContent extends StatelessWidget {
           },
         ),
         ListTile(
-          leading: Icon(Icons.help_outlined, color: theme.disabledColor),
-          title: Text('Help', style: disabledStyle),
+          leading: Icon(Icons.help_outlined, color: enabledColor),
+          title: Text('Help & License', style: enabledStyle),
+          onTap: () {
+            Navigator.pop(context);
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => ViewHelpPage(
+                    title: 'Help Overview & License', filename: 'help_overview.md'),
+              ),
+            );
+          },
         ),
       ],
     );

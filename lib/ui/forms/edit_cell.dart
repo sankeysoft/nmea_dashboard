@@ -15,7 +15,10 @@ import 'abstract.dart';
 /// A form that lets the user edit a data cell.
 class EditCellPage extends StatefulFormPage {
   EditCellPage({required KeyedDataCellSpec spec, super.key})
-      : super(title: 'Edit cell', child: _EditCellForm(spec: spec));
+      : super(
+            title: 'Edit cell',
+            actions: [const HelpButton('help_edit_cell.md')],
+            child: _EditCellForm(spec: spec));
 }
 
 /// The stateful form itself
@@ -63,7 +66,9 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
       _element = null;
     }
     if (dataElement?.property == null ||
-        !formattersFor(dataElement!.property.dimension).keys.contains(_format)) {
+        !formattersFor(dataElement!.property.dimension)
+            .keys
+            .contains(_format)) {
       _format = null;
     }
   }
@@ -158,7 +163,8 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
             .map((entry) =>
                 DropdownEntry(value: entry.key, text: entry.value.longName))
             .toList(),
-        initialValue: eligibleFormatters.keys.contains(_format) ? _format : null,
+        initialValue:
+            eligibleFormatters.keys.contains(_format) ? _format : null,
         onChanged: (String? value) {
           setState(() {
             _format = value;

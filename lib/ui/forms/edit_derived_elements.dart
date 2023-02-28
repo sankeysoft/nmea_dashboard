@@ -15,7 +15,11 @@ class EditDerivedElementsPage extends StatelessFormPage {
   EditDerivedElementsPage({super.key})
       : super(
             title: 'Edit derived elements',
-            actions: [_CopyButton(), _PasteButton()],
+            actions: [
+              _CopyButton(),
+              _PasteButton(),
+              const HelpButton('help_edit_derived_elements.md')
+            ],
             content: _EditDerivedElementsContent());
 }
 
@@ -27,7 +31,8 @@ class _CopyButton extends StatelessWidget {
         icon: const Icon(Icons.copy_all_outlined),
         onPressed: () {
           Clipboard.setData(ClipboardData(text: settings.toJson())).then((_) =>
-              showSnackBar(context, 'Derived data definitions copied to clipboard'));
+              showSnackBar(
+                  context, 'Derived data definitions copied to clipboard'));
         });
   }
 }
@@ -122,7 +127,8 @@ class _EditDerivedElementsContent extends StatelessWidget {
                     spec: spec.toBareSpec(),
                     onCreate: (updatedSpec) {
                       final keyedSpec = KeyedDerivedDataSpec.fromBareSpec(
-                          updatedSpec, key: spec.key);
+                          updatedSpec,
+                          key: spec.key);
                       settings.setElement(keyedSpec);
                     }),
               ),
