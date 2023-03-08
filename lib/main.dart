@@ -28,7 +28,6 @@ const SystemUiOverlayStyle overlayStyle = SystemUiOverlayStyle(
 void main() {
   final logSet = LogSet();
   Logger.root.onRecord.listen((record) => logSet.add(record));
-  //print('${record.level.name}: ${record.time}: ${record.message}');
   runApp(NmeaDashboardApp(logSet));
 }
 
