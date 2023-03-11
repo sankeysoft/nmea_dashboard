@@ -77,4 +77,4 @@ Contact us
 ----------
 
 If you have any questions or suggestions about this Privacy Policy, please file
-an issue at [https://github.com/sankeysoft/nmea_dashboard/issues].
+an issue at <https://github.com/sankeysoft/nmea_dashboard/issues>.
