@@ -74,7 +74,7 @@ enum Property {
 
 /// The various sources that can provide data.
 enum Source {
-  unset('Not Yet Set', selectable:false),
+  unset('Not Yet Set', selectable: false),
   network('Network'),
   local('Local device'),
   derived('Derived data');
@@ -92,15 +92,30 @@ enum Source {
 
 /// The various types of dimension used across data elements.
 enum Dimension {
-  angle(type: SingleValue<double>, nativeUnits: 'degrees', derivationFriendly: true),
+  angle(
+      type: SingleValue<double>,
+      nativeUnits: 'degrees',
+      derivationFriendly: true),
   angularRate(type: SingleValue<double>, nativeUnits: 'degrees/sec'),
   bearing(type: SingleValue<double>, nativeUnits: 'degrees true'),
-  distance(type: SingleValue<double>, nativeUnits: 'meters', derivationFriendly: true),
-  depth(type: SingleValue<double>, nativeUnits: 'meters', derivationFriendly: true),
+  distance(
+      type: SingleValue<double>,
+      nativeUnits: 'meters',
+      derivationFriendly: true),
+  depth(
+      type: SingleValue<double>,
+      nativeUnits: 'meters',
+      derivationFriendly: true),
   integer(type: SingleValue<int>, nativeUnits: 'N/A'),
   position(type: DoubleValue<double>, nativeUnits: 'lat/long degrees'),
-  pressure(type: SingleValue<double>, nativeUnits: 'pascals', derivationFriendly: true),
-  speed(type: SingleValue<double>, nativeUnits: 'meters/sec', derivationFriendly: true),
+  pressure(
+      type: SingleValue<double>,
+      nativeUnits: 'pascals',
+      derivationFriendly: true),
+  speed(
+      type: SingleValue<double>,
+      nativeUnits: 'meters/sec',
+      derivationFriendly: true),
   temperature(type: SingleValue<double>, nativeUnits: 'degrees celcius'),
   time(type: SingleValue<DateTime>, nativeUnits: 'datetime');
 
@@ -108,7 +123,10 @@ enum Dimension {
   final String nativeUnits;
   final bool derivationFriendly;
 
-  const Dimension({required this.type, required this.nativeUnits, this.derivationFriendly=false});
+  const Dimension(
+      {required this.type,
+      required this.nativeUnits,
+      this.derivationFriendly = false});
 
   /// Returns a derivation operation from its unqualified name.
   static Dimension? fromString(String? name) {

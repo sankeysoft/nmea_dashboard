@@ -118,8 +118,8 @@ class NmeaParser {
   /// If requireChecksum is true messages without a checksum are rejected.
   List<Value> parseString(String string) {
     if (string.startsWith('!')) {
-      // Silently discard the encapsulated sentences which are often on the
-      // netwwork.
+      // Silently discard the encapsulated (e.g. AIS) sentences which are often
+      // on the network.
       return [];
     } else if (!string.startsWith('\$')) {
       // Thow an exception for anything else, its potentially a network
@@ -193,7 +193,8 @@ List<Value>? _createNmeaValues(type, fields) {
     case 'HDG':
       _validateFieldCount(fields, 5);
       // Only accept heading messages with deviation and store in true until
-      // we support user supplied deviation, then we'll need a different solution.
+      // we support user supplied deviation, then we'll need a different
+      // solution.
       final magHdg = double.parse(fields[0]);
       final variation = _parseVariation(fields[3], fields[4]);
       final trueHdg = (magHdg - variation) % 360.0;
