@@ -5,6 +5,7 @@
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
+import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
 
@@ -22,6 +23,9 @@ class Staleness {
 /// the type of input data (U) may not match the type of stored data (V).
 abstract class DataElement<V extends Value, U extends Value>
     with ChangeNotifier {
+  /// This class's logger.
+  static final _log = Logger('DataElement');
+
   /// The property we expect for incoming values.
   final Property property;
 
@@ -42,8 +46,11 @@ abstract class DataElement<V extends Value, U extends Value>
   /// A timer since the last update
   final Stopwatch lastUpdateStopwatch = Stopwatch();
 
-  /// The most recent valid data received by this element.
+  /// The most recent valid data accepted by this element.
   V? _value;
+
+  /// The tier most recently accepted by this element, even if no longer valid.
+  int? _tier;
 
   DataElement(this.property, this.staleness);
 
@@ -73,12 +80,29 @@ abstract class DataElement<V extends Value, U extends Value>
       throw InvalidTypeException(
           'Tried to update $property DataElement with ${newValue.property} value');
     }
+    // Record if this value causes us to change tier and discard worse data if
+    // better tier data is still valid
+    if (_tier != null && newValue.tier < _tier!) {
+      _log.info(
+          'Upgrading $property from tier $_tier to tier ${newValue.tier}');
+    } else if (_tier != null && newValue.tier > _tier!) {
+      if (_value != null) {
+        // Ignore any lower tier data we receive if better data is still valid.
+        return;
+      }
+      _log.warning(
+          'Downgrading $property from tier $_tier to tier ${newValue.tier}');
+    }
+    _tier = newValue.tier;
+
     // Set a new timer to invalidate this element is no new data is received,
     // replacing any previous timer.
     stalenessTimer?.cancel();
     if (staleness != null) {
       stalenessTimer = Timer(staleness!.duration, () => invalidateValue());
     }
+
+    // Convert and store the new value and notify on change.
     final V newStoredValue = convertValue(newValue);
     if (newStoredValue != _value) {
       _value = newStoredValue;
@@ -147,9 +171,10 @@ class DerivedDataElement
   final Operation _operation;
   final double _operand;
 
-  DerivedDataElement(
-      this._name, this._sourceElement, this._formatter, this._operation, this._operand)
-      : super(_sourceElement.property, /* No staleness, source will notify on invalid */ null) {
+  DerivedDataElement(this._name, this._sourceElement, this._formatter,
+      this._operation, this._operand)
+      : super(_sourceElement.property,
+            /* No staleness, source will notify on invalid */ null) {
     // Update self when the sourceElement sends a notification.
     _sourceElement.addListener(() {
       final sourceValue = _sourceElement.value;

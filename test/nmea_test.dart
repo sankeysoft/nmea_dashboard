@@ -25,7 +25,9 @@ class ValueListMatches extends Matcher {
     for (int i = 0; i < _expected.length; i++) {
       final e = _expected[i];
       final a = actual[i];
-      if (a.source != e.source || a.property != e.property) {
+      if (a.source != e.source ||
+          a.property != e.property ||
+          a.tier != e.tier) {
         return false;
       }
       if (e is SingleValue<double>) {
@@ -145,7 +147,8 @@ void main() {
             .parseString(r'$YDGLL,3748.8322,N,12230.6429,W,171453.24,A,A*7A'),
         ValueListMatches([
           DoubleValue<double>(
-              37.81387, -122.51072, Source.network, Property.gpsPosition),
+              37.81387, -122.51072, Source.network, Property.gpsPosition,
+              tier: 2),
         ]));
   });
 

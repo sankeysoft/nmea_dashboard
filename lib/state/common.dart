@@ -177,22 +177,30 @@ enum Operation {
 
 /// A value is a single instance of the data for some property.
 abstract class Value {
+  /// The high level source that the datum came from (e.g. network)
   final Source source;
+
+  /// The quality/preference of the data source, where 1 represents the best
+  /// quality/most preferred source for this property and higher numbers
+  /// represent lower preferences.
+  final int tier;
+
+  /// The property that this datum applies to.
   final Property property;
 
-  Value(this.source, this.property);
+  Value(this.source, this.property, this.tier);
 }
 
 /// A value containing a single primitive.
 class SingleValue<T> extends Value {
   final T value;
 
-  SingleValue(this.value, source, property)
-      : super(source, _verifyType(property, SingleValue<T>));
+  SingleValue(this.value, source, property, {tier = 1})
+      : super(source, _verifyType(property, SingleValue<T>), tier);
 
   @override
   String toString() {
-    return "S=$source, P=$property, V=$value";
+    return "S=$source($tier), P=$property, V=$value";
   }
 }
 
@@ -201,12 +209,12 @@ class DoubleValue<T> extends Value {
   final T first;
   final T second;
 
-  DoubleValue(this.first, this.second, source, property)
-      : super(source, _verifyType(property, DoubleValue<T>));
+  DoubleValue(this.first, this.second, source, property, {tier = 1})
+      : super(source, _verifyType(property, DoubleValue<T>), tier);
 
   @override
   String toString() {
-    return "S=$source, P=$property, V=$first,$second";
+    return "S=$source($tier), P=$property, V=$first,$second";
   }
 }
 
@@ -216,10 +224,11 @@ class AugmentedBearing extends Value {
   final double bearing;
   final double? variation;
 
-  AugmentedBearing(SingleValue<double> bearing, SingleValue<double>? variation)
+  AugmentedBearing(SingleValue<double> bearing, SingleValue<double>? variation,
+      {tier = 1})
       : bearing = bearing.value,
         variation = variation?.value,
-        super(bearing.source, bearing.property) {
+        super(bearing.source, bearing.property, tier) {
     if (variation != null && variation.property != Property.variation) {
       throw InvalidTypeException(
           'Cannot contruct AugmentedBearing with varation of $variation.property');
@@ -232,7 +241,7 @@ class AugmentedBearing extends Value {
 
   @override
   String toString() {
-    return "S=$source, P=$property, Brg=$bearing Var=$variation";
+    return "S=$source($tier), P=$property, Brg=$bearing Var=$variation";
   }
 }
 

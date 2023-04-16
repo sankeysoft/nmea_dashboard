@@ -224,7 +224,9 @@ List<Value>? _createNmeaValues(type, fields) {
       _validateValidityIndicator(fields, index: 5);
       final lat = _parseLatitude(fields[0], fields[1]);
       final long = _parseLongitude(fields[2], fields[3]);
-      return [DoubleValue(lat, long, Source.network, Property.gpsPosition)];
+      return [
+        DoubleValue(lat, long, Source.network, Property.gpsPosition, tier: 2)
+      ];
     case 'MWV':
       _validateFieldCount(fields, 5);
       _validateValidityIndicator(fields, index: 4);
