@@ -47,7 +47,8 @@ Stream<Value?> _valuesFromTcpConnect(
         }
         socket.close();
       } on SocketException catch (e) {
-        _log.warning('Exception opening TCP stream on $ipAddress:$portNum: $e');
+        _log.warning('Exception opening TCP stream on $ipAddress:$portNum. '
+            'Please check your network settings. ($e)');
         yield null;
         await Future.delayed(_networkErrorRetry);
       }
@@ -71,7 +72,8 @@ Stream<Value?> _valuesFromUdpListen(int portNum, NmeaParser parser) async* {
           yield value;
         }
       } on SocketException catch (e) {
-        _log.warning('Exception opening UDP listed on $portNum: $e');
+        _log.warning('Exception opening UDP listen on $portNum. '
+            'Please check your network settings. ($e)');
         yield null;
         await Future.delayed(_networkErrorRetry);
       }
