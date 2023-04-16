@@ -189,6 +189,11 @@ class SingleValue<T> extends Value {
 
   SingleValue(this.value, source, property)
       : super(source, _verifyType(property, SingleValue<T>));
+
+  @override
+  String toString() {
+    return "S=$source, P=$property, V=$value";
+  }
 }
 
 /// A value containing two primitives.
@@ -198,6 +203,11 @@ class DoubleValue<T> extends Value {
 
   DoubleValue(this.first, this.second, source, property)
       : super(source, _verifyType(property, DoubleValue<T>));
+
+  @override
+  String toString() {
+    return "S=$source, P=$property, V=$first,$second";
+  }
 }
 
 /// A special value that augments a bearing with an optional variation needed
@@ -218,6 +228,11 @@ class AugmentedBearing extends Value {
       throw InvalidTypeException(
           'Cannot contruct AugmentedBearing with bearing of $bearing.property');
     }
+  }
+
+  @override
+  String toString() {
+    return "S=$source, P=$property, Brg=$bearing Var=$variation";
   }
 }
 

@@ -4,6 +4,7 @@
 
 import 'dart:collection';
 
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
 
@@ -31,7 +32,8 @@ const int _logUnsupportedCount = 1;
 const Duration _logInterval = Duration(minutes: 5);
 
 /// Tracks the count for some set of message types.
-class _MessageCounts {
+@visibleForTesting
+class MessageCounts {
   int _total = 0;
   final _map = SplayTreeMap<String, int>();
 
@@ -69,9 +71,12 @@ class _MessageCounts {
 /// message type.
 class NmeaParser {
   static final _log = Logger('NmeaParser');
-  final _ignoredCounts = _MessageCounts();
-  final _unsupportedCounts = _MessageCounts();
-  final _successCounts = _MessageCounts();
+  @visibleForTesting
+  final ignoredCounts = MessageCounts();
+  @visibleForTesting
+  final unsupportedCounts = MessageCounts();
+  @visibleForTesting
+  final successCounts = MessageCounts();
   final bool _requireChecksum;
   DateTime _lastLog;
 
@@ -91,22 +96,22 @@ class NmeaParser {
   /// Logs the current message counts then resets them.
   void logAndClearCounts() {
     final lastLogString = DateFormat('Hms').format(_lastLog);
-    if (_successCounts.isEmpty) {
+    if (successCounts.isEmpty) {
       _log.info('No messages received since $lastLogString');
     } else {
       _log.info(
-          'Parsed ${_successCounts.total} messages: ${_successCounts.summary}');
-      _successCounts.clear();
+          'Parsed ${successCounts.total} messages: ${successCounts.summary}');
+      successCounts.clear();
     }
-    if (!_unsupportedCounts.isEmpty) {
+    if (!unsupportedCounts.isEmpty) {
       _log.info(
-          'Received ${_unsupportedCounts.total} unsupported messages: ${_unsupportedCounts.summary}');
-      _unsupportedCounts.clear();
+          'Received ${unsupportedCounts.total} unsupported messages: ${unsupportedCounts.summary}');
+      unsupportedCounts.clear();
     }
-    if (!_ignoredCounts.isEmpty) {
+    if (!ignoredCounts.isEmpty) {
       _log.info(
-          'Received ${_ignoredCounts.total} ignored messages: ${_ignoredCounts.summary}');
-      _ignoredCounts.clear();
+          'Received ${ignoredCounts.total} ignored messages: ${ignoredCounts.summary}');
+      ignoredCounts.clear();
     }
   }
 
@@ -146,20 +151,20 @@ class NmeaParser {
 
     // Skip ignored messages, pass everything else to the helper.
     if (_ignoredMessages.contains(type)) {
-      _unsupportedCounts.increment(type);
+      ignoredCounts.increment(type);
       return [];
     }
 
     final values = _createNmeaValues(type, fields);
     if (values == null) {
-      final count = _unsupportedCounts.increment(type);
+      final count = unsupportedCounts.increment(type);
       // Only cause logging of unsupported types a few times each.
       if (count <= _logUnsupportedCount) {
         throw const FormatException('Unsupported message type');
       }
       return [];
     }
-    _successCounts.increment(type);
+    successCounts.increment(type);
     return values;
   }
 }
