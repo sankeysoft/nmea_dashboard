@@ -22,8 +22,12 @@ RANDOM_EVENT_RANGE = 25
 def send_file(args, open_file):
     """Sends all the lines in the supplied file, corrupting them if
     requested in the args."""
+    exclude = set(args.exclude.split(',')) if args.exclude else set()
     carry = ''
     for line in open_file.readlines():
+        if len(line) > 6 and line[3:6] in exclude:
+            print(f'not sending {line}', end='')
+            continue
         line = carry + line
         carry = ''
         if args.corrupt and randrange(RANDOM_EVENT_RANGE) == 0:
@@ -87,7 +91,7 @@ def create_parser():
         return arg
 
     parser = argparse.ArgumentParser(
-        description='Script to simulate a YDWG-02 NEMA bridge by broadcasting '
+        description='Script to simulate a YDWG-02 NMEA bridge by broadcasting '
                     'data from a file as UDP packets to localhost on the '
                     'supplied port.',
         epilog='Copyright Jody Sankey 2022')
@@ -98,6 +102,9 @@ def create_parser():
                         help='Broadcast port.')
     parser.add_argument('-c', '--corrupt', action='store_true',
                         help='Introduce some message corruption.')
+
+    parser.add_argument('-x', '--exclude', action='store',
+                        help='Comma separated list of message types to exclude.')
     return parser
 
 
