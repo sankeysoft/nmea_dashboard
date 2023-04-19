@@ -47,8 +47,7 @@ class ValueListMatches extends Matcher {
           return false;
         }
       } else {
-        // TODO: Add support for more value types
-        return false;
+        throw UnimplementedError('No matcher for value type: $e');
       }
     }
     return true;
@@ -99,6 +98,26 @@ void main() {
     parser.logAndClearCounts();
     expect(parser.ignoredCounts.total, 0);
     expect(parser.successCounts.total, 0);
+  });
+
+  test('should parse BWR', () {
+    expect(
+        NmeaParser(true).parseString(
+            r'$YDBWR,203514.60,3740.2436,N,12222.6994,W,148.0,T,134.9,M,0.11,N,0,A*4C'),
+        ValueListMatches([
+          SingleValue<double>(
+              203.71993, Source.network, Property.waypointRange),
+          SingleValue<double>(148, Source.network, Property.waypointBearing),
+        ]));
+  });
+
+  test('should support DBT', () {
+    expect(
+        NmeaParser(true).parseString(r'$SDDBT,58.10,f,17.71,M,,F*24'),
+        ValueListMatches([
+          SingleValue<double>(17.71, Source.network, Property.depthUncalibrated,
+              tier: 2),
+        ]));
   });
 
   test('should parse DPT', () {
@@ -172,11 +191,37 @@ void main() {
         ]));
   });
 
-  test('should parse ROT', () {
+  test('should parse RMB', () {
     expect(
-        NmeaParser(true).parseString(r'$YDROT,-15.1,A*23'),
+        NmeaParser(true).parseString(
+            r'$YDRMB,A,0.100,L,0,0,3740.2436,N,12222.6994,W,0.11,148.0,0.0,V,A*4F'),
         ValueListMatches([
-          SingleValue<double>(-0.25167, Source.network, Property.rateOfTurn),
+          SingleValue<double>(203.71993, Source.network, Property.waypointRange,
+              tier: 2),
+          SingleValue<double>(148, Source.network, Property.waypointBearing,
+              tier: 2),
+          SingleValue<double>(
+              -185.1999, Source.network, Property.crossTrackError,
+              tier: 2),
+        ]));
+  });
+
+  test('should parse RMC', () {
+    expect(
+        NmeaParser(true).parseString(
+            r'$GPRMC,230830,A,1755.039,N,06443.653,W,5.50,357.0,250803,3.0,W*4B'),
+        ValueListMatches([
+          DoubleValue<double>(
+              17.917317, -64.72755, Source.network, Property.gpsPosition,
+              tier: 3),
+          SingleValue<DateTime>(DateTime.utc(2003, 08, 25, 23, 08, 30),
+              Source.network, Property.utcTime,
+              tier: 2),
+          SingleValue<double>(2.82945, Source.network, Property.speedOverGround,
+              tier: 2),
+          SingleValue<double>(357.0, Source.network, Property.courseOverGround,
+              tier: 2),
+          SingleValue<double>(3.0, Source.network, Property.variation, tier: 2),
         ]));
   });
 
@@ -233,6 +278,15 @@ void main() {
         ValueListMatches([
           SingleValue<double>(1.0, Source.network, Property.pitch),
           SingleValue<double>(0.25, Source.network, Property.roll),
+        ]));
+  });
+
+  test('should parse XTE', () {
+    expect(
+        NmeaParser(true).parseString(r'$YDXTE,A,A,1.000,R,N,A*26'),
+        ValueListMatches([
+          SingleValue<double>(
+              1851.9993, Source.network, Property.crossTrackError),
         ]));
   });
 

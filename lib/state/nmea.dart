@@ -12,16 +12,15 @@ import 'common.dart';
 
 /// The list of message types that are silently ignored.
 const _ignoredMessages = {
-  // Ignore everything waypoint related
-  'AAM', 'BOD', 'BWC', 'BRW', 'BWW', 'R00', 'RTE',
-  'WCV', 'WNC', 'WPL', 'XTE', 'XTR', 'WDC', 'WDR',
-  'WFM', 'WNR',
-  // Ignore everything autopilot related.
+  // Ignore most things related to waypoints and routes except active waypoint.
+  'AAM', 'BOD', 'BWC', 'BRW', 'BWW', 'R00', 'RTE', 'WCV', 'WNC',
+  'WPL', 'XTR', 'WDC', 'WDR', 'WFM', 'WNR',
+  // Ignore autopilot control messages.
   'APA', 'APB',
   // Ignore detailed satellite information and GPS datum.
-  'GSV', 'DTM', 'GRS',
-  // Ignore obsolete messages where data is received in other forms.
-  'MDA', 'DBK', 'DBS', 'DBT', 'HDM', 'HDT', 'VWT', 'VWR',
+  'GSA', 'GSV', 'DTM', 'GRS',
+  // Ignore obsolete messages that haven't been explicitly requested.
+  'MDA', 'DBK', 'DBS', 'HDT', 'MWD', 'VWT', 'VWR',
 };
 
 /// The number of times to throw an exception containing the input for each new
@@ -185,8 +184,26 @@ void _validateChecksum(payload, checksumString) {
 /// Attempts to create zero or more value containing NMEA0183 message contents
 /// from the supplied type string and field list, throwing a FormatException
 /// if unsuccessful or null if the type is not recognized.
-List<Value>? _createNmeaValues(type, fields) {
+List<Value>? _createNmeaValues(String type, List<String> fields) {
   switch (type) {
+    case 'BWR':
+      _validateMinFieldCount(fields, 12);
+      _validateFieldValue(fields, index: 6, expected: 'T');
+      _validateFieldValue(fields, index: 10, expected: 'N');
+      final bearing = double.parse(fields[5]);
+      final range = double.parse(fields[9]) / metersToNauticalMiles;
+      return [
+        SingleValue(range, Source.network, Property.waypointRange),
+        SingleValue(bearing, Source.network, Property.waypointBearing),
+      ];
+    case 'DBT':
+      _validateFieldCount(fields, 6);
+      _validateFieldValue(fields, index: 3, expected: 'M');
+      return [
+        SingleValue(
+            double.parse(fields[2]), Source.network, Property.depthUncalibrated,
+            tier: 2),
+      ];
     case 'DPT':
       _validateMinFieldCount(fields, 2);
       final depth = double.parse(fields[0]);
@@ -197,15 +214,20 @@ List<Value>? _createNmeaValues(type, fields) {
       ];
     case 'HDG':
       _validateFieldCount(fields, 5);
-      // Only accept heading messages with deviation and store in true until
-      // we support user supplied deviation, then we'll need a different
-      // solution.
       final magHdg = double.parse(fields[0]);
       final variation = _parseVariation(fields[3], fields[4]);
       final trueHdg = (magHdg - variation) % 360.0;
       return [
         SingleValue(variation, Source.network, Property.variation),
         SingleValue(trueHdg, Source.network, Property.heading),
+      ];
+    case 'HDM':
+      _validateFieldCount(fields, 2);
+      _validateFieldValue(fields, index: 1, expected: 'M');
+      return [
+        SingleValue(
+            double.parse(fields[0]), Source.network, Property.headingMag,
+            tier: 2),
       ];
     case 'GGA':
       _validateFieldCount(fields, 14);
@@ -214,7 +236,7 @@ List<Value>? _createNmeaValues(type, fields) {
       var ret = <Value>[
         DoubleValue(lat, long, Source.network, Property.gpsPosition)
       ];
-      if (!fields[7].isEmpty) {
+      if (fields[7].isNotEmpty) {
         ret.add(SingleValue(
             double.parse(fields[7]), Source.network, Property.gpsHdop));
       }
@@ -254,6 +276,55 @@ List<Value>? _createNmeaValues(type, fields) {
         SingleValue(
             double.parse(fields[0]) / 60, Source.network, Property.rateOfTurn)
       ];
+    case 'RMB':
+      _validateMinFieldCount(fields, 13);
+      _validateValidityIndicator(fields, index: 0);
+      final range = double.parse(fields[9]) / metersToNauticalMiles;
+      final bearing = double.parse(fields[10]);
+      final xte = _parseCrossTrackError(fields[1], fields[2]);
+      return [
+        SingleValue(range, Source.network, Property.waypointRange, tier: 2),
+        SingleValue(bearing, Source.network, Property.waypointBearing, tier: 2),
+        SingleValue(xte, Source.network, Property.crossTrackError, tier: 2),
+      ];
+    case 'RMC':
+      _validateMinFieldCount(fields, 11);
+      _validateValidityIndicator(fields, index: 1);
+      final lat = _parseLatitude(fields[2], fields[3]);
+      final long = _parseLongitude(fields[4], fields[5]);
+      if (fields[0].length < 6) {
+        throw FormatException('Time field too short: ${fields[0]}');
+      }
+      final hour = int.parse(fields[0].substring(0, 2));
+      final minute = int.parse(fields[0].substring(2, 4));
+      final second = int.parse(fields[0].substring(4, 6));
+      if (fields[8].length != 6) {
+        throw FormatException('Date field not 6 characters: ${fields[0]}');
+      }
+      final day = int.parse(fields[8].substring(0, 2));
+      final month = int.parse(fields[8].substring(2, 4));
+      final year = 2000 + int.parse(fields[8].substring(4, 6));
+      final dt = DateTime.utc(year, month, day, hour, minute, second);
+      var ret = <Value>[
+        DoubleValue(lat, long, Source.network, Property.gpsPosition, tier: 3),
+        SingleValue(dt, Source.network, Property.utcTime, tier: 2),
+      ];
+      if (fields[6].isNotEmpty) {
+        final sog = double.parse(fields[6]) / metersPerSecondToKnots;
+        ret.add(SingleValue(sog, Source.network, Property.speedOverGround,
+            tier: 2));
+      }
+      if (fields[7].isNotEmpty) {
+        final cog = double.parse(fields[7]);
+        ret.add(SingleValue(cog, Source.network, Property.courseOverGround,
+            tier: 2));
+      }
+      if (fields[9].isNotEmpty) {
+        final variation = _parseVariation(fields[9], fields[10]);
+        ret.add(SingleValue(variation, Source.network, Property.variation,
+            tier: 2));
+      }
+      return ret;
     case 'RSA':
       _validateFieldCount(fields, 4);
       _validateValidityIndicator(fields, index: 1);
@@ -307,6 +378,15 @@ List<Value>? _createNmeaValues(type, fields) {
             'No recognised measurements found in XDR message');
       }
       return values;
+    case 'XTE':
+      _validateMinFieldCount(fields, 5);
+      _validateValidityIndicator(fields, index: 0);
+      _validateValidityIndicator(fields, index: 1);
+      _validateFieldValue(fields, index: 4, expected: 'N');
+      final xte = _parseCrossTrackError(fields[2], fields[3]);
+      return [
+        SingleValue(xte, Source.network, Property.crossTrackError),
+      ];
     case 'ZDA':
       _validateFieldCount(fields, 6);
       if (fields[0].length < 6) {
@@ -386,6 +466,19 @@ double _parseLongitude(valueString, direction) {
       return -value;
     default:
       throw FormatException('Invalid longitude direction $direction');
+  }
+}
+
+/// Parses a decimal encoded latitude and direction indicator.
+double _parseCrossTrackError(valueString, direction) {
+  final meters = double.parse(valueString) / metersToNauticalMiles;
+  switch (direction) {
+    case 'L':
+      return -meters;
+    case 'R':
+      return meters;
+    default:
+      throw FormatException('Invalid XTE direction $direction');
   }
 }
 

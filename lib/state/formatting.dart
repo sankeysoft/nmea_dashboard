@@ -120,6 +120,15 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
       return _bearingString((value.bearing + value.variation) % 360.0, 'M');
     }),
   },
+  Dimension.crossTrackError: {
+    'meters':
+        CustomFormatter<SingleValue<double>>('meters', null, '---', (value) {
+      return _xteString(value.value, 1.0, 'm');
+    }),
+    'feet': CustomFormatter<SingleValue<double>>('feet', null, '---', (value) {
+      return _xteString(value.value, metersToFeet, 'ft');
+    }),
+  },
   Dimension.distance: {
     'km': SimpleFormatter('km', 'km', '---.--', metersToKilometers, 2),
     'nm': SimpleFormatter('nm', 'nm', '---.--', metersToNauticalMiles, 2),
@@ -158,7 +167,8 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
     // with a heightFraction heuristic although some wide fonts or unusual
     // screen sizes may still run into issues.
     'hms': CustomFormatter<SingleValue<DateTime>>('H:M:S', null, '--:--:--',
-        (data) => DateFormat('Hms').format(data.value), heightFraction: 0.7),
+        (data) => DateFormat('Hms').format(data.value),
+        heightFraction: 0.7),
     'ymdhms': CustomFormatter<SingleValue<DateTime>>(
         'Y-M-D H:M:S',
         'Y-M-D',
@@ -167,7 +177,17 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
   },
 };
 
-String _bearingString(number, suffix) {
+String _bearingString(double number, String suffix) {
   int rounded = number.round() % 360;
   return rounded.toString().padLeft(3, '0') + suffix;
+}
+
+String _xteString(double value, double conversion, String units) {
+  // Treat +/- 1 meter as good enough.
+  if (value >= -1 && value <= 1) {
+    return 'On Track';
+  }
+  final converted = (value * conversion).round();
+  final guidance = (value < 0) ? 'Steer Left' : 'Steer Right';
+  return '$converted $units\n$guidance';
 }

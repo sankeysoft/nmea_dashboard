@@ -152,7 +152,12 @@ class DataSet with ChangeNotifier {
       // The presence of periodic null values lets us cancel this subscription
       // but we can ignore them during the processing.
       if (value != null) {
-        final element = networkElements[value.property.name];
+        // Special case sending magnetic heading values to the true heading
+        // data element.
+        final targetProperty = (value.property == Property.headingMag)
+            ? Property.heading
+            : value.property;
+        final element = networkElements[targetProperty.name];
         if (element == null) {
           _log.warning('Got unrecognized network value: ${value.property}');
         } else {

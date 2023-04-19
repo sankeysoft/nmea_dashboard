@@ -738,7 +738,10 @@ const String _defaultPageSpecs = '''
 		{"source": "network", "element": "waterTemperature", "format": "farenheit"},
 		{"source": "network", "element": "roll", "format": "degrees"},
 		{"source": "network", "element": "pitch", "format": "degrees"},
-		{"source": "network", "element": "rudderAngle", "format": "degrees"}
+		{"source": "network", "element": "rudderAngle", "format": "degrees"},
+		{"source": "network", "element": "waypointRange", "format": "nm"},
+		{"source": "network", "element": "waypointBearing", "format": "true"},
+		{"source": "network", "element": "crossTrackError", "format": "feet"}
   ]
 }, {
   "name": "Medium",

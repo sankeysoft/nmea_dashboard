@@ -38,6 +38,10 @@ enum Property {
   gpsPosition('GPS position', 'GPS', Dimension.position),
   gpsHdop('GPS HDOP', 'HDOP', Dimension.depth),
   heading('Heading', 'Heading', Dimension.bearing),
+  // Sometimes a network message can only generate headings in magnetic so use
+  // this property. All data elements work with a true heading internally hence
+  // no sources provide this mag heading property.
+  headingMag('Mag Heading', 'Mag Hdg', Dimension.bearing, sources: {}),
   pitch('Pitch angle', 'Pitch', Dimension.angle),
   pressure('Air pressure', 'Pressure', Dimension.pressure),
   rateOfTurn('Rate of turn', 'ROT', Dimension.angularRate),
@@ -51,7 +55,10 @@ enum Property {
       sources: {Source.local, Source.network}),
   localTime('Local datetime', 'Local', Dimension.time, sources: {Source.local}),
   variation('Magnetic variation', 'MagVar', Dimension.angle),
-  waterTemperature('Water temperature', 'Water', Dimension.temperature);
+  waterTemperature('Water temperature', 'Water', Dimension.temperature),
+  waypointBearing('Bearing to waypoint', 'Wpt Brg', Dimension.bearing),
+  waypointRange('Range to waypoint', 'Wpt Rng', Dimension.distance),
+  crossTrackError('Cross track error', 'XTE', Dimension.crossTrackError);
 
   /// A long name suitable for use during selection, e.g. "Speed over ground".
   final String longName;
@@ -98,6 +105,7 @@ enum Dimension {
       derivationFriendly: true),
   angularRate(type: SingleValue<double>, nativeUnits: 'degrees/sec'),
   bearing(type: SingleValue<double>, nativeUnits: 'degrees true'),
+  crossTrackError(type: SingleValue<double>, nativeUnits: 'meters'),
   distance(
       type: SingleValue<double>,
       nativeUnits: 'meters',

@@ -18,9 +18,10 @@ class Staleness {
   Staleness(this.duration);
 }
 
-/// A single element of marine data based on a history of some data. The value may change
-/// over time based on supplied inputs and may at times be invalid. In the asbstract case
-/// the type of input data (U) may not match the type of stored data (V).
+/// A single element of marine data based on a history of some data. The value
+/// may change over time based on supplied inputs and may at times be invalid.
+/// In the asbstract case the type of input data (U) may not match the type of
+/// stored data (V).
 abstract class DataElement<V extends Value, U extends Value>
     with ChangeNotifier {
   /// This class's logger.
@@ -34,7 +35,7 @@ abstract class DataElement<V extends Value, U extends Value>
   final Type storedType = V;
 
   /// The type of the values we accept as input. Note this might be different
-  /// than the types of values we store (i.e. U)
+  /// than the types of values we store (i.e. V)
   final Type inputType = U;
 
   /// The time from last update before the data is considered invalid.
@@ -149,9 +150,38 @@ class ConsistentDataElement<V extends Value> extends DataElement<V, V> {
 /// A special case element for displaying bearings using a reference variation
 class BearingDataElement
     extends DataElement<AugmentedBearing, SingleValue<double>> {
+  // Only output a log warning for discarding mag heading due to missing
+  // variation once each time the condition occurs.
+  static bool loggedMissingVariation = false;
+
   final ConsistentDataElement<SingleValue<double>> variation;
 
   BearingDataElement(this.variation, super.property, super.staleness);
+
+  @override
+  void updateValue(final SingleValue<double> newValue) {
+    /// Handle the special case of the element storing heading, which can
+    /// accept either true headings or magnetic headings that it converts.
+    if (newValue.property == Property.headingMag &&
+        property == Property.heading) {
+      final variationValue = variation.value;
+      if (variationValue == null) {
+        if (!loggedMissingVariation) {
+          DataElement._log
+              .warning('Cannot use mag heading while variation is unknown');
+          loggedMissingVariation = true;
+        }
+        return;
+      }
+      final trueHeading = (newValue.value - variationValue.value) % 360.0;
+      super.updateValue(SingleValue<double>(
+          trueHeading, newValue.source, Property.heading,
+          tier: newValue.tier));
+      loggedMissingVariation = false;
+    } else {
+      super.updateValue(newValue);
+    }
+  }
 
   @override
   AugmentedBearing convertValue(SingleValue<double> newValue) {
