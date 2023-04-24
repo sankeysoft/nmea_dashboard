@@ -31,7 +31,8 @@ class _NetworkSettingsForm extends StatefulWidget {
   State<_NetworkSettingsForm> createState() => _NetworkSettingsFormState();
 }
 
-class _NetworkSettingsFormState extends StatefulFormState<_NetworkSettingsForm> {
+class _NetworkSettingsFormState
+    extends StatefulFormState<_NetworkSettingsForm> {
   late int _portNum;
   late InternetAddress _ipAddress;
   late NetworkMode _mode;
@@ -78,7 +79,8 @@ class _NetworkSettingsFormState extends StatefulFormState<_NetworkSettingsForm> 
   }
 
   Widget _buildModeField() {
-    buildItem(NetworkMode mode) => DropdownEntry(value:mode, text:mode.description);
+    buildItem(NetworkMode mode) =>
+        DropdownEntry(value: mode, text: mode.description);
     return buildDropdownBox(
       label: 'Mode',
       items: [
@@ -103,7 +105,7 @@ class _NetworkSettingsFormState extends StatefulFormState<_NetworkSettingsForm> 
     return buildTextField(
         label: 'IP address',
         initialValue: _ipAddress.address,
-        keyboardType: TextInputType.number,
+        keyboardType: TextInputType.text,
         enabled: enabled,
         maxLength: 15,
         validator: (value) {

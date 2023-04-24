@@ -228,7 +228,7 @@ class _EditDerivedDataFormState
   Widget _buildOperandField() {
     return buildTextField(
         initialValue: _operand.toString(),
-        keyboardType: TextInputType.number,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
         maxLength: 8,
         validator: (value) {
           return (double.tryParse(value ?? '') == null)
