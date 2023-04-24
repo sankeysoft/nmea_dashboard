@@ -22,8 +22,6 @@ abstract class Formatter<V> {
 
 /// Returns a map of allowable formatters for the supplied dimension.
 Map<String, Formatter> formattersFor(Dimension? dimension) {
-  // TODO: Add a test that verifies the dimension map is complete and
-  //       therefore its safe to do this exclamation mark.
   return (dimension == null) ? {} : _formatters[dimension]!;
 }
 
@@ -59,7 +57,7 @@ class IntegerFormatter extends Formatter<SingleValue<int>> {
 
   @override
   String format(SingleValue input) {
-    return input.value.asString();
+    return input.value.toString();
   }
 }
 
@@ -187,7 +185,7 @@ String _xteString(double value, double conversion, String units) {
   if (value >= -1 && value <= 1) {
     return 'On Track';
   }
-  final converted = (value * conversion).round();
+  final converted = (value * conversion).round().abs();
   final guidance = (value < 0) ? 'Steer Left' : 'Steer Right';
   return '$converted $units\n$guidance';
 }
