@@ -130,12 +130,29 @@ void main() {
         ]));
   });
 
-  test('should parse HDG', () {
+  test('should parse HDG with variation', () {
     expect(
         NmeaParser(true).parseString(r'$YDHDG,7.3,,,13.1,E*08'),
         ValueListMatches([
           SingleValue<double>(-13.1, Source.network, Property.variation),
           SingleValue<double>(20.4, Source.network, Property.heading),
+        ]));
+  });
+
+  test('should parse HDG without variation', () {
+    expect(
+        NmeaParser(true).parseString(r'$YDHDG,173.8,,,,*59'),
+        ValueListMatches([
+          SingleValue<double>(173.8, Source.network, Property.headingMag),
+        ]));
+  });
+
+  test('should parse HDM', () {
+    expect(
+        NmeaParser(true).parseString(r'$IIHDM,143.3,M*27'),
+        ValueListMatches([
+          SingleValue<double>(143.3, Source.network, Property.headingMag,
+              tier: 2),
         ]));
   });
 

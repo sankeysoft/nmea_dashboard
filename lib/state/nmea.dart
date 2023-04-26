@@ -18,7 +18,7 @@ const _ignoredMessages = {
   // Ignore autopilot control messages.
   'APA', 'APB',
   // Ignore detailed satellite information and GPS datum.
-  'GSA', 'GSV', 'DTM', 'GRS',
+  'ALM', 'GBS', 'GSA', 'GSV', 'DTM', 'GRS',
   // Ignore obsolete messages that haven't been explicitly requested.
   'MDA', 'DBK', 'DBS', 'HDT', 'MWD', 'VWT', 'VWR',
 };
@@ -215,6 +215,10 @@ List<Value>? _createNmeaValues(String type, List<String> fields) {
     case 'HDG':
       _validateFieldCount(fields, 5);
       final magHdg = double.parse(fields[0]);
+      if (fields[3].isEmpty) {
+        // Support equipment which does not know variation.
+        return [SingleValue(magHdg, Source.network, Property.headingMag)];
+      }
       final variation = _parseVariation(fields[3], fields[4]);
       final trueHdg = (magHdg - variation) % 360.0;
       return [
@@ -406,7 +410,7 @@ List<Value>? _createNmeaValues(String type, List<String> fields) {
 }
 
 /// Validates fields contains the expected number of entries.
-void _validateFieldCount(fields, expectedCount) {
+void _validateFieldCount(List<String> fields, int expectedCount) {
   if (fields.length != expectedCount) {
     throw FormatException(
         'Expected $expectedCount fields, found ${fields.length}');
@@ -414,7 +418,7 @@ void _validateFieldCount(fields, expectedCount) {
 }
 
 /// Validates fields contains at least the expected number of entries.
-void _validateMinFieldCount(fields, minimumCount) {
+void _validateMinFieldCount(List<String> fields, int minimumCount) {
   if (fields.length < minimumCount) {
     throw FormatException(
         'Expected at least $minimumCount fields, found ${fields.length}');
@@ -422,7 +426,8 @@ void _validateMinFieldCount(fields, minimumCount) {
 }
 
 /// Validates a field contains the supplied value.
-void _validateFieldValue(fields, {required index, required expected, message}) {
+void _validateFieldValue(List<String> fields,
+    {required int index, required String expected, String? message}) {
   if (fields[index] != expected) {
     throw FormatException(
         message ?? 'Expected $expected in field $index, got ${fields[index]}');
@@ -436,7 +441,7 @@ void _validateValidityIndicator(fields, {required index}) {
 }
 
 /// Parses a decimal encoded latitude and direction indicator.
-double _parseLatitude(valueString, direction) {
+double _parseLatitude(String valueString, String direction) {
   if (valueString.length < 7) {
     throw const FormatException('Latitude value wrong length');
   }
@@ -453,7 +458,7 @@ double _parseLatitude(valueString, direction) {
 }
 
 /// Parses a decimal encoded latitude and direction indicator.
-double _parseLongitude(valueString, direction) {
+double _parseLongitude(String valueString, String direction) {
   if (valueString.length < 8) {
     throw const FormatException('Longitude value wrong length');
   }
@@ -470,7 +475,10 @@ double _parseLongitude(valueString, direction) {
 }
 
 /// Parses a decimal encoded latitude and direction indicator.
-double _parseCrossTrackError(valueString, direction) {
+double _parseCrossTrackError(String valueString, String direction) {
+  if (valueString.isEmpty) {
+    throw const FormatException('Offset not populated');
+  }
   final meters = double.parse(valueString) / metersToNauticalMiles;
   switch (direction) {
     case 'L':
@@ -483,7 +491,10 @@ double _parseCrossTrackError(valueString, direction) {
 }
 
 /// Parses a variation magniture and sign, returning a positive value for West.
-double _parseVariation(valueString, direction) {
+double _parseVariation(String valueString, String direction) {
+  if (valueString.isEmpty) {
+    throw const FormatException('Varation not populated');
+  }
   final value = double.parse(valueString);
   switch (direction) {
     case 'E':
