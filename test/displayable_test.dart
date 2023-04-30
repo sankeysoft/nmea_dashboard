@@ -14,7 +14,7 @@ KeyedDataCellSpec _makeSpec(String element, String format) {
       DataCellSpec('network', element, format));
 }
 
-DataElement _makeDate(Property property) {
+DataElement _makeData(Property property) {
   return ConsistentDataElement.newForProperty(
       property, Staleness(const Duration(seconds: 1)));
 }
@@ -23,14 +23,14 @@ void main() {
   test('should not accept mismatched type', () {
     expect(
         () => DataElementDisplay(
-            _makeDate(Property.gpsPosition),
+            _makeData(Property.gpsPosition),
             formattersFor(Dimension.depth)['feet']!,
             _makeSpec('gpsPosition', 'degMin')),
         throwsException);
   });
 
   test('should handle missing data', () {
-    final data = _makeDate(Property.speedOverGround);
+    final data = _makeData(Property.speedOverGround);
     final displayable = DataElementDisplay(
         data,
         formattersFor(Dimension.speed)['metersPerSec']!,
@@ -41,7 +41,7 @@ void main() {
   });
 
   test('should handle present data', () {
-    final data = _makeDate(Property.speedOverGround);
+    final data = _makeData(Property.speedOverGround);
     final displayable = DataElementDisplay(
         data,
         formattersFor(Dimension.speed)['metersPerSec']!,
@@ -54,7 +54,7 @@ void main() {
   });
 
   test('should pass through change events', () {
-    final data = _makeDate(Property.speedOverGround);
+    final data = _makeData(Property.speedOverGround);
     final displayable = DataElementDisplay(
         data,
         formattersFor(Dimension.speed)['metersPerSec']!,
