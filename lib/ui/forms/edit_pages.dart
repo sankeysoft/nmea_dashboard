@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../state/settings.dart';
+import '../../state/specs.dart';
 import 'abstract.dart';
 import 'edit_page.dart';
 

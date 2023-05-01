@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 
 import '../../state/data_set.dart';
 import '../../state/displayable.dart';
+import '../../state/specs.dart';
 import '../forms/edit_cell.dart';
 import '../forms/edit_page.dart';
 import '../forms/edit_pages.dart';
@@ -178,7 +179,8 @@ class _DrawerContent extends StatelessWidget {
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) => ViewHelpPage(
-                    title: 'Help Overview & License', filename: 'help_overview.md'),
+                    title: 'Help Overview & License',
+                    filename: 'help_overview.md'),
               ),
             );
           },

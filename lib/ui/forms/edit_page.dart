@@ -5,27 +5,28 @@
 import 'package:flutter/material.dart';
 
 import '../../state/common.dart';
-import '../../state/settings.dart';
+import '../../state/specs.dart';
 import 'abstract.dart';
 
 /// The initial spec for freshly created cells.
 final _defaultCellSpec = DataCellSpec(Source.unset.name, "", "");
 
 /// The initial spec for a freshly created page.
-final _defaultPageSpec =
-    DataPageSpec('', List.filled(8, _defaultCellSpec));
+final _defaultPageSpec = DataPageSpec('', List.filled(8, _defaultCellSpec));
 
 /// A function called on successful creation of a DataPageSpec.
 typedef CreatePageSpecFunction = void Function(DataPageSpec spec);
 
 /// A form that lets the user edit a single page.
 class EditPagePage extends StatefulFormPage {
-
-  EditPagePage({DataPageSpec? pageSpec, required CreatePageSpecFunction onCreate, super.key})
+  EditPagePage(
+      {DataPageSpec? pageSpec,
+      required CreatePageSpecFunction onCreate,
+      super.key})
       : super(
-        title: 'Edit page',
-        actions: [const HelpButton('help_edit_page.md')],
-        child: _EditPageForm(pageSpec, onCreate));
+            title: 'Edit page',
+            actions: [const HelpButton('help_edit_page.md')],
+            child: _EditPageForm(pageSpec, onCreate));
 }
 
 class _EditPageForm extends StatefulWidget {
@@ -64,23 +65,21 @@ class _EditPageFormState extends StatefulFormState<_EditPageForm> {
             const Expanded(
               child: SizedBox(height: 100),
             ),
-            buildSaveButton(
-                postSaver: () {
-                  final originalCells = widget._pageSpec.cells;
-                  List<DataCellSpec> cells;
-                  if (_size < originalCells.length) {
-                    // Truncate the existing list.
-                    cells = originalCells.sublist(0, _size);
-                  } else {
-                    // Grow the existing list with empty cells.
-                    cells = originalCells +
-                        List.filled(
-                            _size - originalCells.length, _defaultCellSpec);
-                  }
-                  // Call the function we were told to call.
-                  widget._onCreate(DataPageSpec(_name, cells));
-                  Navigator.pop(context);
-                })
+            buildSaveButton(postSaver: () {
+              final originalCells = widget._pageSpec.cells;
+              List<DataCellSpec> cells;
+              if (_size < originalCells.length) {
+                // Truncate the existing list.
+                cells = originalCells.sublist(0, _size);
+              } else {
+                // Grow the existing list with empty cells.
+                cells = originalCells +
+                    List.filled(_size - originalCells.length, _defaultCellSpec);
+              }
+              // Call the function we were told to call.
+              widget._onCreate(DataPageSpec(_name, cells));
+              Navigator.pop(context);
+            })
           ]),
     );
   }

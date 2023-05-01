@@ -8,6 +8,7 @@ import 'package:flutter/widgets.dart';
 import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:nmea_dashboard/state/local.dart';
+import 'package:nmea_dashboard/state/specs.dart';
 
 import 'data_element.dart';
 import 'displayable.dart';

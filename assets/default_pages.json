@@ -1,0 +1,62 @@
+[{
+	"name": "Standard",
+	"cells": [
+    {"source": "local", "element": "localTime", "format": "hms"},
+    {"source": "network", "element": "heading", "format": "mag"},
+		{"source": "network", "element": "distanceTrip", "format": "nm"},
+		{"source": "network", "element": "depthWithOffset", "format": "feet"},
+		{"source": "network", "element": "speedThroughWater", "format": "knots"},
+		{"source": "network", "element": "trueWindSpeed", "format": "knots"},
+		{"source": "network", "element": "trueWindDirection", "format": "true"},
+		{"source": "network", "element": "pressure", "format": "millibars"},
+		{"source": "network", "element": "speedOverGround", "format": "knots"},
+	  {"source": "network", "element": "gpsPosition", "format": "degMin"}
+  ]
+}, {
+	"name": "All data",
+	"cells": [
+    {"source": "local", "element": "utcTime", "format": "ymdhms"},
+		{"source": "network", "element": "gpsPosition", "format": "degMinSec"},
+		{"source": "network", "element": "gpsHdop", "format": "meters"},
+		{"source": "network", "element": "heading", "format": "mag"},
+		{"source": "network", "element": "courseOverGround", "format": "mag"},
+		{"source": "network", "element": "variation", "format": "degrees"},
+		{"source": "network", "element": "rateOfTurn", "format": "degreesPerSec"},
+		{"source": "network", "element": "distanceTrip", "format": "nm"},
+		{"source": "network", "element": "distanceTotal", "format": "nm"},
+		{"source": "network", "element": "speedOverGround", "format": "knots"},
+		{"source": "network", "element": "speedThroughWater", "format": "knots"},
+		{"source": "network", "element": "currentSet", "format": "true"},
+		{"source": "network", "element": "currentDrift", "format": "knots"},
+		{"source": "network", "element": "depthWithOffset", "format": "feet"},
+		{"source": "network", "element": "depthUncalibrated", "format": "feet"},
+		{"source": "network", "element": "trueWindSpeed", "format": "knots"},
+		{"source": "network", "element": "trueWindDirection", "format": "true"},
+		{"source": "network", "element": "pressure", "format": "millibars"},
+		{"source": "network", "element": "apparentWindSpeed", "format": "knots"},
+		{"source": "network", "element": "apparentWindAngle", "format": "degrees"},
+		{"source": "network", "element": "waterTemperature", "format": "farenheit"},
+		{"source": "network", "element": "roll", "format": "degrees"},
+		{"source": "network", "element": "pitch", "format": "degrees"},
+		{"source": "network", "element": "rudderAngle", "format": "degrees"},
+		{"source": "network", "element": "waypointRange", "format": "nm"},
+		{"source": "network", "element": "waypointBearing", "format": "true"},
+		{"source": "network", "element": "crossTrackError", "format": "feet"}
+  ]
+}, {
+  "name": "Medium",
+  "cells": [
+    {"source": "local", "element": "localTime", "format": "hms"},
+    {"source": "network", "element": "heading", "format": "mag"},
+    {"source": "network", "element": "distanceTrip", "format": "nm"},
+    {"source": "network", "element": "depthWithOffset", "format": "feet"},
+		{"source": "network", "element": "speedThroughWater", "format": "knots2dp"},
+		{"source": "network", "element": "speedOverGround", "format": "knots2dp"},
+		{"source": "network", "element": "trueWindSpeed", "format": "knots"},
+		{"source": "network", "element": "trueWindDirection", "format": "true"},
+		{"source": "network", "element": "gpsPosition", "format": "degMin"},
+		{"source": "network", "element": "pressure", "format": "millibars"},
+		{"source": "network", "element": "waterTemperature", "format": "farenheit"},
+		{"source": "network", "element": "apparentWindSpeed", "format": "knots"}
+  ]
+}]

@@ -8,6 +8,7 @@ import 'package:nmea_dashboard/ui/forms/edit_derived_element.dart';
 import 'package:provider/provider.dart';
 
 import '../../state/settings.dart';
+import '../../state/specs.dart';
 import 'abstract.dart';
 
 /// A form that lets the user edit the list of derived elements.

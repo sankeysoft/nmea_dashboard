@@ -9,7 +9,7 @@ import '../../state/common.dart';
 import '../../state/data_element.dart';
 import '../../state/data_set.dart';
 import '../../state/formatting.dart';
-import '../../state/settings.dart';
+import '../../state/specs.dart';
 import 'abstract.dart';
 
 /// The initial spec for a freshly created page.

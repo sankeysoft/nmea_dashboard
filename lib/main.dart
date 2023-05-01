@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/state/logset.dart';
+import 'package:nmea_dashboard/state/specs.dart';
 import 'package:nmea_dashboard/ui/forms/view_help.dart';
 import 'package:provider/provider.dart';
 import 'state/data_set.dart';

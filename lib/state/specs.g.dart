@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'settings.dart';
+part of 'specs.dart';
 
 // **************************************************************************
 // JsonSerializableGenerator
@@ -10,7 +10,7 @@ DerivedDataSpec _$DerivedDataSpecFromJson(Map<String, dynamic> json) =>
     DerivedDataSpec(
       json['name'] as String,
       json['inputSource'] as String,
-      json['inputName'] as String,
+      json['inputElement'] as String,
       json['inputFormat'] as String,
       json['operation'] as String,
       (json['operand'] as num).toDouble(),
@@ -20,7 +20,7 @@ Map<String, dynamic> _$DerivedDataSpecToJson(DerivedDataSpec instance) =>
     <String, dynamic>{
       'name': instance.name,
       'inputSource': instance.inputSource,
-      'inputName': instance.inputElement,
+      'inputElement': instance.inputElement,
       'inputFormat': instance.inputFormat,
       'operation': instance.operation,
       'operand': instance.operand,

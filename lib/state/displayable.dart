@@ -3,8 +3,8 @@
 // of the MIT license. See the LICENCE.md file for details.
 
 import 'package:flutter/widgets.dart';
-import 'package:nmea_dashboard/state/settings.dart';
 import 'package:nmea_dashboard/state/common.dart';
+import 'package:nmea_dashboard/state/specs.dart';
 
 import 'data_element.dart';
 import 'formatting.dart';
@@ -57,7 +57,8 @@ class DataElementDisplay extends Displayable {
 
   DataElementDisplay(this.data, this.formatter, super.spec) {
     if (data.storedType != formatter.valueType) {
-      throw InvalidTypeException('Cannot create DataElementDisplay, ${formatter.valueType} incompatible with ${data.storedType}');
+      throw InvalidTypeException(
+          'Cannot create DataElementDisplay, ${formatter.valueType} incompatible with ${data.storedType}');
     }
     data.addListener(() {
       notifyListeners();
