@@ -149,18 +149,6 @@ List<T>? _validateJsonList<T>(
   return returnList;
 }
 
-/// A unique identifier for some item read from settings.
-class SettingsKey extends ValueKey<int> {
-  const SettingsKey(super.value);
-
-  static int _nextValue = 1;
-
-  static int allocate() {
-    _nextValue += 1;
-    return _nextValue - 1;
-  }
-}
-
 /// Settings for interaction with the network.
 class NetworkSettings with ChangeNotifier {
   final _PrefMappedValue<int, NetworkMode> _mode;

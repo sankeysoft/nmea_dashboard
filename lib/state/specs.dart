@@ -5,13 +5,24 @@
 import 'package:flutter/material.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:logging/logging.dart';
-import 'package:nmea_dashboard/state/settings.dart';
 
 /// This allows the other class to access private members in
 /// the JsonSerializable generated file.
 part 'specs.g.dart';
 
 final _log = Logger('Specs');
+
+/// A unique identifier for specifications.
+class _SpecKey extends ValueKey<int> {
+  const _SpecKey(super.value);
+
+  static int _nextValue = 1;
+
+  static int allocate() {
+    _nextValue += 1;
+    return _nextValue - 1;
+  }
+}
 
 /// A specification for an element of derived data and a key
 /// to uniquely identify it.
@@ -37,11 +48,11 @@ class KeyedDerivedDataSpec {
 }
 
 /// A unique identifier for each derived data element.
-class DerivedDataKey extends SettingsKey {
+class DerivedDataKey extends _SpecKey {
   const DerivedDataKey(super.value);
 
   static DerivedDataKey make() {
-    return DerivedDataKey(SettingsKey.allocate());
+    return DerivedDataKey(_SpecKey.allocate());
   }
 }
 
@@ -120,11 +131,11 @@ class KeyedDataPageSpec extends ChangeNotifier {
 }
 
 /// A unique identifier for each data page.
-class DataPageKey extends SettingsKey {
+class DataPageKey extends _SpecKey {
   const DataPageKey(super.value);
 
   static DataPageKey make() {
-    return DataPageKey(SettingsKey.allocate());
+    return DataPageKey(_SpecKey.allocate());
   }
 }
 
@@ -161,12 +172,12 @@ class KeyedDataCellSpec {
 }
 
 /// A unique identifier for each data cell.
-class DataCellKey extends SettingsKey {
+class DataCellKey extends _SpecKey {
   final DataPageKey pageKey;
   const DataCellKey(super.value, this.pageKey);
 
   static DataCellKey make(DataPageKey pageKey) {
-    return DataCellKey(SettingsKey.allocate(), pageKey);
+    return DataCellKey(_SpecKey.allocate(), pageKey);
   }
 }
 
