@@ -102,7 +102,7 @@ class _EditDerivedElementsContent extends StatelessWidget {
     return ReorderableListView(
       buildDefaultDragHandles: false,
       onReorder: (oldIndex, newIndex) {
-        List<KeyedDerivedDataSpec> specs = settings.derivedDataSpecs.toList();
+        List<DerivedDataSpec> specs = settings.derivedDataSpecs.toList();
         final moved = specs.removeAt(oldIndex);
         // Correct the newIndex for the deleted item if we're moving down.
         if (newIndex > oldIndex) newIndex -= 1;
@@ -115,7 +115,7 @@ class _EditDerivedElementsContent extends StatelessWidget {
   }
 
   Widget _buildElementTile(BuildContext context, DerivedDataSettings settings,
-      KeyedDerivedDataSpec spec, int index) {
+      DerivedDataSpec spec, int index) {
     return buildMovableDeletableTile(
         key: spec.key,
         index: index,
@@ -125,13 +125,7 @@ class _EditDerivedElementsContent extends StatelessWidget {
         onTap: () => Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) => EditDerivedDataPage(
-                    spec: spec.toBareSpec(),
-                    onCreate: (updatedSpec) {
-                      final keyedSpec = KeyedDerivedDataSpec.fromBareSpec(
-                          updatedSpec,
-                          key: spec.key);
-                      settings.setElement(keyedSpec);
-                    }),
+                    spec: spec, onCreate: (spec) => settings.setElement(spec)),
               ),
             ),
         onDeleteTap: () => showDialog(
@@ -155,8 +149,7 @@ class _EditDerivedElementsContent extends StatelessWidget {
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(
           builder: (context) => EditDerivedDataPage(onCreate: (spec) {
-            final keyedSpec = KeyedDerivedDataSpec.fromBareSpec(spec);
-            settings.setElement(keyedSpec);
+            settings.setElement(spec);
           }),
         ),
       ),

@@ -9,10 +9,14 @@ import '../../state/specs.dart';
 import 'abstract.dart';
 
 /// The initial spec for freshly created cells.
-final _defaultCellSpec = DataCellSpec(Source.unset.name, "", "");
+DataCellSpec _createCellSpec() {
+  return DataCellSpec(Source.unset.name, "", "");
+}
 
 /// The initial spec for a freshly created page.
-final _defaultPageSpec = DataPageSpec('', List.filled(8, _defaultCellSpec));
+DataPageSpec _createPageSpec() {
+  return DataPageSpec('', List.generate(8, (_) => _createCellSpec()));
+}
 
 /// A function called on successful creation of a DataPageSpec.
 typedef CreatePageSpecFunction = void Function(DataPageSpec spec);
@@ -34,7 +38,7 @@ class _EditPageForm extends StatefulWidget {
   final DataPageSpec _pageSpec;
 
   _EditPageForm(DataPageSpec? pageSpec, this._onCreate)
-      : _pageSpec = pageSpec ?? _defaultPageSpec;
+      : _pageSpec = pageSpec ?? _createPageSpec();
 
   @override
   State<_EditPageForm> createState() => _EditPageFormState();
@@ -74,7 +78,8 @@ class _EditPageFormState extends StatefulFormState<_EditPageForm> {
               } else {
                 // Grow the existing list with empty cells.
                 cells = originalCells +
-                    List.filled(_size - originalCells.length, _defaultCellSpec);
+                    List.generate(
+                        _size - originalCells.length, (_) => _createCellSpec());
               }
               // Call the function we were told to call.
               widget._onCreate(DataPageSpec(_name, cells));

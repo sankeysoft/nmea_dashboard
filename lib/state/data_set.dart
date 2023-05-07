@@ -185,7 +185,7 @@ class DataSet with ChangeNotifier {
 
   /// Returns a formatted view on one of the tracked data elements, or a
   /// displayable error if that could not be found.
-  Displayable find(KeyedDataCellSpec spec) {
+  Displayable find(DataCellSpec spec) {
     final source = Source.fromString(spec.source);
     if (source == null) {
       if (spec.source.isNotEmpty) {

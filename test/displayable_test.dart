@@ -9,9 +9,8 @@ import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:nmea_dashboard/state/specs.dart';
 import 'package:test/test.dart';
 
-KeyedDataCellSpec _makeSpec(String element, String format) {
-  return KeyedDataCellSpec(DataCellKey.make(DataPageKey.make()),
-      DataCellSpec('network', element, format));
+DataCellSpec _makeSpec(String element, String format) {
+  return DataCellSpec('network', element, format);
 }
 
 DataElement _makeData(Property property) {

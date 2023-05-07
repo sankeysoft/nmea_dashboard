@@ -26,7 +26,7 @@ class DataTablePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dataSet = Provider.of<DataSet>(context);
-    final pageSpec = Provider.of<KeyedDataPageSpec>(context);
+    final pageSpec = Provider.of<DataPageSpec>(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -52,19 +52,16 @@ class DataTablePage extends StatelessWidget {
 class _EditPageButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final pageSpec = Provider.of<KeyedDataPageSpec>(context);
+    final pageSpec = Provider.of<DataPageSpec>(context);
     final settings = Provider.of<PageSettings>(context);
     return IconButton(
         icon: const Icon(Icons.tune_outlined),
         onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) => EditPagePage(
-                    pageSpec: pageSpec.toBareSpec(),
+                    pageSpec: pageSpec,
                     onCreate: (updatedSpec) {
-                      final keyedSpec = KeyedDataPageSpec.fromBareSpec(
-                          updatedSpec,
-                          key: pageSpec.key);
-                      settings.setPage(keyedSpec);
+                      settings.setPage(updatedSpec);
                     }),
               ),
             ));

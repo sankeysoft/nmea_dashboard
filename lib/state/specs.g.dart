@@ -46,10 +46,19 @@ DataCellSpec _$DataCellSpecFromJson(Map<String, dynamic> json) => DataCellSpec(
       name: json['name'] as String?,
     );
 
-Map<String, dynamic> _$DataCellSpecToJson(DataCellSpec instance) =>
-    <String, dynamic>{
-      'source': instance.source,
-      'element': instance.element,
-      'format': instance.format,
-      'name': instance.name,
-    };
+Map<String, dynamic> _$DataCellSpecToJson(DataCellSpec instance) {
+  final val = <String, dynamic>{
+    'source': instance.source,
+    'element': instance.element,
+    'format': instance.format,
+  };
+
+  void writeNotNull(String key, dynamic value) {
+    if (value != null) {
+      val[key] = value;
+    }
+  }
+
+  writeNotNull('name', instance.name);
+  return val;
+}

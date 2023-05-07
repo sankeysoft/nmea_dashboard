@@ -282,7 +282,7 @@ class UiSettings with ChangeNotifier {
 class DerivedDataSettings with ChangeNotifier {
   static const String _prefKey = 'derived_v1';
   final SharedPreferences _prefs;
-  final Map<DerivedDataKey, KeyedDerivedDataSpec> _derivedDataSpecs = {};
+  final Map<SpecKey, DerivedDataSpec> _derivedDataSpecs = {};
 
   /// Creates settings from the supplied prefs, starting empty if
   /// the shared prefs are missing of invalid.
@@ -293,11 +293,10 @@ class DerivedDataSettings with ChangeNotifier {
   }
 
   /// An interator over the data specs in order.
-  Iterable<KeyedDerivedDataSpec> get derivedDataSpecs =>
-      _derivedDataSpecs.values;
+  Iterable<DerivedDataSpec> get derivedDataSpecs => _derivedDataSpecs.values;
 
   /// Replaces the current set of derived data with the supplied specifications.
-  void replaceElements(Iterable<KeyedDerivedDataSpec> derivedDataSpecs) {
+  void replaceElements(Iterable<DerivedDataSpec> derivedDataSpecs) {
     _derivedDataSpecs.clear();
     for (final derivedDataSpec in derivedDataSpecs) {
       _derivedDataSpecs[derivedDataSpec.key] = derivedDataSpec;
@@ -306,15 +305,16 @@ class DerivedDataSettings with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Adds or replaces the supplied specification in the current set of derived data.
-  void setElement(KeyedDerivedDataSpec spec) {
+  /// Adds or replaces the supplied specification in the current set of derived
+  /// data.
+  void setElement(DerivedDataSpec spec) {
     _derivedDataSpecs[spec.key] = spec;
     _save();
     notifyListeners();
   }
 
   /// Deletes the supplied specification from current set of pages.
-  void removeElement(KeyedDerivedDataSpec spec) {
+  void removeElement(DerivedDataSpec spec) {
     _derivedDataSpecs.remove(spec.key);
     _save();
     notifyListeners();
@@ -332,35 +332,35 @@ class DerivedDataSettings with ChangeNotifier {
     return success;
   }
 
-  /// Returns a json stringSaves the configuration of all data pages into shared prefs.
+  /// Returns a json string containing the configuration of all derived data.
   String toJson() {
-    final jsonIterator =
-        _derivedDataSpecs.values.map((spec) => spec.toBareSpec()).toList();
+    final jsonIterator = _derivedDataSpecs.values.toList();
     return json.encode(jsonIterator);
   }
 
-  /// Overwrites all data with elements from a json encoded string, making no changes if
-  /// the string is not valid or if dryRun is true. Returns true on success.
+  /// Overwrites all data with elements from a json encoded string, making no
+  /// changes if the string is not valid or if dryRun is true. Returns true on
+  /// success.
   bool _fromJson(
       {required String json, required String source, bool dryRun = false}) {
     // Use the helper function to convert to a list of bare specs
-    final bareSpecs = _validateJsonList(
+    final specs = _validateJsonList(
         json, (e) => DerivedDataSpec.fromJson(e), 'derived data settings',
         minimumLength: 0);
-    // Leave with a failure if this didn't work or success we're dry running and it did.
-    if (bareSpecs == null) {
+    // Leave with a failure if this didn't work or success we're dry running and
+    // it did.
+    if (specs == null) {
       return false;
     } else if (dryRun) {
       return true;
     }
 
-    // If we're not dry run and have bare specs use them to create a KeyedSpec in the map.
+    // If we're not dry run use the specs to repopulate the map.
     _derivedDataSpecs.clear();
-    for (final bareSpec in bareSpecs) {
-      final keyedSpec = KeyedDerivedDataSpec.fromBareSpec(bareSpec);
-      _derivedDataSpecs[keyedSpec.key] = keyedSpec;
+    for (final spec in specs) {
+      _derivedDataSpecs[spec.key] = spec;
     }
-    _log.info('Loaded ${bareSpecs.length} derived elements from $source');
+    _log.info('Loaded ${specs.length} derived elements from $source');
     return true;
   }
 
@@ -375,11 +375,11 @@ class DerivedDataSettings with ChangeNotifier {
 class PageSettings with ChangeNotifier {
   static const String _prefKey = 'page_v1';
   final SharedPreferences _prefs;
-  final Map<DataPageKey, KeyedDataPageSpec> _dataPageSpecs = {};
-  DataPageKey? _selectedKey;
+  final Map<SpecKey, DataPageSpec> _dataPageSpecs = {};
+  SpecKey? _selectedPageKey;
 
   /// Creates a settings page from the supplied prefs, or from defaults if
-  /// the shared prefs are missing of invalid.
+  /// the shared prefs are missing or invalid.
   PageSettings(this._prefs, String defaultJson) {
     final prefString = _prefs.getString(_prefKey);
     if (!_fromJson(json: prefString ?? '', source: 'shared preferences')) {
@@ -388,11 +388,11 @@ class PageSettings with ChangeNotifier {
   }
 
   /// The index of the page that should be displayed by default; either the
-  /// newest created page of the last selected.
+  /// newest created page or the last selected.
   int? get selectedPageIndex {
     int idx = 0;
-    for (DataPageKey key in _dataPageSpecs.keys) {
-      if (key == _selectedKey) {
+    for (SpecKey pageKey in _dataPageSpecs.keys) {
+      if (pageKey == _selectedPageKey) {
         return idx;
       }
       idx++;
@@ -402,22 +402,22 @@ class PageSettings with ChangeNotifier {
 
   /// Records selection of a page on some top level UI.
   void selectPage(int index) {
-    _selectedKey = _dataPageSpecs.keys.toList()[index];
+    _selectedPageKey = _dataPageSpecs.keys.toList()[index];
   }
 
   /// An iterator over the pages in order.
-  Iterable<KeyedDataPageSpec> get dataPageSpecs => _dataPageSpecs.values;
+  Iterable<DataPageSpec> get dataPageSpecs => _dataPageSpecs.values;
 
   /// Returns a page by its key.
-  KeyedDataPageSpec? lookupByKey(DataPageKey key) {
-    return _dataPageSpecs[key];
+  DataPageSpec? lookupByKey(SpecKey pageKey) {
+    return _dataPageSpecs[pageKey];
   }
 
   /// Replaces the current set of pages with the defaults.
   void useDefaults() async {
     _fromJson(json: await _getDefaultPages(), source: 'defaults');
     _save();
-    _selectedKey = null;
+    _selectedPageKey = null;
     notifyListeners();
   }
 
@@ -428,14 +428,14 @@ class PageSettings with ChangeNotifier {
     bool success = _fromJson(json: text, source: 'clipboard', dryRun: dryRun);
     if (!dryRun && success) {
       _save();
-      _selectedKey = null;
+      _selectedPageKey = null;
       notifyListeners();
     }
     return success;
   }
 
   /// Replaces the current set of pages with the supplied specifications.
-  void replacePages(Iterable<KeyedDataPageSpec> pageSpecs) {
+  void replacePages(Iterable<DataPageSpec> pageSpecs) {
     _dataPageSpecs.clear();
     for (final pageSpec in pageSpecs) {
       _dataPageSpecs[pageSpec.key] = pageSpec;
@@ -445,10 +445,10 @@ class PageSettings with ChangeNotifier {
   }
 
   /// Adds or replaces the supplied specification in the current set of pages.
-  void setPage(KeyedDataPageSpec pageSpec) {
+  void setPage(DataPageSpec pageSpec) {
     // Update most recently selected if we don't already have this key.
     if (!_dataPageSpecs.containsKey(pageSpec.key)) {
-      _selectedKey = pageSpec.key;
+      _selectedPageKey = pageSpec.key;
     }
     _dataPageSpecs[pageSpec.key] = pageSpec;
     _save();
@@ -456,52 +456,53 @@ class PageSettings with ChangeNotifier {
   }
 
   /// Deletes the supplied specification from current set of pages.
-  void removePage(KeyedDataPageSpec pageSpec) {
+  void removePage(DataPageSpec pageSpec) {
     _dataPageSpecs.remove(pageSpec.key);
     _save();
     notifyListeners();
   }
 
-  /// Updates the supplied cell key with a new specification.
-  void updateCell(DataCellKey cellKey, DataCellSpec cellSpec) {
-    final page = _dataPageSpecs[cellKey.pageKey];
-    if (page == null) {
-      _log.warning('Could not find page to update ${cellKey.pageKey}');
-    } else {
-      page.updateCell(cellKey, cellSpec);
-      _save();
+  /// Updates the supplied cell specification using its key.
+  void updateCell(DataCellSpec cellSpec) {
+    for (final page in _dataPageSpecs.values) {
+      if (page.containsCell(cellSpec.key)) {
+        page.updateCell(cellSpec);
+        _save();
+        return;
+      }
     }
+    _log.warning('Could not find page to update ${cellSpec.key}');
   }
 
-  /// Returns a json stringSaves the configuration of all data pages into shared prefs.
+  /// Returns a json string containing the configuration of all pages.
   String toJson() {
-    final jsonIterator =
-        _dataPageSpecs.values.map((pageSpec) => pageSpec.toBareSpec()).toList();
+    final jsonIterator = _dataPageSpecs.values.toList();
     return json.encode(jsonIterator);
   }
 
-  /// Overwrites all data with pages from a json encoded string, making no changes if
-  /// the string is not valid or if dryRun is true. Returns true on success.
+  /// Overwrites all data with pages from a json encoded string, making no
+  /// changes if the string is not valid or if dryRun is true. Returns true on
+  /// success.
   bool _fromJson(
       {required String json, required String source, bool dryRun = false}) {
     // Use the helper function to convert to a list of bare specs
-    final barePageSpecs = _validateJsonList(
+    final pageSpecs = _validateJsonList(
         json, (p) => DataPageSpec.fromJson(p), 'page settings',
         minimumLength: 1);
-    // Leave with a failure if this didn't work or success we're dry running and it did.
-    if (barePageSpecs == null) {
+    // Leave with a failure if this didn't work or success we're dry running and
+    // it did.
+    if (pageSpecs == null) {
       return false;
     } else if (dryRun) {
       return true;
     }
 
-    // If we're not dry run and have bare specs use them to create a KeyedSpec in the map.
+    // If we're not dry run and have specs use them to create a map.
     _dataPageSpecs.clear();
-    for (final bareSpec in barePageSpecs) {
-      final keyedSpec = KeyedDataPageSpec.fromBareSpec(bareSpec);
-      _dataPageSpecs[keyedSpec.key] = keyedSpec;
+    for (final spec in pageSpecs) {
+      _dataPageSpecs[spec.key] = spec;
     }
-    _log.info('Loaded ${barePageSpecs.length} pages from $source');
+    _log.info('Loaded ${pageSpecs.length} pages from $source');
     return true;
   }
 

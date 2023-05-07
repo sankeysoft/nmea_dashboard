@@ -182,7 +182,7 @@ class _HomePage extends StatelessWidget {
               child: PageView(
                   controller: controller,
                   children: dataSettings.dataPageSpecs.map((pageSpec) {
-                    return ChangeNotifierProvider<KeyedDataPageSpec>.value(
+                    return ChangeNotifierProvider<DataPageSpec>.value(
                         value: pageSpec, child: const DataTablePage());
                   }).toList()),
             )));

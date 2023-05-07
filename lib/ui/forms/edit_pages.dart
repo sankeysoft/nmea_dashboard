@@ -121,7 +121,7 @@ class _EditPagesContent extends StatelessWidget {
     return ReorderableListView(
       buildDefaultDragHandles: false,
       onReorder: (oldIndex, newIndex) {
-        List<KeyedDataPageSpec> specs = settings.dataPageSpecs.toList();
+        List<DataPageSpec> specs = settings.dataPageSpecs.toList();
         final moved = specs.removeAt(oldIndex);
         // Correct the newIndex for the deleted item if we're moving down.
         if (newIndex > oldIndex) newIndex -= 1;
@@ -134,7 +134,7 @@ class _EditPagesContent extends StatelessWidget {
   }
 
   Widget _buildPageTile(BuildContext context, PageSettings settings,
-      KeyedDataPageSpec spec, int index) {
+      DataPageSpec spec, int index) {
     return buildMovableDeletableTile(
         key: spec.key,
         index: index,
@@ -144,12 +144,9 @@ class _EditPagesContent extends StatelessWidget {
         onTap: () => Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) => EditPagePage(
-                    pageSpec: spec.toBareSpec(),
+                    pageSpec: spec,
                     onCreate: (updatedSpec) {
-                      final keyedSpec = KeyedDataPageSpec.fromBareSpec(
-                          updatedSpec,
-                          key: spec.key);
-                      settings.setPage(keyedSpec);
+                      settings.setPage(updatedSpec);
                     }),
               ),
             ),
@@ -173,8 +170,7 @@ class _EditPagesContent extends StatelessWidget {
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(
           builder: (context) => EditPagePage(onCreate: (spec) {
-            final keyedSpec = KeyedDataPageSpec.fromBareSpec(spec);
-            settings.setPage(keyedSpec);
+            settings.setPage(spec);
           }),
         ),
       ),

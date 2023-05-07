@@ -15,7 +15,7 @@ import 'abstract.dart';
 
 /// A form that lets the user edit a data cell.
 class EditCellPage extends StatefulFormPage {
-  EditCellPage({required KeyedDataCellSpec spec, super.key})
+  EditCellPage({required DataCellSpec spec, super.key})
       : super(
             title: 'Edit cell',
             actions: [const HelpButton('help_edit_cell.md')],
@@ -24,7 +24,7 @@ class EditCellPage extends StatefulFormPage {
 
 /// The stateful form itself
 class _EditCellForm extends StatefulWidget {
-  final KeyedDataCellSpec spec;
+  final DataCellSpec spec;
   const _EditCellForm({required this.spec});
 
   @override
@@ -98,13 +98,14 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
             ),
             buildSaveButton(postSaver: () {
               // By this stage all the fields will have saved back to our state
-              // and we can be confident all the fields are populated. Just create
-              // a new spec from these and ask the settings to use it.
-              // can into the spec we came from.
-              final bareSpec = DataCellSpec(
+              // and we can be confident all the fields are populated. Just
+              // create a new spec from these (reusing the previous key) and ask
+              // the settings to use it.
+              final cellSpec = DataCellSpec(
                   _source?.name ?? '', _element ?? '', _format ?? '',
-                  name: _isNameOverridden ? _nameController.text : null);
-              _pageSettings.updateCell(widget.spec.key, bareSpec);
+                  name: _isNameOverridden ? _nameController.text : null,
+                  key: widget.spec.key);
+              _pageSettings.updateCell(cellSpec);
               Navigator.pop(context);
             })
           ]),

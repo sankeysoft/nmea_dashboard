@@ -13,7 +13,7 @@ import 'formatting.dart';
 /// displaying a value string along with heading and unit strings.
 abstract class Displayable with ChangeNotifier {
   /// The spec that was used to create this displayable
-  final KeyedDataCellSpec spec;
+  final DataCellSpec spec;
 
   Displayable(this.spec);
 

@@ -12,8 +12,10 @@ import '../../state/formatting.dart';
 import '../../state/specs.dart';
 import 'abstract.dart';
 
-/// The initial spec for a freshly created page.
-final _defaultDerivedDataSpec = DerivedDataSpec('', 'network', '', '', '', 0);
+/// Create an initial spec for a freshly created element.
+DerivedDataSpec _createDefaultSpec() {
+  return DerivedDataSpec('', 'network', '', '', '', 0);
+}
 
 /// A function called on successful creation of a DerivedDataSpec.
 typedef CreateDerivedDataFunction = void Function(DerivedDataSpec spec);
@@ -35,7 +37,7 @@ class _EditDerivedDataForm extends StatefulWidget {
   final DerivedDataSpec _spec;
 
   _EditDerivedDataForm(DerivedDataSpec? spec, this._onCreate)
-      : _spec = spec ?? _defaultDerivedDataSpec;
+      : _spec = spec ?? _createDefaultSpec();
 
   @override
   State<_EditDerivedDataForm> createState() => _EditDerivedDataFormState();
@@ -93,7 +95,8 @@ class _EditDerivedDataFormState
                   _inputName ?? '',
                   _inputFormat ?? '',
                   _operation.name,
-                  _operand);
+                  _operand,
+                  key: widget._spec.key);
               widget._onCreate(spec);
               Navigator.pop(context);
             })
