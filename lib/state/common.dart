@@ -183,6 +183,25 @@ enum Operation {
   }
 }
 
+/// A time interval over which operation that may be performed on one data element to derive another.
+enum HistoryInterval {
+  fifteenMin('15 minutes', Duration(seconds: 10), 90),
+  twoHours('2 hours', Duration(minutes: 1), 120),
+  twelveHours('12 hours', Duration(minutes: 6), 120),
+  fortyEightHours('48 hours', Duration(minutes: 30), 96);
+
+  /// The string to display.
+  final String display;
+
+  /// The length of each segment in the interval.
+  final Duration segment;
+
+  /// The total number of segments to track.
+  final int count;
+
+  const HistoryInterval(this.display, this.segment, this.count);
+}
+
 /// A value is a single instance of the data for some property.
 abstract class Value {
   /// The high level source that the datum came from (e.g. network)
