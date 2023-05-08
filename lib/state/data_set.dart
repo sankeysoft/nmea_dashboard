@@ -87,6 +87,11 @@ class DataSet with ChangeNotifier {
         } else if (property.dimension == Dimension.bearing) {
           elementMap[property.name] =
               BearingDataElement(variation, property, staleness);
+        } else if (ConsistentDataElementWithHistory.supportsType(
+            property.dimension.type)) {
+          // Create an element which will track history if possible.
+          elementMap[property.name] =
+              ConsistentDataElementWithHistory(property, staleness);
         } else {
           elementMap[property.name] =
               ConsistentDataElement.newForProperty(property, staleness);
@@ -130,6 +135,7 @@ class DataSet with ChangeNotifier {
         _log.warning(
             'Could not create ${spec.name} from non-simple format ${spec.inputFormat}');
       } else {
+        // TODO: support history on derived data elements.
         elementMap[spec.name] = DerivedDataElement(
             spec.name, inputElement, formatter, operation, spec.operand);
       }

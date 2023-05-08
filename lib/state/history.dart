@@ -8,6 +8,32 @@ import 'package:flutter/widgets.dart';
 import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/state/common.dart';
 
+/// A optionally present history of the average value of some property over a
+/// sequence of time segments. Only present when one or more change notifiers
+/// are connected.
+class OptionalHistory with ChangeNotifier {
+  /// The interval that we store over.
+  final HistoryInterval interval;
+
+  /// The history.
+  History? _history;
+
+  OptionalHistory(this.interval) {
+    //TODO: Don't initialize until a listener connects
+    _history = History(interval);
+    _history!.addListener(() => notifyListeners());
+  }
+
+  /// Adds a new value into the history.
+  void addValue(final SingleValue<double> newValue) {
+    _history?.addValue(newValue);
+  }
+
+  // TODO: Delete the history on last listener removal.
+
+  List<double?> get values => _history?.values ?? [];
+}
+
 /// A class to accumulate values within some time window.
 class _Accumulator {
   int count;
@@ -27,27 +53,6 @@ class _Accumulator {
   }
 }
 
-/// A optionally present history of the average value of some property over a
-/// sequence of time segments. Only present when one or more change notifiers
-/// are connected.
-class OptionalHistory with ChangeNotifier {
-  /// The interval that we store over.
-  final HistoryInterval interval;
-
-  /// The history.
-  History? _history;
-
-  OptionalHistory(this.interval) {
-    //TODO: Don't initialize until a listener connects
-    _history = History(interval);
-    _history!.addListener(() => notifyListeners());
-  }
-
-  // TODO: Delete the history on last listener removal.
-
-  List<double?> get values => _history?.values ?? [];
-}
-
 /// A history of the average value of some property over a sequence of time
 /// segments. Values are null where no data was received.
 class History with ChangeNotifier {
@@ -61,7 +66,7 @@ class History with ChangeNotifier {
   Timer? _segmentTimer;
 
   /// The array of recent values.
-  List<double?> _values;
+  final List<double?> _values;
 
   /// The time at the end of the last segment in values.
   DateTime _endValueTime;
@@ -74,7 +79,7 @@ class History with ChangeNotifier {
   double? _max;
 
   History(this.interval)
-      : _values = List.filled(interval.count, null),
+      : _values = List.filled(interval.count, null, growable: true),
         _accumulator = _Accumulator(),
         // TODO: align the segments on a minute/second to allow restoration from
         // a previous lifecycle.

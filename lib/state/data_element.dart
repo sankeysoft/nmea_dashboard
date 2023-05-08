@@ -8,6 +8,7 @@ import 'package:flutter/widgets.dart';
 import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
+import 'package:nmea_dashboard/state/history.dart';
 
 /// The shortest time between triggering updates on an element.
 const _freshnessLimit = Duration(milliseconds: 800);
@@ -75,8 +76,9 @@ abstract class DataElement<V extends Value, U extends Value>
     stalenessTimer = null;
   }
 
-  /// Updates the value held by this element.
-  void updateValue(final U newValue) {
+  /// Updates the value held by this element, returning true if the new value
+  /// was accepted.
+  bool updateValue(final U newValue) {
     if (newValue.property != property) {
       throw InvalidTypeException(
           'Tried to update $property DataElement with ${newValue.property} value');
@@ -89,7 +91,7 @@ abstract class DataElement<V extends Value, U extends Value>
     } else if (_tier != null && newValue.tier > _tier!) {
       if (_value != null) {
         // Ignore any lower tier data we receive if better data is still valid.
-        return;
+        return false;
       }
       _log.warning(
           'Downgrading $property from tier $_tier to tier ${newValue.tier}');
@@ -116,6 +118,7 @@ abstract class DataElement<V extends Value, U extends Value>
         notifyListeners();
       }
     }
+    return true;
   }
 
   /// Converts an input value to a stored value.
@@ -147,6 +150,36 @@ class ConsistentDataElement<V extends Value> extends DataElement<V, V> {
   }
 }
 
+class ConsistentDataElementWithHistory
+    extends ConsistentDataElement<SingleValue<double>> {
+  final Map<HistoryInterval, OptionalHistory> _histories;
+
+  /// Returns true iff the supplied datatype can be used to create a history.
+  static bool supportsType(Type type) {
+    return type == SingleValue<double>;
+  }
+
+  ConsistentDataElementWithHistory(super.property, super.staleness)
+      : _histories = Map.fromEntries(
+            HistoryInterval.values.map((h) => MapEntry(h, OptionalHistory(h))));
+
+  @override
+  bool updateValue(final SingleValue<double> newValue) {
+    final accepted = super.updateValue(newValue);
+    if (accepted) {
+      for (final history in _histories.values) {
+        history.addValue(newValue);
+      }
+    }
+    return accepted;
+  }
+
+  /// Returns the history for the supplied interval.
+  OptionalHistory history(HistoryInterval interval) {
+    return _histories[interval]!;
+  }
+}
+
 /// A special case element for displaying bearings using a reference variation
 class BearingDataElement
     extends DataElement<AugmentedBearing, SingleValue<double>> {
@@ -159,7 +192,7 @@ class BearingDataElement
   BearingDataElement(this.variation, super.property, super.staleness);
 
   @override
-  void updateValue(final SingleValue<double> newValue) {
+  bool updateValue(final SingleValue<double> newValue) {
     /// Handle the special case of the element storing heading, which can
     /// accept either true headings or magnetic headings that it converts.
     if (newValue.property == Property.headingMag &&
@@ -171,15 +204,16 @@ class BearingDataElement
               .warning('Cannot use mag heading while variation is unknown');
           loggedMissingVariation = true;
         }
-        return;
+        return false;
       }
       final trueHeading = (newValue.value - variationValue.value) % 360.0;
-      super.updateValue(SingleValue<double>(
+      final result = super.updateValue(SingleValue<double>(
           trueHeading, newValue.source, Property.heading,
           tier: newValue.tier));
       loggedMissingVariation = false;
+      return result;
     } else {
-      super.updateValue(newValue);
+      return super.updateValue(newValue);
     }
   }
 
