@@ -123,6 +123,14 @@ class DataCellSpec {
   /// The name of the element supplying data within source.
   final String element;
 
+  /// The type of cell, e.g. current value or history.
+  @JsonKey(defaultValue: 'current')
+  final String type;
+
+  /// The history interval, only populated for history cell types.
+  @JsonKey(includeIfNull: false)
+  final String? historyInterval;
+
   /// The format to use when rendering the element.
   final String format;
 
@@ -130,11 +138,12 @@ class DataCellSpec {
   @JsonKey(includeIfNull: false)
   final String? name;
 
-  DataCellSpec(this.source, this.element, this.format,
-      {this.name, SpecKey? key})
+  DataCellSpec(this.source, this.element, this.type, this.format,
+      {this.name, this.historyInterval, SpecKey? key})
       : key = key ?? SpecKey.make();
 
   factory DataCellSpec.fromJson(Map<String, dynamic> json) =>
       _$DataCellSpecFromJson(json);
+
   Map<String, dynamic> toJson() => _$DataCellSpecToJson(this);
 }

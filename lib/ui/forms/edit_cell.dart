@@ -18,6 +18,7 @@ class EditCellPage extends StatefulFormPage {
   EditCellPage({required DataCellSpec spec, super.key})
       : super(
             title: 'Edit cell',
+            maxHeight: 600,
             actions: [const HelpButton('help_edit_cell.md')],
             child: _EditCellForm(spec: spec));
 }
@@ -31,6 +32,22 @@ class _EditCellForm extends StatefulWidget {
   State<_EditCellForm> createState() => _EditCellFormState();
 }
 
+class _CellTypeAndAssociatedFields {
+  final CellType? type;
+  final HistoryInterval? historyInterval;
+
+  _CellTypeAndAssociatedFields(this.type, this.historyInterval);
+
+  @override
+  bool operator ==(Object other) =>
+      other is _CellTypeAndAssociatedFields &&
+      other.type == type &&
+      other.historyInterval == historyInterval;
+
+  @override
+  int get hashCode => Object.hash(type, historyInterval);
+}
+
 class _EditCellFormState extends StatefulFormState<_EditCellForm> {
   late DataSet _dataSet;
   late PageSettings _pageSettings;
@@ -38,16 +55,22 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
   Source? _source;
   String? _element;
   String? _format;
+  CellType? _type;
+  HistoryInterval? _historyInterval;
   bool _isNameOverridden = false;
   final _nameController = TextEditingController();
 
   @override
   void initState() {
     _source = Source.fromString(widget.spec.source);
+    // Derived elements don't have complile-time definitions, so don't sanitize
+    // element yet.
     _element = widget.spec.element;
-    // We can't validate the format until we've get a dataSet to supply the dimension
-    // for any derived data elements.
+    // We can't validate the format until we've get a dataSet to supply the
+    // dimension for any derived data elements.
     _format = widget.spec.format;
+    _type = CellType.fromString(widget.spec.type);
+    _historyInterval = HistoryInterval.fromString(widget.spec.historyInterval);
     _isNameOverridden = (widget.spec.name != null);
     if (widget.spec.name != null) {
       _nameController.text = widget.spec.name!;
@@ -65,6 +88,13 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
 
     if (dataElement == null) {
       _element = null;
+    }
+    if (_type == CellType.history &&
+        dataElement.runtimeType != ConsistentDataElementWithHistory) {
+      // TODO: This could be cleaner. Maybe do history support as a mixin or
+      // have a boolean method on the abstract class that returns false for
+      // non-history.
+      _type = null;
     }
     if (dataElement?.property == null ||
         !formattersFor(dataElement!.property.dimension)
@@ -90,6 +120,7 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
           children: [
             _buildSourceField(),
             _buildElementField(),
+            _buildTypeField(),
             _buildFormatField(),
             _buildOverrideNameField(),
             _buildNameField(),
@@ -101,9 +132,10 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
               // and we can be confident all the fields are populated. Just
               // create a new spec from these (reusing the previous key) and ask
               // the settings to use it.
-              final cellSpec = DataCellSpec(
-                  _source?.name ?? '', _element ?? '', _format ?? '',
+              final cellSpec = DataCellSpec(_source?.name ?? '', _element ?? '',
+                  _type?.name ?? '', _format ?? '',
                   name: _isNameOverridden ? _nameController.text : null,
+                  historyInterval: _historyInterval?.name,
                   key: widget.spec.key);
               _pageSettings.updateCell(cellSpec);
               Navigator.pop(context);
@@ -153,6 +185,41 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
         return null;
       },
     );
+  }
+
+  Widget _buildTypeField() {
+    final List<DropdownEntry<_CellTypeAndAssociatedFields>> entries = [
+      DropdownEntry(
+          value: _CellTypeAndAssociatedFields(CellType.current, null),
+          text: CellType.current.longName)
+    ];
+    if (_dataSet.sources[_source]?[_element].runtimeType ==
+        ConsistentDataElementWithHistory) {
+      // TODO: Also make this history support checking cleaner.
+      entries.addAll(HistoryInterval.values.map((h) => DropdownEntry(
+          value: _CellTypeAndAssociatedFields(CellType.history, h),
+          text: 'History - ${h.display}')));
+    }
+    final intended = _CellTypeAndAssociatedFields(_type, _historyInterval);
+
+    return buildDropdownBox(
+        label: 'Cell Type',
+        items: entries,
+        initialValue: entries.map((e) => e.value).toSet().contains(intended)
+            ? intended
+            : null,
+        onChanged: (_CellTypeAndAssociatedFields? value) {
+          setState(() {
+            _type = value?.type;
+            _historyInterval = value?.historyInterval;
+          });
+        },
+        validator: (value) {
+          if (value == null) {
+            return 'Format must be set';
+          }
+          return null;
+        });
   }
 
   Widget _buildFormatField() {

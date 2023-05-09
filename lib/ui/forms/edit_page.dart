@@ -10,7 +10,7 @@ import 'abstract.dart';
 
 /// The initial spec for freshly created cells.
 DataCellSpec _createCellSpec() {
-  return DataCellSpec(Source.unset.name, "", "");
+  return DataCellSpec(Source.unset.name, '', CellType.current.name, '');
 }
 
 /// The initial spec for a freshly created page.

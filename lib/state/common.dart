@@ -183,15 +183,33 @@ enum Operation {
   }
 }
 
-/// A time interval over which operation that may be performed on one data element to derive another.
+/// The various sources types of data cell that can be defined.
+enum CellType {
+  current('Current Value'),
+  history('History Graph');
+
+  final String longName;
+
+  const CellType(this.longName);
+
+  /// Returns a cell type from its unqualified name.
+  static CellType? fromString(String? name) {
+    return CellType.values.asNameMap()[name];
+  }
+}
+
+/// A time interval over which historical data may be tracked.
 enum HistoryInterval {
-  fifteenMin('15 minutes', Duration(seconds: 10), 90),
-  twoHours('2 hours', Duration(minutes: 1), 120),
-  twelveHours('12 hours', Duration(minutes: 6), 120),
-  fortyEightHours('48 hours', Duration(minutes: 30), 96);
+  fifteenMin('15 minutes', '15m', Duration(seconds: 10), 90),
+  twoHours('2 hours', '2hr', Duration(minutes: 1), 120),
+  twelveHours('12 hours', '12hr', Duration(minutes: 6), 120),
+  fortyEightHours('48 hours', '48hr', Duration(minutes: 30), 96);
 
   /// The string to display.
   final String display;
+
+  /// A short string to display.
+  final String short;
 
   /// The length of each segment in the interval.
   final Duration segment;
@@ -199,7 +217,12 @@ enum HistoryInterval {
   /// The total number of segments to track.
   final int count;
 
-  const HistoryInterval(this.display, this.segment, this.count);
+  const HistoryInterval(this.display, this.short, this.segment, this.count);
+
+  /// Returns a history interval from its unqualified name.
+  static HistoryInterval? fromString(String? name) {
+    return HistoryInterval.values.asNameMap()[name];
+  }
 }
 
 /// A value is a single instance of the data for some property.

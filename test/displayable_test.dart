@@ -10,7 +10,7 @@ import 'package:nmea_dashboard/state/specs.dart';
 import 'package:test/test.dart';
 
 DataCellSpec _makeSpec(String element, String format) {
-  return DataCellSpec('network', element, format);
+  return DataCellSpec('network', element, 'current', format);
 }
 
 DataElement _makeData(Property property) {

@@ -67,9 +67,11 @@ void main() {
 
   test('should serialize DerivedDataPage', () {
     final pageSpec = DataPageSpec('page 1', [
-      DataCellSpec('network', 'element 1', 'feet'),
-      DataCellSpec('network', 'element 2', 'meters'),
-      DataCellSpec('derived', 'element 3', 'stoats', name: '3 stoats'),
+      DataCellSpec('network', 'element 1', 'current', 'feet'),
+      DataCellSpec('network', 'element 2', 'history', 'meters',
+          historyInterval: 'fifteenMinutes'),
+      DataCellSpec('derived', 'element 3', 'current', 'stoats',
+          name: '3 stoats'),
     ]);
     expect(pageSpec.toJson(), {
       'name': pageSpec.name,
@@ -77,16 +79,20 @@ void main() {
         {
           'source': 'network',
           'element': 'element 1',
+          'type': 'current',
           'format': 'feet',
         },
         {
           'source': 'network',
           'element': 'element 2',
+          'type': 'history',
+          'historyInterval': 'fifteenMinutes',
           'format': 'meters',
         },
         {
           'source': 'derived',
           'element': 'element 3',
+          'type': 'current',
           'format': 'stoats',
           'name': '3 stoats',
         }
@@ -95,19 +101,23 @@ void main() {
   });
 
   test('should deserialize DerivedDataPage', () {
-    /// Note one of these has no name and one has a null name as we used to
-    /// generate in old code.
+    /// Note one of these has no name and one has a null type as we used to
+    /// generate in old code. One also has a missing type which we interpret
+    /// as current value.
     final pageSpec = DataPageSpec.fromJson(json.decode("""{
       "name": "test page",
       "cells": [
         {
           "source": "network",
           "element": "element 1",
+          "type": "current",
           "format": "feet"
         },
         {
           "source": "network",
           "element": "element 2",
+          "type": "history",
+          "historyInterval": "twoHours",
           "format": "meters",
           "name": null
         },
@@ -123,14 +133,20 @@ void main() {
     expect(pageSpec.cells.length, 3);
     expect(pageSpec.cells[0].source, 'network');
     expect(pageSpec.cells[0].element, 'element 1');
+    expect(pageSpec.cells[0].type, 'current');
+    expect(pageSpec.cells[0].historyInterval, isNull);
     expect(pageSpec.cells[0].format, 'feet');
     expect(pageSpec.cells[0].name, isNull);
     expect(pageSpec.cells[1].source, 'network');
     expect(pageSpec.cells[1].element, 'element 2');
+    expect(pageSpec.cells[1].type, 'history');
+    expect(pageSpec.cells[1].historyInterval, 'twoHours');
     expect(pageSpec.cells[1].format, 'meters');
     expect(pageSpec.cells[1].name, isNull);
     expect(pageSpec.cells[2].source, 'derived');
     expect(pageSpec.cells[2].element, 'element 3');
+    expect(pageSpec.cells[2].type, 'current');
+    expect(pageSpec.cells[2].historyInterval, isNull);
     expect(pageSpec.cells[2].format, 'stoats');
     expect(pageSpec.cells[2].name, '3 stoats');
     expect(pageSpec.cells.length, 3);
@@ -141,8 +157,9 @@ void main() {
 
   test('containCell should only be true for contained cells', () {
     final pageSpec = DataPageSpec('page 1', [
-      DataCellSpec('network', 'element 1', 'feet'),
-      DataCellSpec('network', 'element 2', 'meters'),
+      DataCellSpec('network', 'element 1', 'current', 'feet'),
+      DataCellSpec('network', 'element 2', 'history', 'meters',
+          historyInterval: 'twoHours'),
     ]);
 
     expect(pageSpec.containsCell(pageSpec.key), false);
@@ -152,11 +169,12 @@ void main() {
 
   test('should be able to update valid cell', () {
     final pageSpec = DataPageSpec('page 1', [
-      DataCellSpec('network', 'element 1', 'feet'),
-      DataCellSpec('network', 'element 2', 'meters'),
+      DataCellSpec('network', 'element 1', 'current', 'feet'),
+      DataCellSpec('network', 'element 2', 'history', 'meters',
+          historyInterval: 'twoHours'),
     ]);
-    final updatedCell = DataCellSpec('local', 'updated 2', 'meters',
-        key: pageSpec.cells[1].key);
+    final updatedCell = DataCellSpec('local', 'updated 2', 'history', 'meters',
+        historyInterval: 'twoHours', key: pageSpec.cells[1].key);
     pageSpec.updateCell(updatedCell);
     expect(pageSpec.containsCell(updatedCell.key), true);
     expect(pageSpec.cells[1].source, 'local');
@@ -166,11 +184,13 @@ void main() {
 
   test('should fail to update invalid cell', () {
     final pageSpec = DataPageSpec('page 1', [
-      DataCellSpec('network', 'element 1', 'feet'),
-      DataCellSpec('network', 'element 2', 'meters'),
+      DataCellSpec('network', 'element 1', 'current', 'feet'),
+      DataCellSpec('network', 'element 2', 'history', 'meters',
+          historyInterval: 'twoHours'),
     ]);
     // Note this gets a new key rather than a key that matches an existing cell.
-    final updatedCell = DataCellSpec('local', 'updated 2', 'meters');
+    final updatedCell = DataCellSpec('local', 'updated 2', 'history', 'meters',
+        historyInterval: 'twoHours');
     pageSpec.updateCell(updatedCell);
     expect(pageSpec.containsCell(updatedCell.key), false);
   });

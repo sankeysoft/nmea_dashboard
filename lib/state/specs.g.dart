@@ -42,15 +42,17 @@ Map<String, dynamic> _$DataPageSpecToJson(DataPageSpec instance) =>
 DataCellSpec _$DataCellSpecFromJson(Map<String, dynamic> json) => DataCellSpec(
       json['source'] as String,
       json['element'] as String,
+      json['type'] as String? ?? 'current',
       json['format'] as String,
       name: json['name'] as String?,
+      historyInterval: json['historyInterval'] as String?,
     );
 
 Map<String, dynamic> _$DataCellSpecToJson(DataCellSpec instance) {
   final val = <String, dynamic>{
     'source': instance.source,
     'element': instance.element,
-    'format': instance.format,
+    'type': instance.type,
   };
 
   void writeNotNull(String key, dynamic value) {
@@ -59,6 +61,8 @@ Map<String, dynamic> _$DataCellSpecToJson(DataCellSpec instance) {
     }
   }
 
+  writeNotNull('historyInterval', instance.historyInterval);
+  val['format'] = instance.format;
   writeNotNull('name', instance.name);
   return val;
 }
