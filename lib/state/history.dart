@@ -3,6 +3,7 @@
 // of the MIT license. See the LICENCE.md file for details.
 
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/widgets.dart';
 import 'package:logging/logging.dart';
@@ -15,21 +16,37 @@ class OptionalHistory with ChangeNotifier {
   /// The interval that we store over.
   final HistoryInterval interval;
 
-  /// The history.
+  /// The history, populated while this object has listeners.
   History? _history;
 
-  OptionalHistory(this.interval) {
-    //TODO: Don't initialize until a listener connects
-    _history = History(interval);
-    _history!.addListener(() => notifyListeners());
+  OptionalHistory(this.interval);
+
+  @override
+  void addListener(VoidCallback listener) {
+    super.addListener(listener);
+    // Create a history if we haven't already and pass its events
+    // up to our own listeners.
+    if (_history == null) {
+      _history = History(interval);
+      _history!.addListener(() => notifyListeners());
+    }
+  }
+
+  @override
+  void removeListener(VoidCallback listener) {
+    super.removeListener(listener);
+    // If that was the last listener, destroy the underlying history
+    if (!hasListeners) {
+      print("destroying history with last listener for ${interval.short}");
+      _history?.dispose();
+      _history == null;
+    }
   }
 
   /// Adds a new value into the history.
   void addValue(final SingleValue<double> newValue) {
     _history?.addValue(newValue);
   }
-
-  // TODO: Delete the history on last listener removal.
 
   List<double?> get values => _history?.values ?? [];
 }
@@ -100,6 +117,7 @@ class History with ChangeNotifier {
 
     // Potentially we are being called way later than the end of the segment we
     // were accumulating, figure out how many we should slide the array down.
+    print('trying to end segment at $now after valueTime of $_endValueTime');
     final segmentCount =
         (now.difference(_endValueTime).inSeconds / interval.segment.inSeconds)
             .floor();
@@ -107,7 +125,7 @@ class History with ChangeNotifier {
       _log.warning('Ignoring segment count $segmentCount updating history. '
           'Time may have stepped back or timer misfired');
     } else {
-      _values.removeRange(0, segmentCount);
+      _values.removeRange(0, max(segmentCount, _values.length));
       _values.add(average);
       for (int i = 1; i < segmentCount; i++) {
         _values.add(null);

@@ -8,10 +8,8 @@ import 'package:flutter/widgets.dart';
 import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:nmea_dashboard/state/local.dart';
-import 'package:nmea_dashboard/state/specs.dart';
 
 import 'data_element.dart';
-import 'displayable.dart';
 import 'network.dart';
 import 'settings.dart';
 import 'common.dart';
@@ -189,33 +187,9 @@ class DataSet with ChangeNotifier {
     });
   }
 
-  /// Returns a formatted view on one of the tracked data elements, or a
-  /// displayable error if that could not be found.
-  Displayable find(DataCellSpec spec) {
-    final source = Source.fromString(spec.source);
-    if (source == null) {
-      if (spec.source.isNotEmpty) {
-        _log.warning('Invalid spec source ${spec.source}');
-      }
-      return NotFoundDisplay(spec);
-    } else if (source == Source.unset) {
-      return UnsetDisplay(spec);
-    }
-
-    final DataElement? dataElement = sources[source]?[spec.element];
-    if (dataElement == null) {
-      _log.warning('Could not find ${spec.element} in source ${spec.source}');
-      return NotFoundDisplay(spec);
-    }
-
-    final Formatter? formatter =
-        formattersFor(dataElement.property.dimension)[spec.format];
-    if (formatter == null) {
-      _log.warning(
-          'Could not find ${spec.format} format for ${dataElement.property.dimension}');
-      return NotFoundDisplay(spec);
-    }
-
-    return DataElementDisplay(dataElement, formatter, spec);
+  /// Returns a tracked data element give the source and name, or null if that
+  /// could not be found.
+  DataElement? find(Source source, String elementName) {
+    return sources[source]?[elementName];
   }
 }

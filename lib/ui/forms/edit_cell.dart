@@ -18,7 +18,6 @@ class EditCellPage extends StatefulFormPage {
   EditCellPage({required DataCellSpec spec, super.key})
       : super(
             title: 'Edit cell',
-            maxHeight: 600,
             actions: [const HelpButton('help_edit_cell.md')],
             child: _EditCellForm(spec: spec));
 }
@@ -81,8 +80,8 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
     super.initState();
   }
 
-  // Clears any internal fields that are now inconsistent given the present value of
-  // higher level fields.
+  // Clears any internal fields that are now inconsistent given the present
+  // value of higher level fields.
   void _wipeInvalidFields() {
     final dataElement = _dataSet.sources[_source]?[_element];
 
@@ -203,7 +202,7 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
     final intended = _CellTypeAndAssociatedFields(_type, _historyInterval);
 
     return buildDropdownBox(
-        label: 'Cell Type',
+        label: 'Display',
         items: entries,
         initialValue: entries.map((e) => e.value).toSet().contains(intended)
             ? intended

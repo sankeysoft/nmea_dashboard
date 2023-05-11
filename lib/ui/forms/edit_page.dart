@@ -71,6 +71,7 @@ class _EditPageFormState extends StatefulFormState<_EditPageForm> {
             ),
             buildSaveButton(postSaver: () {
               final originalCells = widget._pageSpec.cells;
+              final originalKey = widget._pageSpec.key;
               List<DataCellSpec> cells;
               if (_size < originalCells.length) {
                 // Truncate the existing list.
@@ -82,7 +83,7 @@ class _EditPageFormState extends StatefulFormState<_EditPageForm> {
                         _size - originalCells.length, (_) => _createCellSpec());
               }
               // Call the function we were told to call.
-              widget._onCreate(DataPageSpec(_name, cells));
+              widget._onCreate(DataPageSpec(_name, cells, key: originalKey));
               Navigator.pop(context);
             })
           ]),
