@@ -62,7 +62,7 @@ enum _Component {
 
 abstract class HeadingContentsCell extends SpecCell {
   HeadingContentsCell(
-      {required heading, required units, required content, spec, key})
+      {required heading, required units, required content, required spec, key})
       : super(
             spec: spec,
             key: key,

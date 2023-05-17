@@ -30,7 +30,8 @@ ThemeData createThemeData(UiSettings settings) {
       // Surface is used for the app bar and drawer.
       surface: palette.midBackground,
       onSurface: palette.primary,
-      // Surface tint is used for tiles and the drawer header.
+      // Surface tint is used for tiles, the drawer header, and missing data
+      // in graphs.
       surfaceTint: palette.lightestBackground,
     ),
     scaffoldBackgroundColor: palette.darkestBackground,
@@ -42,12 +43,19 @@ ThemeData createThemeData(UiSettings settings) {
       titleMedium: TextStyle(fontSize: 16, color: palette.primary),
       // Used by form fields.
       labelMedium: TextStyle(fontSize: 16, color: palette.primary),
+      // Used by graph axes.
+      labelSmall: TextStyle(
+          fontSize: 14,
+          fontFamily: settings.headingFont,
+          color: palette.midPrimary),
       // Used by the actual data.
       headlineLarge:
           TextStyle(fontFamily: settings.valueFont, color: palette.primary),
       // Used by the headings and units.
-      headlineMedium:
-          TextStyle(fontFamily: settings.headingFont, color: palette.midPrimary, height: 1),
+      headlineMedium: TextStyle(
+          fontFamily: settings.headingFont,
+          color: palette.midPrimary,
+          height: 1),
     ),
   );
 }

@@ -6,10 +6,11 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:logging/logging.dart';
-import 'package:nmea_dashboard/state/formatting.dart';
-import 'package:nmea_dashboard/state/local.dart';
 
 import 'data_element.dart';
+import 'formatting.dart';
+import 'history.dart';
+import 'local.dart';
 import 'network.dart';
 import 'settings.dart';
 import 'common.dart';
@@ -27,6 +28,9 @@ class DataSet with ChangeNotifier {
   /// Network settings we can use to drive the network subscription.
   final DerivedDataSettings _derivedDataSettings;
 
+  /// A manager for history persistence and progression.
+  final HistoryManager _historyManager;
+
   /// The currently active subscription to network events.
   StreamSubscription? _networkSubscription;
 
@@ -40,7 +44,8 @@ class DataSet with ChangeNotifier {
   /// This class's logger.
   static final _log = Logger('DataSet');
 
-  DataSet(this._networkSettings, this._derivedDataSettings) {
+  DataSet(
+      this._networkSettings, this._derivedDataSettings, this._historyManager) {
     // Create all known data for primary sources.
     for (final source in [Source.network, Source.local]) {
       sources[source] = _createPrimaryDataElements(source);
@@ -74,26 +79,26 @@ class DataSet with ChangeNotifier {
     /// mag/true conversion. If no elements use it (e.g. source==local) it just
     /// falls out of scope.
     final variation = ConsistentDataElement<SingleValue<double>>(
-        Property.variation, staleness);
+        source, Property.variation, staleness);
 
     Map<String, DataElement> elementMap = {};
     for (final property in Property.values) {
       if (property.sources.contains(source)) {
         // Some special handling to pass the global variation to all bearings.
+        late final DataElement element;
         if (property == Property.variation) {
-          elementMap[property.name] = variation;
+          element = variation;
         } else if (property.dimension == Dimension.bearing) {
-          elementMap[property.name] =
-              BearingDataElement(variation, property, staleness);
-        } else if (ConsistentDataElementWithHistory.supportsType(
-            property.dimension.type)) {
-          // Create an element which will track history if possible.
-          elementMap[property.name] =
-              ConsistentDataElementWithHistory(property, staleness);
+          element = BearingDataElement(source, variation, property, staleness);
         } else {
-          elementMap[property.name] =
-              ConsistentDataElement.newForProperty(property, staleness);
+          element =
+              ConsistentDataElement.newForProperty(source, property, staleness);
         }
+        // Some elements support history and should be told
+        if (element is WithHistory) {
+          element.registerManager(_historyManager);
+        }
+        elementMap[property.name] = element;
       }
     }
     return elementMap;
@@ -133,9 +138,11 @@ class DataSet with ChangeNotifier {
         _log.warning(
             'Could not create ${spec.name} from non-simple format ${spec.inputFormat}');
       } else {
-        // TODO: support history on derived data elements.
-        elementMap[spec.name] = DerivedDataElement(
+        // Derived elements are always working with doubles and support history.
+        final element = DerivedDataElement(
             spec.name, inputElement, formatter, operation, spec.operand);
+        element.registerManager(_historyManager);
+        elementMap[spec.name] = element;
       }
     }
     return elementMap;

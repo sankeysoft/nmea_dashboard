@@ -10,6 +10,11 @@ This form lets you define one of the cells on a data page.
   on the selected source. Note that not all elements will be available on all
   networks.
 
+* **Type**: How the data should be displayed. All elements support displaying
+  the current value, some elements support displaying a graph of the value over
+  time. When a history type is selected it will take some time (roughly 100th of
+  the selected time window) before the graph is displayed.
+
 * **Format**: Which format and units should be used to display the data. The
   formats in this list depend on the selected element.
 

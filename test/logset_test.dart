@@ -3,7 +3,7 @@
 // of the MIT license. See the LICENCE.md file for details.
 
 import 'package:logging/logging.dart';
-import 'package:nmea_dashboard/state/logset.dart';
+import 'package:nmea_dashboard/state/log_set.dart';
 import 'package:test/test.dart';
 
 void main() {

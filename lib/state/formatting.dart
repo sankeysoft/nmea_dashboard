@@ -25,8 +25,22 @@ Map<String, Formatter> formattersFor(Dimension? dimension) {
   return (dimension == null) ? {} : _formatters[dimension]!;
 }
 
+/// A formatter that is able to convert numbers to and from a target range.
+abstract class ConvertingFormatter<V> extends Formatter<V> {
+  ConvertingFormatter(super.longName, super.units, super.invalid,
+      {super.heightFraction});
+
+  /// Returns a convertion of the supplied input to the units displayed
+  /// by this formatter.
+  double convert(double input);
+
+  /// Returns a convertion of the supplied input in the units displayed
+  /// by this formatter back to the native units for the dimension.
+  double unconvert(double input);
+}
+
 /// A formatter to format floating point numbers with a fixed number of DPs.
-class SimpleFormatter extends Formatter<SingleValue<double>> {
+class SimpleFormatter extends ConvertingFormatter<SingleValue<double>> {
   final double scale;
   final int dp;
 
@@ -35,12 +49,14 @@ class SimpleFormatter extends Formatter<SingleValue<double>> {
 
   /// Returns a convertion of the supplied input to the units displayed
   /// by this formatter.
+  @override
   double convert(double input) {
     return input * scale;
   }
 
   /// Returns a convertion of the supplied input in the units displayed
   /// by this formatter back to the native units for the dimension.
+  @override
   double unconvert(double input) {
     return input / scale;
   }
@@ -100,6 +116,35 @@ class CustomFormatter<V> extends Formatter<V> {
   }
 }
 
+/// A formatter based on custom conversion, unconvertion, and format functions
+class CustomConvertingFormatter
+    extends ConvertingFormatter<SingleValue<double>> {
+  final double Function(double) conversion;
+  final double Function(double) unconversion;
+  final String Function(double) formatting;
+
+  CustomConvertingFormatter(super.longName, super.units, super.invalid,
+      {super.heightFraction,
+      required this.conversion,
+      required this.unconversion,
+      required this.formatting});
+
+  @override
+  double convert(double input) {
+    return conversion(input);
+  }
+
+  @override
+  double unconvert(double input) {
+    return unconversion(input);
+  }
+
+  @override
+  String format(SingleValue<double> input) {
+    return formatting(convert(input.value));
+  }
+}
+
 /// A map of all the possible formatters for all dimensions.
 final Map<Dimension, Map<String, Formatter>> _formatters = {
   Dimension.angle: {
@@ -154,8 +199,10 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
   },
   Dimension.temperature: {
     'celcius': SimpleFormatter('celcius', '°C', '--.-', 1.0, 1),
-    'farenheit': CustomFormatter<SingleValue<double>>('farenheit', '°F', '--.-',
-        (data) => ((data.value * 9.0 / 5.0) + 32.0).toStringAsFixed(1)),
+    'farenheit': CustomConvertingFormatter('farenheit', '°F', '--.-',
+        conversion: (cel) => ((cel * 9.0 / 5.0) + 32.0),
+        unconversion: (far) => ((far - 32.0) / 9.0 * 5.0),
+        formatting: (far) => (far.toStringAsFixed(1)))
   },
   Dimension.time: {
     // Rendering time without date is very wide, so unlike most other data it

@@ -28,6 +28,9 @@ abstract class DataElement<V extends Value, U extends Value>
   /// This class's logger.
   static final _log = Logger('DataElement');
 
+  /// A unique and developer readable string to identify this data element.
+  final String id;
+
   /// The property we expect for incoming values.
   final Property property;
 
@@ -54,7 +57,7 @@ abstract class DataElement<V extends Value, U extends Value>
   /// The tier most recently accepted by this element, even if no longer valid.
   int? _tier;
 
-  DataElement(this.property, this.staleness);
+  DataElement(this.id, this.property, this.staleness);
 
   /// A long name for the element, suitable for picking from a list.
   String get longName => property.longName;
@@ -127,17 +130,21 @@ abstract class DataElement<V extends Value, U extends Value>
 
 /// A DataElement where the input type matches the storage type.
 class ConsistentDataElement<V extends Value> extends DataElement<V, V> {
-  ConsistentDataElement(super.property, super.staleness);
-
+  ConsistentDataElement(Source source, property, staleness)
+      : super('${source.name}_${property.name}', property, staleness);
   static ConsistentDataElement newForProperty(
-      Property property, Staleness staleness) {
+      Source source, Property property, Staleness staleness) {
     // Hideousness to deal with Dart's crappy type system.
     if (property.dimension.type == SingleValue<double>) {
-      return ConsistentDataElement<SingleValue<double>>(property, staleness);
+      // Create a different subclass with history when possible.
+      return SingleValueDoubleConsistentDataElement(
+          source, property, staleness);
     } else if (property.dimension.type == SingleValue<DateTime>) {
-      return ConsistentDataElement<SingleValue<DateTime>>(property, staleness);
+      return ConsistentDataElement<SingleValue<DateTime>>(
+          source, property, staleness);
     } else if (property.dimension.type == DoubleValue<double>) {
-      return ConsistentDataElement<DoubleValue<double>>(property, staleness);
+      return ConsistentDataElement<DoubleValue<double>>(
+          source, property, staleness);
     } else {
       throw InvalidTypeException(
           "Cannot create Element with unknown runtime type ${property.dimension}");
@@ -150,33 +157,41 @@ class ConsistentDataElement<V extends Value> extends DataElement<V, V> {
   }
 }
 
-class ConsistentDataElementWithHistory
-    extends ConsistentDataElement<SingleValue<double>> {
-  final Map<HistoryInterval, OptionalHistory> _histories;
+mixin WithHistory<U extends Value, V extends Value> on DataElement<U, V> {
+  late final Map<HistoryInterval, OptionalHistory> _histories = Map.fromEntries(
+      HistoryInterval.values.map((i) => MapEntry(i, OptionalHistory(i, id))));
 
-  /// Returns true iff the supplied datatype can be used to create a history.
-  static bool supportsType(Type type) {
-    return type == SingleValue<double>;
+  void addHistoryValue(final SingleValue<double> newValue) {
+    for (final history in _histories.values) {
+      history.addValue(newValue);
+    }
   }
 
-  ConsistentDataElementWithHistory(super.property, super.staleness)
-      : _histories = Map.fromEntries(
-            HistoryInterval.values.map((h) => MapEntry(h, OptionalHistory(h))));
-
-  @override
-  bool updateValue(final SingleValue<double> newValue) {
-    final accepted = super.updateValue(newValue);
-    if (accepted) {
-      for (final history in _histories.values) {
-        history.addValue(newValue);
-      }
+  /// Notifies all histories of the supplied manager.
+  void registerManager(HistoryManager manager) {
+    for (final history in _histories.values) {
+      history.registerManager(manager);
     }
-    return accepted;
   }
 
   /// Returns the history for the supplied interval.
   OptionalHistory history(HistoryInterval interval) {
     return _histories[interval]!;
+  }
+}
+
+class SingleValueDoubleConsistentDataElement
+    extends ConsistentDataElement<SingleValue<double>> with WithHistory {
+  SingleValueDoubleConsistentDataElement(
+      super.source, super.property, super.staleness);
+
+  @override
+  bool updateValue(final SingleValue<double> newValue) {
+    final accepted = super.updateValue(newValue);
+    if (accepted) {
+      addHistoryValue(newValue);
+    }
+    return accepted;
   }
 }
 
@@ -189,7 +204,8 @@ class BearingDataElement
 
   final ConsistentDataElement<SingleValue<double>> variation;
 
-  BearingDataElement(this.variation, super.property, super.staleness);
+  BearingDataElement(Source source, this.variation, property, staleness)
+      : super('${source.name}_${property.name}', property, staleness);
 
   @override
   bool updateValue(final SingleValue<double> newValue) {
@@ -228,16 +244,17 @@ class BearingDataElement
 
 /// A DataElement whose value is derived from some other value.
 class DerivedDataElement
-    extends DataElement<SingleValue<double>, SingleValue<double>> {
+    extends DataElement<SingleValue<double>, SingleValue<double>>
+    with WithHistory {
   final String _name;
   final DataElement<SingleValue<double>, Value> _sourceElement;
-  final SimpleFormatter _formatter;
+  final ConvertingFormatter _formatter;
   final Operation _operation;
   final double _operand;
 
   DerivedDataElement(this._name, this._sourceElement, this._formatter,
       this._operation, this._operand)
-      : super(_sourceElement.property,
+      : super('${_name}_from_${_sourceElement.id}', _sourceElement.property,
             /* No staleness, source will notify on invalid */ null) {
     // Update self when the sourceElement sends a notification.
     _sourceElement.addListener(() {
@@ -253,6 +270,15 @@ class DerivedDataElement
         updateValue(SingleValue(derived, Source.derived, sourceValue.property));
       }
     });
+  }
+
+  @override
+  bool updateValue(final SingleValue<double> newValue) {
+    final accepted = super.updateValue(newValue);
+    if (accepted) {
+      addHistoryValue(newValue);
+    }
+    return accepted;
   }
 
   @override

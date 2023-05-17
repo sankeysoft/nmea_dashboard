@@ -3,13 +3,12 @@
 // of the MIT license. See the LICENCE.md file for details.
 
 import 'package:flutter/material.dart';
+import 'package:nmea_dashboard/state/common.dart';
+import 'package:nmea_dashboard/state/data_element.dart';
+import 'package:nmea_dashboard/state/data_set.dart';
+import 'package:nmea_dashboard/state/formatting.dart';
+import 'package:nmea_dashboard/state/specs.dart';
 import 'package:provider/provider.dart';
-
-import '../../state/common.dart';
-import '../../state/data_element.dart';
-import '../../state/data_set.dart';
-import '../../state/formatting.dart';
-import '../../state/specs.dart';
 import 'abstract.dart';
 
 /// Create an initial spec for a freshly created element.

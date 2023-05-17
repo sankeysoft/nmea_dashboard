@@ -2,6 +2,10 @@
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
+import 'package:intl/intl.dart';
+
+import 'data_element.dart';
+
 const double metersPerSecondToKnots = 1.94384;
 const double metersToKilometers = 0.001;
 const double metersToNauticalMiles = 0.000539957;
@@ -200,10 +204,14 @@ enum CellType {
 
 /// A time interval over which historical data may be tracked.
 enum HistoryInterval {
-  fifteenMin('15 minutes', '15m', Duration(seconds: 10), 90),
-  twoHours('2 hours', '2hr', Duration(minutes: 1), 120),
-  twelveHours('12 hours', '12hr', Duration(minutes: 6), 120),
-  fortyEightHours('48 hours', '48hr', Duration(minutes: 30), 96);
+  fifteenMin('15 minutes', '15min', Duration(seconds: 10), 90,
+      Duration(minutes: 5), 'HH:mm'),
+  twoHours(
+      '2 hours', '2hr', Duration(minutes: 1), 120, Duration(hours: 1), 'HH:mm'),
+  twelveHours('12 hours', '12hr', Duration(minutes: 6), 120, Duration(hours: 3),
+      'HH:mm'),
+  fortyEightHours('48 hours', '48hr', Duration(minutes: 30), 96,
+      Duration(days: 1), 'MMM d');
 
   /// The string to display.
   final String display;
@@ -214,14 +222,32 @@ enum HistoryInterval {
   /// The length of each segment in the interval.
   final Duration segment;
 
+  /// The length between tickmarks on a graph of the interval.
+  final Duration tick;
+
   /// The total number of segments to track.
   final int count;
 
-  const HistoryInterval(this.display, this.short, this.segment, this.count);
+  /// The string used to format times inside this interval.
+  final String _format;
+
+  const HistoryInterval(this.display, this.short, this.segment, this.count,
+      this.tick, this._format);
 
   /// Returns a history interval from its unqualified name.
   static HistoryInterval? fromString(String? name) {
     return HistoryInterval.values.asNameMap()[name];
+  }
+
+  /// Returns the short name for a cell showing this interval for a property.
+  String shortCellName(DataElement element) {
+    return '${element.shortName} ($short)';
+  }
+
+  /// Returns the short name for a cell showing this interval for a property.
+  String formatTime(DateTime time) {
+    // Unfortunately dateformat is not const constructor so can't make earlier.
+    return DateFormat(_format).format(time);
   }
 }
 
@@ -251,6 +277,11 @@ class SingleValue<T> extends Value {
   @override
   String toString() {
     return "S=$source($tier), P=$property, V=$value";
+  }
+
+  /// Returns a new single value with the same metadata but a new value.
+  SingleValue<T> copyWithNewValue(T newValue) {
+    return SingleValue(newValue, source, property, tier: tier);
   }
 }
 

@@ -4,13 +4,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:nmea_dashboard/state/data_element.dart';
+import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:provider/provider.dart';
 
-import '../../state/formatting.dart';
 import 'abstract.dart';
 
 class CurrentValueCell extends HeadingContentsCell {
-  CurrentValueCell({required element, required formatter, spec, key})
+  CurrentValueCell({required element, required formatter, required spec, key})
       : super(
             spec: spec,
             key: key,

@@ -5,12 +5,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
-import 'package:nmea_dashboard/state/logset.dart';
-import 'package:nmea_dashboard/state/specs.dart';
-import 'package:nmea_dashboard/ui/forms/view_help.dart';
 import 'package:provider/provider.dart';
 import 'state/data_set.dart';
+import 'state/history.dart';
+import 'state/log_set.dart';
 import 'state/settings.dart';
+import 'state/specs.dart';
+import 'ui/forms/view_help.dart';
 import 'ui/theme.dart';
 import 'ui/pages/data_table.dart';
 
@@ -45,11 +46,15 @@ class NmeaDashboardApp extends StatelessWidget {
     /// Display the loading screen for at least the minimum time, potentially
     /// it could be diplayed longer if loading the setting takes a while.
     return FutureBuilder(
-        future:
-            Future.wait([Settings.create(), Future.delayed(loadingScreenTime)]),
+        future: Future.wait([
+          Settings.create(),
+          HistoryManager.create(),
+          Future.delayed(loadingScreenTime)
+        ]),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.done) {
             final settings = snapshot.data![0];
+            final historyManager = snapshot.data![1];
             return MultiProvider(providers: [
               ChangeNotifierProvider<LogSet>(create: (_) => _logSet),
               ChangeNotifierProvider<Settings>(create: (_) => settings),
@@ -61,7 +66,8 @@ class NmeaDashboardApp extends StatelessWidget {
               ChangeNotifierProvider<DerivedDataSettings>(
                   create: (_) => settings.derived),
               ChangeNotifierProvider<DataSet>(
-                  create: (_) => DataSet(settings.network, settings.derived)),
+                  create: (_) => DataSet(
+                      settings.network, settings.derived, historyManager)),
             ], child: _ThemedApp());
           } else {
             return _LoadingPage();

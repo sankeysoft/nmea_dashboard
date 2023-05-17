@@ -84,21 +84,20 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
   // value of higher level fields.
   void _wipeInvalidFields() {
     final dataElement = _dataSet.sources[_source]?[_element];
-
     if (dataElement == null) {
       _element = null;
     }
-    if (_type == CellType.history &&
-        dataElement.runtimeType != ConsistentDataElementWithHistory) {
-      // TODO: This could be cleaner. Maybe do history support as a mixin or
-      // have a boolean method on the abstract class that returns false for
-      // non-history.
+
+    if (_type == CellType.history && dataElement is! WithHistory) {
       _type = null;
     }
-    if (dataElement?.property == null ||
-        !formattersFor(dataElement!.property.dimension)
-            .keys
-            .contains(_format)) {
+
+    final dimension = dataElement?.property.dimension;
+    if (!formattersFor(dimension).keys.contains(_format)) {
+      _format = null;
+    }
+    if (_type == CellType.history &&
+        formattersFor(dimension)[_format] is! ConvertingFormatter) {
       _format = null;
     }
   }
@@ -192,9 +191,7 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
           value: _CellTypeAndAssociatedFields(CellType.current, null),
           text: CellType.current.longName)
     ];
-    if (_dataSet.sources[_source]?[_element].runtimeType ==
-        ConsistentDataElementWithHistory) {
-      // TODO: Also make this history support checking cleaner.
+    if (_dataSet.sources[_source]?[_element] is WithHistory) {
       entries.addAll(HistoryInterval.values.map((h) => DropdownEntry(
           value: _CellTypeAndAssociatedFields(CellType.history, h),
           text: 'History - ${h.display}')));
@@ -215,7 +212,7 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
         },
         validator: (value) {
           if (value == null) {
-            return 'Format must be set';
+            return 'Type must be set';
           }
           return null;
         });
@@ -260,11 +257,16 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
 
   Widget _buildNameField() {
     final enabled = _isNameOverridden;
-    // If we're not overriding the name update the text to reflect the current elementName.
+    // If we're not overriding the name update the text to reflect the
+    // current elementName.
     final element = _dataSet.sources[_source]?[_element];
 
     if (!_isNameOverridden) {
-      _nameController.text = element?.shortName ?? '';
+      if (_historyInterval != null && element != null) {
+        _nameController.text = _historyInterval!.shortCellName(element);
+      } else {
+        _nameController.text = element?.shortName ?? '';
+      }
     }
     return buildTextField(
         label: 'Name',

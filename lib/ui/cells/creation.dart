@@ -9,6 +9,7 @@ import 'package:nmea_dashboard/state/data_set.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:nmea_dashboard/state/specs.dart';
 import 'package:nmea_dashboard/ui/cells/current_value_cell.dart';
+import 'package:nmea_dashboard/ui/cells/history_cell.dart';
 import 'package:nmea_dashboard/ui/cells/text_cell.dart';
 
 import 'abstract.dart';
@@ -44,5 +45,35 @@ Cell createCell(DataSet dataset, DataCellSpec spec) {
     return NotFoundCell(spec: spec);
   }
 
-  return CurrentValueCell(element: element, formatter: formatter, spec: spec);
+  final CellType? type = CellType.fromString(spec.type);
+  if (type == null) {
+    _log.warning('Could not find ${spec.type} cell type');
+    return NotFoundCell(spec: spec);
+  }
+  switch (type) {
+    case CellType.current:
+      return CurrentValueCell(
+          element: element, formatter: formatter, spec: spec);
+    case CellType.history:
+      final HistoryInterval? interval =
+          HistoryInterval.fromString(spec.historyInterval);
+      if (interval == null) {
+        _log.warning('Could not find ${spec.historyInterval} interval');
+        return NotFoundCell(spec: spec);
+      }
+      if (formatter is! ConvertingFormatter) {
+        _log.warning(
+            'History formatter ${formatter.longName} is not converting');
+        return NotFoundCell(spec: spec);
+      }
+      if (element is! WithHistory) {
+        _log.warning(
+            'Could not build history cell for non-history type ${element.property}');
+      }
+      return HistoryCell(
+          element: element,
+          history: (element as WithHistory).history(interval),
+          formatter: formatter,
+          spec: spec);
+  }
 }
