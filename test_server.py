@@ -41,6 +41,8 @@ def send_file(args: ArgumentParser, open_file: typing.TextIO):
             clock, timestamp = datetime.now(), datetime_from_zda(line)
             if last_timestamp is None:
                 print(f'Found first timestamp {timestamp.strftime("%Y-%m-%d %H:%M:%S")}')
+            elif timestamp <= last_timestamp or clock <= last_clock:
+                print(f'Ignoring non-positive step. {timestamp.strftime("%Y-%m-%d %H:%M:%S")}')
             else:
                 # Adjust the rate at which we send new lines based on how successful we were at
                 # maintaining a real to data time ratio over the last invterval with EWMA to smooth
