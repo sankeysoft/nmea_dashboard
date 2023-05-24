@@ -5,6 +5,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart' as intl;
 import 'package:nmea_dashboard/state/data_element.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:nmea_dashboard/state/history.dart';
@@ -37,10 +38,10 @@ class _Graph extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final history = Provider.of<OptionalHistory>(context);
-    if (history.inner?.min == null || history.inner?.max == null) {
+    if (history.inner == null) {
       return const FittedBox(
           fit: BoxFit.contain,
-          child: Text("No History Data", textAlign: TextAlign.center));
+          child: Text("No History Object", textAlign: TextAlign.center));
     }
     return Padding(
         padding: const EdgeInsets.only(top: 16),
@@ -63,12 +64,10 @@ class _YAxis {
   _YAxis(this.minNative, this.minDisplay, this.maxNative, this.maxDisplay,
       this.tickCount, this._formatDp);
 
-  static _YAxis? calculate(History history, ConvertingFormatter formatter) {
-    double? minNative = history.min;
-    double? maxNative = history.max;
-    if (minNative == null || maxNative == null) {
-      return null;
-    }
+  static _YAxis calculate(History history, ConvertingFormatter formatter) {
+    // Default to fixed values if the history does not yet have a range.
+    double minNative = history.min ?? 0;
+    double maxNative = history.max ?? 1;
     double minDisplay = formatter.convert(minNative);
     double maxDisplay = formatter.convert(maxNative);
 
@@ -96,7 +95,6 @@ class _YAxis {
     minNative = formatter.unconvert(minDisplay);
     maxNative = formatter.unconvert(maxDisplay);
     final tickCount = ((maxDisplay - minDisplay) / tickSpacing).round() + 1;
-    //print('$minDisplay to $maxDisplay step $tickSpacing count $tickCount');
 
     return _YAxis(
         minNative, minDisplay, maxNative, maxDisplay, tickCount, formatDp);
@@ -146,13 +144,6 @@ class _GraphPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     // First calculate and validate the information we need for the axes.
     final yAxis = _YAxis.calculate(history, formatter);
-    if (yAxis == null) {
-      // Should never hit invalid axis because parent should have checked
-      // min/max was not null, just bail if it happens.
-      // TODO: maybe its better to handle the no history case here and draw
-      // a message inside the plot so there is a smaller visual change.
-      return;
-    }
     final xAxis = _XAxis.calculate(history);
 
     // If we have enough height to comfortably fit the *max* number of tick
@@ -160,40 +151,47 @@ class _GraphPainter extends CustomPainter {
     // marks we won't change format) then display ticks.
     final minText = layoutText(yAxis.format(yAxis.minDisplay));
     final charHeight = minText.height;
-    bool drawTicks = (size.height > minText.height * 12);
-    if (drawTicks) {
-      // While drawing ticks we reduce the height of the y axis to allow for the
-      // x axis.
+    bool drawGrid = (size.height > minText.height * 12);
+    bool validData = (history.min != null && history.max != null);
+
+    late final double yAxisWidth;
+    late final Size plotSize;
+    late final Offset plotOffset;
+    if (drawGrid) {
+      // While drawing a grid we reduce the height of the y axis to allow for
+      // the x axis...
       final axisHeight = size.height - charHeight;
-      final yAxisWidth =
-          paintYAxis(canvas, axisHeight, yAxis, drawTicks, minText) +
-              charHeight / 2;
+      yAxisWidth = paintYAxis(canvas, axisHeight, yAxis, drawGrid, minText) +
+          charHeight / 2;
       paintXAxis(canvas, Offset(yAxisWidth, size.height - charHeight),
           size.width - yAxisWidth, xAxis, history);
-
-      // And reduce the plot height further so the top and bottom are aligned
-      // with the center of the labels.
-      Size plotSize = Size(size.width - yAxisWidth, axisHeight - charHeight);
-      Offset plotOffset = Offset(yAxisWidth, charHeight / 2);
-      paintPlot(canvas, plotSize, plotOffset, xAxis, yAxis, drawTicks);
+      // ...and reduce the plot height further so the top and bottom are aligned
+      // with the center of the top and bottom labels.
+      plotSize = Size(size.width - yAxisWidth, axisHeight - charHeight);
+      plotOffset = Offset(yAxisWidth, charHeight / 2);
     } else {
       // When height is constrained, let both the axis and the plot take the
       // full height and don't draw the xaxis.
-      final yAxisWidth =
-          paintYAxis(canvas, size.height, yAxis, drawTicks, minText) +
-              charHeight / 2;
+      yAxisWidth = paintYAxis(canvas, size.height, yAxis, drawGrid, minText) +
+          charHeight / 2;
+      plotSize = Size(size.width - yAxisWidth, size.height);
+      plotOffset = Offset(yAxisWidth, 0);
+    }
 
-      Size plotSize = Size(size.width - yAxisWidth, size.height);
-      Offset plotOffset = Offset(yAxisWidth, 0);
-      paintPlot(canvas, plotSize, plotOffset, xAxis, yAxis, drawTicks);
+    paintPlot(canvas, plotSize, plotOffset, yAxis);
+    if (drawGrid && validData) {
+      // Avoid the grid if we paint status text explaining lack of data.
+      paintXGrid(canvas, plotSize, plotOffset, xAxis);
+      paintYGrid(canvas, plotSize, plotOffset, yAxis);
     }
 
     _lastPaintEvt = history.endValueTime;
   }
 
-  TextPainter layoutText(String text) {
+  TextPainter layoutText(String text, {TextAlign align = TextAlign.left}) {
     final painter = TextPainter(
-        text: TextSpan(text: text, style: theme.textTheme.labelSmall));
+        text: TextSpan(text: text, style: theme.textTheme.labelSmall),
+        textAlign: align);
     painter.textDirection = TextDirection.ltr;
     painter.layout();
     return painter;
@@ -229,6 +227,20 @@ class _GraphPainter extends CustomPainter {
     return maxWidth;
   }
 
+  /// Paints the gridlines on the Y axis.
+  void paintYGrid(Canvas canvas, Size size, Offset offset, _YAxis yAxis) {
+    final greyStroke = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..color = theme.colorScheme.primaryContainer;
+
+    final dyStep = size.height / (yAxis.tickCount - 1);
+    for (double dy = dyStep + offset.dy; dy < size.height - 1.0; dy += dyStep) {
+      canvas.drawLine(Offset(offset.dx, dy), Offset(offset.dx + size.width, dy),
+          greyStroke);
+    }
+  }
+
   /// Paints the value markers on the X axis.
   void paintXAxis(Canvas canvas, Offset offset, double availableWidth,
       _XAxis xAxis, History history) {
@@ -256,59 +268,97 @@ class _GraphPainter extends CustomPainter {
     }
   }
 
-  /// Paints the actual plot and the surrounding grid.
-  void paintPlot(Canvas canvas, Size size, Offset offset, _XAxis xAxis,
-      _YAxis yAxis, bool drawTicks) {
-    final segWidth = size.width / history.values.length;
-    // Draw slightly wider than the theoretical to avoid gaps between segments.
-    final drawWidth = segWidth + 1.0;
-    final rangeNative = max(yAxis.maxNative - yAxis.minNative, 0.01);
-
+  /// Paints the gridlines on the Y axis.
+  void paintXGrid(Canvas canvas, Size size, Offset offset, _XAxis xAxis) {
     final greyStroke = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
       ..color = theme.colorScheme.primaryContainer;
 
-    // Start with a black background.
+    for (int segment = xAxis.firstTickSegment;
+        segment < history.values.length;
+        segment += xAxis.tickSpacing) {
+      final dx = offset.dx + (segment / history.values.length) * size.width;
+      canvas.drawLine(Offset(dx, offset.dy),
+          Offset(dx, offset.dy + size.height), greyStroke);
+    }
+  }
+
+  /// Paints the actual plot and the surrounding grid.
+  void paintPlot(Canvas canvas, Size size, Offset offset, _YAxis yAxis) {
+    final segWidth = size.width / history.values.length;
+    final rangeNative = max(yAxis.maxNative - yAxis.minNative, 0.01);
+    final y0 = offset.dy + size.height;
+
+    final greyStroke = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..color = theme.colorScheme.primaryContainer;
+    final whiteFill = Paint()
+      ..style = PaintingStyle.fill
+      ..color = theme.colorScheme.primary;
+    final blackFill = Paint()
+      ..style = PaintingStyle.fill
+      ..color = theme.colorScheme.onPrimary;
+
+    // Start with a grey background representing the defualt of invalid data.
     canvas.drawRect(
         Rect.fromLTWH(offset.dx, offset.dy, size.width, size.height),
-        Paint()..color = theme.colorScheme.onPrimary);
+        Paint()..color = theme.colorScheme.surfaceTint);
 
-    // Draw vertical slices for each segment of time.
-    // TODO: The additional width is annoying. Instead first paint invalid color
-    // then for each valid plock of segments paint a black background then a
-    // white polygon with the exact shape.
-    for (int i = 0; i < history.values.length; i++) {
-      final val = history.values[i];
-      final dx = segWidth * i + offset.dx;
-      if (val == null) {
-        // Missing data is shown as a full height grey slice.
-        canvas.drawRect(Rect.fromLTWH(dx, offset.dy, drawWidth, size.height),
-            Paint()..color = theme.colorScheme.surfaceTint);
-      } else {
-        // Present data is shown as a primary slice of the appropriate height.
-        final h = min((val - yAxis.minNative) / rangeNative, 1.0) * size.height;
-        final dy = offset.dy + (size.height - h);
-        canvas.drawRect(Rect.fromLTWH(dx, dy, drawWidth, h),
-            Paint()..color = theme.colorScheme.primary);
-      }
-    }
-
-    // Add axis lines.
-    if (drawTicks) {
-      final dyStep = size.height / (yAxis.tickCount - 1);
-      for (double dy = dyStep + offset.dy;
-          dy < size.height - 1.0;
-          dy += dyStep) {
-        canvas.drawLine(Offset(offset.dx, dy),
-            Offset(offset.dx + size.width, dy), greyStroke);
-      }
-      for (int segment = xAxis.firstTickSegment;
-          segment < history.values.length;
-          segment += xAxis.tickSpacing) {
-        final dx = offset.dx + (segment / history.values.length) * size.width;
-        canvas.drawLine(Offset(dx, offset.dy),
-            Offset(dx, offset.dy + size.height), greyStroke);
+    if (history.min == null || history.max == null) {
+      // If there is no history min/max there will be no data. Draw status text
+      // instead of the actual graph.
+      // TODO: Probably cleaner having a separate method poplulate text driven
+      // by the master paint method?
+      final endTime = intl.DateFormat("HH:mm:ss")
+          .format(history.endValueTime.add(history.interval.segment).toLocal());
+      final text = layoutText('Accumulating\nhistory until\n$endTime',
+          align: TextAlign.center);
+      final txtOffset = Offset(offset.dx + size.width / 2 - text.width / 2,
+          offset.dy + size.height / 2 - text.height / 2);
+      text.paint(canvas, txtOffset);
+    } else {
+      // Draw rectangular black and bargraph white paths for each chunk of valid
+      // data.
+      Path? whitePath;
+      Path? blackPath;
+      for (int i = 0; i < history.values.length + 1; i++) {
+        /// Deliberately iterate one more to close any previous shape.
+        final x = segWidth * i + offset.dx;
+        if (i >= history.values.length || history.values[i] == null) {
+          // Draw the previous shape if we had one.
+          if (blackPath != null) {
+            blackPath.lineTo(x, offset.dy);
+            blackPath.lineTo(x, y0);
+            blackPath.close();
+            canvas.drawPath(blackPath, blackFill);
+            blackPath = null;
+          }
+          if (whitePath != null) {
+            whitePath.lineTo(x, y0);
+            whitePath.close();
+            canvas.drawPath(whitePath, whiteFill);
+            whitePath = null;
+          }
+        } else {
+          final y = y0 -
+              min((history.values[i]! - yAxis.minNative) / rangeNative, 1.0) *
+                  size.height;
+          // Create new paths if needed.
+          if (blackPath == null) {
+            blackPath = Path();
+            blackPath.moveTo(x, y0);
+            blackPath.lineTo(x, offset.dy);
+          }
+          if (whitePath == null) {
+            whitePath = Path();
+            whitePath.moveTo(x, y0);
+          }
+          // Draw this bar in the bar graph.
+          whitePath.lineTo(x, y);
+          whitePath.relativeLineTo(segWidth, 0);
+        }
       }
     }
 
