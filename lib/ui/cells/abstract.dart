@@ -2,6 +2,8 @@
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../../state/specs.dart';
@@ -78,9 +80,11 @@ abstract class HeadingContentsCell extends SpecCell {
 
 class _CellContentLayoutDelegate extends MultiChildLayoutDelegate {
   // The minimum aspect ratio of the header line.
-  static const _aspectRatio = 6 / 1;
+  static const double _aspectRatio = 6 / 1;
   // The maximum height of the header line as a fraction of cell height.
-  static const _heightFraction = 1 / 5;
+  static const double _heightFraction = 1 / 5;
+  // The maximum absolute height of the header line.
+  static const double _maxHeight = 80;
 
   @override
   Size getSize(BoxConstraints constraints) {
@@ -94,11 +98,12 @@ class _CellContentLayoutDelegate extends MultiChildLayoutDelegate {
     if (size.width / (size.height * _heightFraction) < _aspectRatio) {
       // The cell is high. If we used the max header height the aspect ratio
       // would be too stubby. Use less height to maintain aspect ratio.
-      headerSize = Size(size.width, size.width / _aspectRatio);
+      headerSize = Size(size.width, min(size.width / _aspectRatio, _maxHeight));
     } else {
       // The cell is wide. If we used the ideal aspect ratio the header would
       // take up too much height so cap to the max height fraction.
-      headerSize = Size(size.width, size.height * _heightFraction);
+      headerSize =
+          Size(size.width, min(size.height * _heightFraction, _maxHeight));
     }
 
     // Let the units choose its width first since its least likely to overflow.
