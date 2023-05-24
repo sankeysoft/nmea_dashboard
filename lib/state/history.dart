@@ -5,6 +5,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:collection/collection.dart';
 import 'package:flutter/widgets.dart';
 import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/state/common.dart';
@@ -22,7 +23,27 @@ DateTime truncateUtcToDuration(DateTime input, Duration duration) {
 /// preferences for the faster intervals.
 const Duration _saveInterval = Duration(minutes: 1);
 
-/// A helper to manage persistant history data.
+/// The interval between checks for segment completion.
+const Duration _timerInterval = Duration(seconds: 2);
+
+/// A simple PODO for timer events.
+class _HistoryEvent implements Comparable<_HistoryEvent> {
+  final DateTime time;
+  final History history;
+
+  _HistoryEvent(this.time, this.history);
+
+  @override
+  int compareTo(_HistoryEvent other) {
+    // Swap sign in comparison so min time is pulled from the HeapPriorityQueue
+    // first.
+    return time.compareTo(other.time);
+    //return time.millisecondsSinceEpoch
+    //    .compareTo(-other.time.millisecondsSinceEpoch);
+  }
+}
+
+/// A helper to manage persistance and timing for history data.
 class HistoryManager {
   /// This class's logger.
   static final _log = Logger('HistoryManager');
@@ -30,10 +51,28 @@ class HistoryManager {
   /// A SharedPrefs reference used to interact with persistent storage.
   final SharedPreferences prefs;
 
-  HistoryManager(this.prefs);
+  final HeapPriorityQueue<_HistoryEvent> _events;
+
+  HistoryManager(this.prefs) : _events = HeapPriorityQueue() {
+    Timer.periodic(_timerInterval, (_) => _checkTimedEvents());
+  }
 
   static Future<HistoryManager> create() async {
     return HistoryManager(await SharedPreferences.getInstance());
+  }
+
+  /// Fires timed events in response to timer completion.
+  void _checkTimedEvents() {
+    final now = DateTime.now().toUtc();
+    while (_events.isNotEmpty && now.isAfter(_events.first.time)) {
+      final event = _events.removeFirst();
+      event.history._endSegment(now);
+    }
+  }
+
+  /// Registers a new timed event.
+  void registerEvent(DateTime time, History history) {
+    _events.add(_HistoryEvent(time, history));
   }
 
   /// Writes the supplied history information into a shared preference.
@@ -78,6 +117,7 @@ class HistoryManager {
         previousEndValueTime: endValueTime, previousValues: values);
   }
 
+  /// Returns the shared prefs key used to store a history.
   static String key(String dataId, HistoryInterval interval) {
     return 'history_v1_${dataId}_${interval.name}';
   }
@@ -112,18 +152,14 @@ class OptionalHistory with ChangeNotifier {
     _createInnerIfNeeded();
   }
 
-  @override
-  void removeListener(VoidCallback listener) {
-    super.removeListener(listener);
-    // If that was the last listener, destroy the underlying history
-    if (!hasListeners && _inner != null) {
-      _inner!.dispose();
-      _inner == null;
-    }
-  }
+  // Don't actually remove the inner history when the last listener is
+  // removed - often its only a resize/redraw before immediately adding a new
+  // listener and we don't want to disrupt the recording of history for this.
+  // Not removing means we use a bit more memory than strictly necessary if
+  // the user removes a graph, until the next restart.
 
-  // Create a history if had listeners and a manager and we haven't already.
-  // Pass its events up to our own listeners.
+  /// Create a history if had listeners and a manager and we haven't already.
+  /// Pass its events up to our own listeners.
   void _createInnerIfNeeded() {
     if (_manager != null && hasListeners && _inner == null) {
       _inner = _manager!.restoreHistory(interval, dataId);
@@ -170,9 +206,6 @@ class History with ChangeNotifier {
   /// A unique identifier for the data being tracked.
   final String dataId;
 
-  /// A timer until the current history accumulation segment ends.
-  Timer? _segmentTimer;
-
   /// The array of recent values.
   final List<double?> _values;
 
@@ -182,7 +215,7 @@ class History with ChangeNotifier {
   /// The time at the end of the last segment in values.
   DateTime _endValueTime;
 
-  /// The end value time ot the last save.
+  /// The end value time of the last save.
   DateTime _lastSaveEvt;
 
   /// A class to accumulate data over an interval.
@@ -209,25 +242,15 @@ class History with ChangeNotifier {
       for (int i = previousSegmentOffset; i < previousValues.length; i++) {
         values[i - previousSegmentOffset] = previousValues[i];
       }
+      _updateMinMax();
     }
-    _segmentTimer = Timer(
-        _endValueTime.add(interval.segment).difference(DateTime.now().toUtc()),
-        () => _endSegment());
-  }
-
-  @override
-  void dispose() {
-    _segmentTimer?.cancel();
-    super.dispose();
+    _manager.registerEvent(_endValueTime.add(interval.segment), this);
   }
 
   /// Handles the end of the current accumulation segment, and the start of
   /// the next.
-  void _endSegment() {
-    final now = DateTime.now().toUtc();
-    _segmentTimer?.cancel();
-
-    // Read the current accumlator and start a new one
+  void _endSegment(DateTime now) {
+    // Read the current accumlator and start a new one.
     final average = _accumulator.average();
     _accumulator = _Accumulator();
 
@@ -238,7 +261,7 @@ class History with ChangeNotifier {
             .round();
     if (segmentCount <= 0) {
       _log.warning('Ignoring segment count $segmentCount updating history. '
-          'Time may have stepped back or timer misfired');
+          'Time may have stepped backwards');
     } else {
       _values.removeRange(0, math.min(segmentCount, _values.length));
       _values.add(average);
@@ -254,9 +277,8 @@ class History with ChangeNotifier {
       }
     }
 
-    // Start the next timer.
-    _segmentTimer = Timer(_endValueTime.add(interval.segment).difference(now),
-        () => _endSegment());
+    // Register completion of the next segment.
+    _manager.registerEvent(_endValueTime.add(interval.segment), this);
   }
 
   /// Recalculates the minimums and maximums from _value.
