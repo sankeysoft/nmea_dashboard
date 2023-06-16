@@ -86,10 +86,11 @@ class _YAxis {
     }
     final formatDp = max(-(log(tickSpacing) / ln10).floor(), 0);
 
-    // Round the min down and the max up to this step, ensuring they cant be the
-    // same output even if they were the same and exactly an integer.
-    minDisplay =
-        ((minDisplay - 0.0001) / tickSpacing).floorToDouble() * tickSpacing;
+    // Round the min down and the max up to this step, ensuring they can't be
+    // the same output even if they were the same and exactly an integer.
+    minDisplay = minDisplay.abs() < 0.001
+        ? 0.0
+        : ((minDisplay - 0.0001) / tickSpacing).floorToDouble() * tickSpacing;
     maxDisplay =
         ((maxDisplay + 0.0001) / tickSpacing).ceilToDouble() * tickSpacing;
     minNative = formatter.unconvert(minDisplay);
