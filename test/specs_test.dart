@@ -194,4 +194,19 @@ void main() {
     pageSpec.updateCell(updatedCell);
     expect(pageSpec.containsCell(updatedCell.key), false);
   });
+
+  test('should notify on cell update', () {
+    final pageSpec = DataPageSpec('page 1', [
+      DataCellSpec('network', 'element 1', 'current', 'feet'),
+      DataCellSpec('network', 'element 2', 'history', 'meters',
+          historyInterval: 'twoHours'),
+    ]);
+    int eventCount = 0;
+    pageSpec.addListener(() => eventCount++);
+
+    final updatedCell = DataCellSpec('local', 'updated 2', 'history', 'meters',
+        historyInterval: 'twoHours', key: pageSpec.cells[1].key);
+    pageSpec.updateCell(updatedCell);
+    expect(eventCount, 1);
+  });
 }

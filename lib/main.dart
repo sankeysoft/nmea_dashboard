@@ -48,7 +48,7 @@ class NmeaDashboardApp extends StatelessWidget {
     return FutureBuilder(
         future: Future.wait([
           Settings.create(),
-          HistoryManager.create(),
+          HistoryManagerImpl.create(),
           Future.delayed(loadingScreenTime)
         ]),
         builder: (context, snapshot) {

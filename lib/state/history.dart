@@ -35,16 +35,32 @@ class _HistoryEvent implements Comparable<_HistoryEvent> {
 
   @override
   int compareTo(_HistoryEvent other) {
-    // Swap sign in comparison so min time is pulled from the HeapPriorityQueue
-    // first.
     return time.compareTo(other.time);
-    //return time.millisecondsSinceEpoch
-    //    .compareTo(-other.time.millisecondsSinceEpoch);
+  }
+}
+
+/// A interface to manage persistance and timing for history data, fakeable
+/// for testability.
+abstract class HistoryManager {
+  /// Registers a new timed event.
+  void registerEvent(DateTime time, History history);
+
+  /// Writes the supplied history information into a shared preference.
+  void save(String dataId, HistoryInterval interval, List<double?> values,
+      DateTime endValueTime);
+
+  /// Creates a new history, using data retrieved from shared preferences where
+  /// possible.
+  History restoreHistory(HistoryInterval interval, String dataId);
+
+  /// Returns the shared prefs key used to store a history.
+  static String key(String dataId, HistoryInterval interval) {
+    return 'history_v1_${dataId}_${interval.name}';
   }
 }
 
 /// A helper to manage persistance and timing for history data.
-class HistoryManager {
+class HistoryManagerImpl extends HistoryManager {
   /// This class's logger.
   static final _log = Logger('HistoryManager');
 
@@ -53,12 +69,12 @@ class HistoryManager {
 
   final HeapPriorityQueue<_HistoryEvent> _events;
 
-  HistoryManager(this.prefs) : _events = HeapPriorityQueue() {
+  HistoryManagerImpl(this.prefs) : _events = HeapPriorityQueue() {
     Timer.periodic(_timerInterval, (_) => _checkTimedEvents());
   }
 
-  static Future<HistoryManager> create() async {
-    return HistoryManager(await SharedPreferences.getInstance());
+  static Future<HistoryManagerImpl> create() async {
+    return HistoryManagerImpl(await SharedPreferences.getInstance());
   }
 
   /// Fires timed events in response to timer completion.
@@ -66,16 +82,18 @@ class HistoryManager {
     final now = DateTime.now().toUtc();
     while (_events.isNotEmpty && now.isAfter(_events.first.time)) {
       final event = _events.removeFirst();
-      event.history._endSegment(now);
+      event.history.endSegment(now);
     }
   }
 
   /// Registers a new timed event.
+  @override
   void registerEvent(DateTime time, History history) {
     _events.add(_HistoryEvent(time, history));
   }
 
   /// Writes the supplied history information into a shared preference.
+  @override
   void save(String dataId, HistoryInterval interval, List<double?> values,
       DateTime endValueTime) {
     // Shared prefs does not have well matched datatypes, best we can do is
@@ -85,13 +103,14 @@ class HistoryManager {
       endValueTime.millisecondsSinceEpoch.toString()
     ];
     output.addAll(values.map((v) => (v == null) ? '' : v.toString()));
-    prefs.setStringList(key(dataId, interval), output);
+    prefs.setStringList(HistoryManager.key(dataId, interval), output);
   }
 
   /// Creates a new history, using data retrieved from shared preferences where
   /// possible.
+  @override
   History restoreHistory(HistoryInterval interval, String dataId) {
-    final data = prefs.getStringList(key(dataId, interval));
+    final data = prefs.getStringList(HistoryManager.key(dataId, interval));
     if (data == null) {
       _log.info('No stored history for $dataId, creating a new object');
       return History(interval, dataId, this);
@@ -115,11 +134,6 @@ class HistoryManager {
     final values = data.sublist(2).map((v) => double.tryParse(v)).toList();
     return History(interval, dataId, this,
         previousEndValueTime: endValueTime, previousValues: values);
-  }
-
-  /// Returns the shared prefs key used to store a history.
-  static String key(String dataId, HistoryInterval interval) {
-    return 'history_v1_${dataId}_${interval.name}';
   }
 }
 
@@ -226,11 +240,13 @@ class History with ChangeNotifier {
   double? _max;
 
   History(this.interval, this.dataId, this._manager,
-      {DateTime? previousEndValueTime, List<double?>? previousValues})
+      {DateTime? now,
+      DateTime? previousEndValueTime,
+      List<double?>? previousValues})
       : _values = List.filled(interval.count, null, growable: true),
         _accumulator = _Accumulator(),
-        _endValueTime =
-            truncateUtcToDuration(DateTime.now().toUtc(), interval.segment),
+        _endValueTime = truncateUtcToDuration(
+            now ?? DateTime.now().toUtc(), interval.segment),
         _lastSaveEvt = DateTime.fromMillisecondsSinceEpoch(0, isUtc: true) {
     if (previousEndValueTime != null && previousValues != null) {
       // Try to populate segment values from the old history if any are still
@@ -249,7 +265,7 @@ class History with ChangeNotifier {
 
   /// Handles the end of the current accumulation segment, and the start of
   /// the next.
-  void _endSegment(DateTime now) {
+  void endSegment(DateTime now) {
     // Read the current accumlator and start a new one.
     final average = _accumulator.average();
     _accumulator = _Accumulator();
