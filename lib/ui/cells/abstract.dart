@@ -84,7 +84,7 @@ class _CellContentLayoutDelegate extends MultiChildLayoutDelegate {
   // The maximum height of the header line as a fraction of cell height.
   static const double _heightFraction = 1 / 5;
   // The maximum absolute height of the header line.
-  static const double _maxHeight = 80;
+  static const double _maxHeight = 48;
 
   @override
   Size getSize(BoxConstraints constraints) {
