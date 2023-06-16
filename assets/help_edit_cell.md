@@ -10,10 +10,12 @@ This form lets you define one of the cells on a data page.
   on the selected source. Note that not all elements will be available on all
   networks.
 
-* **Type**: How the data should be displayed. All elements support displaying
+* **Display**: How the data should be displayed. All elements support displaying
   the current value, some elements support displaying a graph of the value over
-  time. When a history type is selected it will take some time (roughly 100th of
-  the selected time window) before the graph is displayed.
+  preselected time ranges. When a history type is selected it will take some
+  time to gather the initial data before the graph is first displayed - longer
+  history ranges take longer to display the initial data. The app can only
+  record history while it the screen is on and the app is displayed.
 
 * **Format**: Which format and units should be used to display the data. The
   formats in this list depend on the selected element.

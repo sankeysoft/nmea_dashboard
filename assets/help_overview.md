@@ -6,8 +6,9 @@ messages onto a Wifi or ethernet network (I use Yacht Device's YDWG-02).
 
 Data is displayed on one or more pages, each containing a grid of data elements.
 Long hold any data element to change the data it is displaying or its format.
-Swipe left or right to move between pages (or use the number keys if you have a
-keyboard). 
+Each cell can hold either the current value of some property or a plot of the
+property over time. Swipe left or right to move between pages (or use the number
+keys if you have a keyboard).
 
 Every form also has its own help page. Please read this by tapping the question
 mark at the top right of the screen to find out more about what the form does
