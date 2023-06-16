@@ -75,18 +75,18 @@ class _EditDerivedDataFormState
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildNameField(),
-            _buildSourceField(),
-            _buildElementField(),
-            _buildFormatField(),
-            Row(children: [
-              Expanded(child: _buildOperationField()),
-              const SizedBox(width: 20),
-              SizedBox(width: 180, child: _buildOperandField())
-            ]),
-            const Expanded(
-              child: SizedBox(height: 50),
-            ),
+            Expanded(
+                child: ListView(children: [
+              _buildNameField(),
+              _buildSourceField(),
+              _buildElementField(),
+              _buildFormatField(),
+              Row(children: [
+                Expanded(child: _buildOperationField()),
+                const SizedBox(width: 20),
+                SizedBox(width: 180, child: _buildOperandField())
+              ])
+            ])),
             buildSaveButton(postSaver: () {
               final spec = DerivedDataSpec(
                   _name,

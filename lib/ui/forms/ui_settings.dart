@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import '../../state/settings.dart';
 import 'abstract.dart';
 
-
 /// A form that lets the user edit user interface settings.
 class UiSettingsPage extends StatefulFormPage {
   UiSettingsPage({required UiSettings settings, key})
@@ -49,15 +48,12 @@ class _UiSettingsFormState extends StatefulFormState<_UiSettingsForm> {
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildValueField(),
-            _buildHeadingField(),
-            const Expanded(
-              child: SizedBox(height: 100),
-            ),
+            Expanded(
+                child: ListView(
+                    children: [_buildValueField(), _buildHeadingField()])),
             buildSaveButton(postSaver: () {
-              widget._settings.setFonts(
-                  valueFont: _valueFont,
-                  headingFont: _headingFont);
+              widget._settings
+                  .setFonts(valueFont: _valueFont, headingFont: _headingFont);
               Navigator.pop(context);
             })
           ]),
@@ -65,7 +61,8 @@ class _UiSettingsFormState extends StatefulFormState<_UiSettingsForm> {
   }
 
   Widget _buildValueField() {
-    buildItem(String font) => DropdownEntry(value:font, text:font, font:font);
+    buildItem(String font) =>
+        DropdownEntry(value: font, text: font, font: font);
     return buildDropdownBox(
       label: 'Value font',
       items: UiSettings.availableFonts.map((f) => buildItem(f)).toList(),
@@ -81,7 +78,8 @@ class _UiSettingsFormState extends StatefulFormState<_UiSettingsForm> {
   }
 
   Widget _buildHeadingField() {
-    buildItem(String font) => DropdownEntry(value:font, text:font, font:font);
+    buildItem(String font) =>
+        DropdownEntry(value: font, text: font, font: font);
     return buildDropdownBox(
       label: 'Heading font',
       items: UiSettings.availableFonts.map((f) => buildItem(f)).toList(),
@@ -95,5 +93,4 @@ class _UiSettingsFormState extends StatefulFormState<_UiSettingsForm> {
       },
     );
   }
-
 }

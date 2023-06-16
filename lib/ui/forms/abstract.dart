@@ -62,7 +62,7 @@ class StatelessFormPage extends StatelessWidget {
   }
 }
 
-/// Builds a list tile that can be reodrered in a reorderable list.
+/// Builds a list tile that can be reordered in a reorderable list.
 Widget buildMovableDeletableTile({
   required Key key,
   required int index,

@@ -63,12 +63,9 @@ class _EditPageFormState extends StatefulFormState<_EditPageForm> {
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildNameField(),
-            _buildSizeField(),
-            const SizedBox(height: 20),
-            const Expanded(
-              child: SizedBox(height: 100),
-            ),
+            Expanded(
+                child:
+                    ListView(children: [_buildNameField(), _buildSizeField()])),
             buildSaveButton(postSaver: () {
               final originalCells = widget._pageSpec.cells;
               final originalKey = widget._pageSpec.key;

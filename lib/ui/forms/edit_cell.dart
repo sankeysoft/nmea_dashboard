@@ -116,15 +116,15 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildSourceField(),
-            _buildElementField(),
-            _buildTypeField(),
-            _buildFormatField(),
-            _buildOverrideNameField(),
-            _buildNameField(),
-            const Expanded(
-              child: SizedBox(height: 100),
-            ),
+            Expanded(
+                child: ListView(children: [
+              _buildSourceField(),
+              _buildElementField(),
+              _buildTypeField(),
+              _buildFormatField(),
+              _buildOverrideNameField(),
+              _buildNameField()
+            ])),
             buildSaveButton(postSaver: () {
               // By this stage all the fields will have saved back to our state
               // and we can be confident all the fields are populated. Just

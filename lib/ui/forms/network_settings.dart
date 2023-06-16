@@ -52,30 +52,29 @@ class _NetworkSettingsFormState
   @override
   Widget build(BuildContext context) {
     return Form(
-      key: formKey,
-      child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildModeField(),
-            _buildIpField(),
-            _buildPortField(),
-            _buildRequireChecksumField(),
-            _buildStalenessField(),
-            const Expanded(
-              child: SizedBox(height: 100),
-            ),
-            buildSaveButton(postSaver: () {
-              widget._settings.set(
-                  mode: _mode,
-                  port: _portNum,
-                  ipAddress: _ipAddress,
-                  requireChecksum: _requireChecksum,
-                  staleness: _staleness);
-              Navigator.pop(context);
-            })
-          ]),
-    );
+        key: formKey,
+        child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                  child: ListView(children: [
+                _buildModeField(),
+                _buildIpField(),
+                _buildPortField(),
+                _buildRequireChecksumField(),
+                _buildStalenessField(),
+              ])),
+              buildSaveButton(postSaver: () {
+                widget._settings.set(
+                    mode: _mode,
+                    port: _portNum,
+                    ipAddress: _ipAddress,
+                    requireChecksum: _requireChecksum,
+                    staleness: _staleness);
+                Navigator.pop(context);
+              })
+            ]));
   }
 
   Widget _buildModeField() {
