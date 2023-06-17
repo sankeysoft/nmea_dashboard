@@ -255,8 +255,12 @@ class History with ChangeNotifier {
           (endValueTime.difference(previousEndValueTime).inSeconds /
                   interval.segment.inSeconds)
               .round();
-      for (int i = previousSegmentOffset; i < previousValues.length; i++) {
-        values[i - previousSegmentOffset] = previousValues[i];
+      // Handle the case where the history had a different number of values
+      // just in case.
+      final srcStartIndex =
+          previousValues.length + previousSegmentOffset - interval.count;
+      for (int i = 0; i + srcStartIndex < previousValues.length; i++) {
+        values[i] = previousValues[srcStartIndex + i];
       }
       _updateMinMax();
     }
@@ -279,10 +283,18 @@ class History with ChangeNotifier {
       _log.warning('Ignoring segment count $segmentCount updating history. '
           'Time may have stepped backwards');
     } else {
-      _values.removeRange(0, math.min(segmentCount, _values.length));
-      _values.add(average);
-      for (int i = 1; i < segmentCount; i++) {
-        _values.add(null);
+      if (segmentCount < _values.length) {
+        // Remove old entries, add the new segment, and pad with nulls for
+        // any segments we missed.
+        _values.removeRange(0, segmentCount);
+        _values.add(average);
+        while (_values.length < interval.count) {
+          _values.add(null);
+        }
+      } else {
+        // Even the segment we were accumulating is out of range, start over.
+        _values.clear();
+        _values.addAll(List.filled(interval.count, null));
       }
       _endValueTime = _endValueTime.add(interval.segment * segmentCount);
       _updateMinMax();

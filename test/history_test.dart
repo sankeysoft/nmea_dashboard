@@ -9,6 +9,10 @@ import 'package:test/test.dart';
 const String _testDataId = 'test_data_id';
 const HistoryInterval _testInterval = HistoryInterval.fifteenMin;
 
+List<double?> valuesListFromSuffix(Iterable<double?> suffix) {
+  return List<double?>.filled(_testInterval.count - suffix.length, null) +
+      List<double?>.from(suffix);
+}
 // Super inconvenient to take the real HistoryManager with the asynchronous
 // and global state problems of SharedPrefs.
 
@@ -124,6 +128,25 @@ void main() {
     }
   });
 
+  test('History should use different length previous values when possible', () {
+    final start =
+        truncateUtcToDuration(DateTime.now().toUtc(), _testInterval.segment);
+    final manager = FakeHistoryManager();
+    List<double> previousValues =
+        List.generate(_testInterval.count + 20, (i) => 100 + i.toDouble());
+    final history = History(_testInterval, _testDataId, manager,
+        now: start,
+        previousEndValueTime: start.subtract(_testInterval.segment * 10),
+        previousValues: previousValues);
+
+    for (int i = 0; i < _testInterval.count - 10; i++) {
+      expect(history.values[i], (i + 120 + 10).toDouble());
+    }
+    for (int i = _testInterval.count - 10; i < _testInterval.count; i++) {
+      expect(history.values[i], null);
+    }
+  });
+
   test('History should ignore previous values when they dont overlap', () {
     final start =
         truncateUtcToDuration(DateTime.now().toUtc(), _testInterval.segment);
@@ -177,8 +200,7 @@ void main() {
     history.endSegment(start.add(_testInterval.segment * 2));
     expect(history.min, 3.0);
     expect(history.max, 5.0);
-    expect(history.values[_testInterval.count - 1], 5.0);
-    expect(history.values[_testInterval.count - 2], 3.0);
+    expect(history.values, valuesListFromSuffix([3.0, 5.0]));
     expect(manager.lastEventTime, start.add(_testInterval.segment * 3));
   });
 
@@ -207,14 +229,26 @@ void main() {
     history.endSegment(start.add(_testInterval.segment * 3));
     history.addValue(_value(11.0));
     history.endSegment(start.add(_testInterval.segment * 4));
+
     expect(history.min, 10.0);
     expect(history.max, 11.0);
-    expect(history.values[_testInterval.count - 1], 11.0);
-    expect(history.values[_testInterval.count - 2], null);
-    expect(history.values[_testInterval.count - 3], null);
-    expect(history.values[_testInterval.count - 4], 10.0);
-    expect(history.values[_testInterval.count - 5], null);
-    expect(manager.lastEventTime, start.add(_testInterval.segment * 5));
+    expect(history.values, valuesListFromSuffix([10.0, null, null, 11.0]));
+  });
+
+  test('History should wipe values if timer is very late', () {
+    final start =
+        truncateUtcToDuration(DateTime.now().toUtc(), _testInterval.segment);
+    final manager = FakeHistoryManager();
+    final history = History(_testInterval, _testDataId, manager, now: start);
+    history.addValue(_value(10.0));
+    history.endSegment(start.add(_testInterval.segment));
+    history.addValue(_value(11.0));
+    history.endSegment(start.add(_testInterval.segment * 2));
+    history.addValue(_value(12.0));
+    history.endSegment(start.add(_testInterval.segment * 9999));
+    expect(history.min, null);
+    expect(history.max, null);
+    expect(history.values, valuesListFromSuffix([]));
   });
 
   test('History should ignore negative time step', () {
@@ -234,7 +268,7 @@ void main() {
     expect(manager.lastEventTime, start.add(_testInterval.segment * 2));
     expect(history.min, 12.0);
     expect(history.max, 12.0);
-    expect(history.values[_testInterval.count - 1], 12.0);
+    expect(history.values, valuesListFromSuffix([12.0]));
   });
 
   test('History should expire old entries once full', () {
