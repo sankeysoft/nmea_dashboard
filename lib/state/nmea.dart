@@ -10,6 +10,9 @@ import 'package:logging/logging.dart';
 
 import 'common.dart';
 
+/// A marker exception for message types that are neither supported nor ignored.
+class UnsupportedMessageException implements Exception {}
+
 /// The list of message types that are silently ignored.
 const _ignoredMessages = {
   // Ignore most things related to waypoints and routes except active waypoint.
@@ -22,10 +25,6 @@ const _ignoredMessages = {
   // Ignore obsolete messages that haven't been explicitly requested.
   'MDA', 'DBK', 'DBS', 'HDT', 'MWD', 'VWT', 'VWR',
 };
-
-/// The number of times to throw an exception containing the input for each new
-/// unknown type for each logging interval.
-const int _logUnsupportedCount = 1;
 
 /// The time between count events.
 const Duration _logInterval = Duration(minutes: 5);
@@ -115,10 +114,11 @@ class NmeaParser {
   }
 
   /// Attempts to parse the supplied string as a NMEA0183 message, returning
-  /// one or more values if parsing the message contents was successful and
-  /// the message type is supported. Throws an exception if parsing errors
-  /// were encountered and the first few times a new unsupported message is
-  /// received. Returns an empty list for ignored message types.
+  /// one or more values if parsing the message contents was successful or
+  /// zero values if parsing was unsucessful but the failure mode should not be
+  /// logged (e.g. a benign problem that has already been logged). Throws an
+  /// exception if parsing errors were encountered and the first time a new
+  /// unsupported message or a message with no data is received.
   /// If requireChecksum is true messages without a checksum are rejected.
   List<Value> parseString(String string) {
     if (string.startsWith('!')) {
@@ -126,7 +126,7 @@ class NmeaParser {
       // on the network.
       return [];
     } else if (!string.startsWith('\$')) {
-      // Thow an exception for anything else, its potentially a network
+      // Thow an exception for any other prefix, its potentially a network
       // parsing problem.
       throw const FormatException('Message is not marked with \$');
     }
@@ -148,21 +148,24 @@ class NmeaParser {
     final type = string.substring(3, 6);
     final fields = string.substring(7).split(',');
 
-    // Skip ignored messages, pass everything else to the helper.
+    // Skip ignored messages.
     if (_ignoredMessages.contains(type)) {
       ignoredCounts.increment(type);
       return [];
     }
 
-    final values = _createNmeaValues(type, fields);
-    if (values == null) {
-      final count = unsupportedCounts.increment(type);
-      // Only cause logging of unsupported types a few times each.
-      if (count <= _logUnsupportedCount) {
+    // Pass everything else to the helper that understands message types.
+    late final List<Value> values;
+    try {
+      values = _createNmeaValues(type, fields);
+    } on UnsupportedMessageException {
+      // Only cause logging of unsupported types once each interval.
+      if (unsupportedCounts.increment(type) <= 1) {
         throw const FormatException('Unsupported message type');
       }
       return [];
     }
+
     successCounts.increment(type);
     return values;
   }
@@ -183,8 +186,9 @@ void _validateChecksum(payload, checksumString) {
 
 /// Attempts to create zero or more value containing NMEA0183 message contents
 /// from the supplied type string and field list, throwing a FormatException
-/// if unsuccessful or null if the type is not recognized.
-List<Value>? _createNmeaValues(String type, List<String> fields) {
+/// if unsuccessful or an UnsupportedMessageException if the message type is
+/// not recognized.
+List<Value> _createNmeaValues(String type, List<String> fields) {
   switch (type) {
     case 'BWR':
       _validateMinFieldCount(fields, 12);
@@ -405,7 +409,7 @@ List<Value>? _createNmeaValues(String type, List<String> fields) {
       final dt = DateTime.utc(year, month, day, hour, minute, second);
       return [SingleValue(dt, Source.network, Property.utcTime)];
     default:
-      return null;
+      throw UnsupportedMessageException();
   }
 }
 
