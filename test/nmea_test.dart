@@ -130,6 +130,14 @@ void main() {
         ]));
   });
 
+  test('should parse DPT without data', () {
+    final parser = NmeaParser(true);
+    expect(() => parser.parseString(r'$IIDPT,,0.0*6E'), throwsFormatException);
+    expect(parser.emptyCounts.total, 1);
+    expect(parser.parseString(r'$IIDPT,,0.0*6E'), ValueListMatches([]));
+    expect(parser.emptyCounts.total, 2);
+  });
+
   test('should parse HDG with variation', () {
     expect(
         NmeaParser(true).parseString(r'$YDHDG,7.3,,,13.1,E*08'),
@@ -264,6 +272,15 @@ void main() {
           SingleValue<double>(
               0.6667, Source.network, Property.speedThroughWater),
         ]));
+  });
+
+  test('should parse VHW without data', () {
+    final parser = NmeaParser(true);
+    expect(() => parser.parseString(r'$VWVHW,,T,,M,,N,,K*54'),
+        throwsFormatException);
+    expect(parser.emptyCounts.total, 1);
+    expect(parser.parseString(r'$VWVHW,,T,,M,,N,,K*54'), ValueListMatches([]));
+    expect(parser.emptyCounts.total, 2);
   });
 
   test('should parse VLW', () {

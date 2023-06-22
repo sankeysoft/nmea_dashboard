@@ -4,6 +4,7 @@
 
 import 'dart:collection';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
@@ -75,6 +76,8 @@ class NmeaParser {
   final unsupportedCounts = MessageCounts();
   @visibleForTesting
   final successCounts = MessageCounts();
+  @visibleForTesting
+  final emptyCounts = MessageCounts();
   final bool _requireChecksum;
   DateTime _lastLog;
 
@@ -98,8 +101,13 @@ class NmeaParser {
       _log.info('No messages received since $lastLogString');
     } else {
       _log.info(
-          'Parsed ${successCounts.total} messages: ${successCounts.summary}');
+          'Sucessfully parsed ${successCounts.total} messages: ${successCounts.summary}');
       successCounts.clear();
+    }
+    if (!emptyCounts.isEmpty) {
+      _log.info(
+          'Received ${emptyCounts.total} messages without data: ${emptyCounts.summary}');
+      emptyCounts.clear();
     }
     if (!unsupportedCounts.isEmpty) {
       _log.info(
@@ -166,6 +174,14 @@ class NmeaParser {
       return [];
     }
 
+    if (values.isEmpty) {
+      // Only cause logging of empty types once each interval.
+      if (emptyCounts.increment(type) <= 1) {
+        throw const FormatException('No data found');
+      }
+      return [];
+    }
+
     successCounts.increment(type);
     return values;
   }
@@ -194,30 +210,32 @@ List<Value> _createNmeaValues(String type, List<String> fields) {
       _validateMinFieldCount(fields, 12);
       _validateFieldValue(fields, index: 6, expected: 'T');
       _validateFieldValue(fields, index: 10, expected: 'N');
-      final bearing = double.parse(fields[5]);
-      final range = double.parse(fields[9]) / metersToNauticalMiles;
       return [
-        SingleValue(range, Source.network, Property.waypointRange),
-        SingleValue(bearing, Source.network, Property.waypointBearing),
-      ];
+        _parseSingleValue(fields[9], Property.waypointRange,
+            divisor: metersToNauticalMiles),
+        _parseSingleValue(fields[5], Property.waypointBearing),
+      ].whereNotNull().toList();
     case 'DBT':
       _validateFieldCount(fields, 6);
       _validateFieldValue(fields, index: 3, expected: 'M');
       return [
-        SingleValue(
-            double.parse(fields[2]), Source.network, Property.depthUncalibrated,
-            tier: 2),
-      ];
+        _parseSingleValue(fields[2], Property.depthUncalibrated, tier: 2),
+      ].whereNotNull().toList();
     case 'DPT':
       _validateMinFieldCount(fields, 2);
+      if (fields[0].isEmpty) {
+        return [];
+      }
       final depth = double.parse(fields[0]);
-      final offset = fields[1] == '' ? 0.0 : double.parse(fields[1]);
+      final offset = fields[1].isEmpty ? 0.0 : double.parse(fields[1]);
       return [
         SingleValue(depth + offset, Source.network, Property.depthWithOffset),
         SingleValue(depth, Source.network, Property.depthUncalibrated),
       ];
     case 'HDG':
       _validateFieldCount(fields, 5);
+      // TODO: Consider supporting a case where mag heading is not know it this
+      //       ever arises.
       final magHdg = double.parse(fields[0]);
       if (fields[3].isEmpty) {
         // Support equipment which does not know variation.
@@ -233,12 +251,11 @@ List<Value> _createNmeaValues(String type, List<String> fields) {
       _validateFieldCount(fields, 2);
       _validateFieldValue(fields, index: 1, expected: 'M');
       return [
-        SingleValue(
-            double.parse(fields[0]), Source.network, Property.headingMag,
-            tier: 2),
-      ];
+        _parseSingleValue(fields[0], Property.headingMag, tier: 2),
+      ].whereNotNull().toList();
     case 'GGA':
       _validateFieldCount(fields, 14);
+      // Note we do not support messages where the position is missing.
       final lat = _parseLatitude(fields[1], fields[2]);
       final long = _parseLongitude(fields[3], fields[4]);
       var ret = <Value>[
@@ -251,6 +268,7 @@ List<Value> _createNmeaValues(String type, List<String> fields) {
       return ret;
     case 'GLL':
       _validateMinFieldCount(fields, 6);
+      // Note we do not support messages where the position is missing.
       _validateValidityIndicator(fields, index: 5);
       final lat = _parseLatitude(fields[0], fields[1]);
       final long = _parseLongitude(fields[2], fields[3]);
@@ -273,20 +291,19 @@ List<Value> _createNmeaValues(String type, List<String> fields) {
     case 'MTW':
       _validateFieldCount(fields, 2);
       _validateFieldValue(fields, index: 1, expected: 'C');
-      return [
-        SingleValue(
-            double.parse(fields[0]), Source.network, Property.waterTemperature)
-      ];
+      return [_parseSingleValue(fields[0], Property.waterTemperature)]
+          .whereNotNull()
+          .toList();
     case 'ROT':
       _validateFieldCount(fields, 2);
       _validateValidityIndicator(fields, index: 1);
-      return [
-        SingleValue(
-            double.parse(fields[0]) / 60, Source.network, Property.rateOfTurn)
-      ];
+      return [_parseSingleValue(fields[0], Property.rateOfTurn, divisor: 60)]
+          .whereNotNull()
+          .toList();
     case 'RMB':
       _validateMinFieldCount(fields, 13);
       _validateValidityIndicator(fields, index: 0);
+      // Note we don't support messages that are marked valid but missing data.
       final range = double.parse(fields[9]) / metersToNauticalMiles;
       final bearing = double.parse(fields[10]);
       final xte = _parseCrossTrackError(fields[1], fields[2]);
@@ -336,54 +353,49 @@ List<Value> _createNmeaValues(String type, List<String> fields) {
     case 'RSA':
       _validateFieldCount(fields, 4);
       _validateValidityIndicator(fields, index: 1);
-      return [
-        SingleValue(
-            double.parse(fields[0]), Source.network, Property.rudderAngle)
-      ];
+      return [_parseSingleValue(fields[0], Property.rudderAngle)]
+          .whereNotNull()
+          .toList();
     case 'VDR':
       _validateFieldCount(fields, 6);
       _validateFieldValue(fields, index: 1, expected: 'T');
       _validateFieldValue(fields, index: 5, expected: 'N');
-      final set = double.parse(fields[0]);
-      final drift = double.parse(fields[4]) / metersPerSecondToKnots;
       return [
-        SingleValue(set, Source.network, Property.currentSet),
-        SingleValue(drift, Source.network, Property.currentDrift)
-      ];
+        _parseSingleValue(fields[0], Property.currentSet),
+        _parseSingleValue(fields[4], Property.currentDrift,
+            divisor: metersPerSecondToKnots)
+      ].whereNotNull().toList();
     case 'VHW':
       _validateMinFieldCount(fields, 8);
       _validateFieldValue(fields, index: 7, expected: 'K');
-      final speed = double.parse(fields[6]) / 3.6; // Convert from kmph (sigh)
-      return [SingleValue(speed, Source.network, Property.speedThroughWater)];
+      return [
+        // Need to convert from kmph (sigh).
+        _parseSingleValue(fields[6], Property.speedThroughWater, divisor: 3.6)
+      ].whereNotNull().toList();
     case 'VLW':
       _validateMinFieldCount(fields, 4);
       _validateFieldValue(fields, index: 1, expected: 'N');
       _validateFieldValue(fields, index: 3, expected: 'N');
-      final total = double.parse(fields[0]) / metersToNauticalMiles;
-      final trip = double.parse(fields[2]) / metersToNauticalMiles;
       return [
-        SingleValue(total, Source.network, Property.distanceTotal),
-        SingleValue(trip, Source.network, Property.distanceTrip)
-      ];
+        _parseSingleValue(fields[0], Property.distanceTotal,
+            divisor: metersToNauticalMiles),
+        _parseSingleValue(fields[2], Property.distanceTrip,
+            divisor: metersToNauticalMiles)
+      ].whereNotNull().toList();
     case 'VTG':
       _validateMinFieldCount(fields, 8);
       _validateFieldValue(fields, index: 1, expected: 'T');
       _validateFieldValue(fields, index: 7, expected: 'K');
-      final course = double.parse(fields[0]);
-      final speed = double.parse(fields[6]) / 3.6; // Convert from kmph (sigh)
       return [
-        SingleValue(course, Source.network, Property.courseOverGround),
-        SingleValue(speed, Source.network, Property.speedOverGround)
-      ];
+        _parseSingleValue(fields[0], Property.courseOverGround),
+        // Need to convert from kmph (sigh).
+        _parseSingleValue(fields[6], Property.speedOverGround, divisor: 3.6)
+      ].whereNotNull().toList();
     case 'XDR':
       _validateMinFieldCount(fields, 4);
       final List<Value> values = [];
       for (int i = 0; i < fields.length - 3; i += 4) {
         values.addAll(_parseXdrMeasurement(fields, i));
-      }
-      if (values.isEmpty) {
-        throw const FormatException(
-            'No recognised measurements found in XDR message');
       }
       return values;
     case 'XTE':
@@ -411,6 +423,21 @@ List<Value> _createNmeaValues(String type, List<String> fields) {
     default:
       throw UnsupportedMessageException();
   }
+}
+
+// Parse a SingleValue<double> from the supplied input, returning null if the
+// input was empty and throwing a FormatException if it was not a valid number.
+// Optionally divides the
+SingleValue<double>? _parseSingleValue(String input, Property property,
+    {double? divisor, int tier = 1}) {
+  if (input.isEmpty) {
+    return null;
+  }
+  double number = double.parse(input);
+  if (divisor != null) {
+    number = number / divisor;
+  }
+  return SingleValue(number, Source.network, property, tier: tier);
 }
 
 /// Validates fields contains the expected number of entries.
