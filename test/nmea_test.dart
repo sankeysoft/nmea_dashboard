@@ -196,6 +196,26 @@ void main() {
         ]));
   });
 
+  test('should parse MDA with temp and RH', () {
+    expect(
+        NmeaParser(true)
+            .parseString(r'$YDMDA,,I,,B,23.9,C,,C,55.5,,14.4,C,,T,,M,,N,,M*15'),
+        ValueListMatches([
+          SingleValue<double>(23.9, Source.network, Property.airTemperature),
+          SingleValue<double>(55.5, Source.network, Property.relativeHumidity),
+          SingleValue<double>(14.4, Source.network, Property.dewPoint)
+        ]));
+  });
+
+  test('should parse MDA with pressure', () {
+    expect(
+        NmeaParser(true).parseString(
+            r'$YDMDA,29.8902,I,1.0122,B,,C,,C,,,,C,,T,,M,,N,,M*3F'),
+        ValueListMatches([
+          SingleValue<double>(10122, Source.network, Property.pressure),
+        ]));
+  });
+
   test('should parse MWV with apparent', () {
     expect(
         NmeaParser(true).parseString(r'$YDMWV,354.9,R,0.9,M,A*21'),
@@ -305,13 +325,33 @@ void main() {
         ]));
   });
 
-  test('should parse XDR', () {
+  test('should parse XDR with roll pitch yaw', () {
     expect(
         NmeaParser(true).parseString(
             r'$YDXDR,A,-44.75,D,Yaw,A,1.00,D,Pitch,A,0.25,D,Roll*65'),
         ValueListMatches([
           SingleValue<double>(1.0, Source.network, Property.pitch),
           SingleValue<double>(0.25, Source.network, Property.roll),
+        ]));
+  });
+
+  test('should parse XDR with pressure', () {
+    expect(
+        NmeaParser(true).parseString(r'$YDXDR,P,101080,P,Baro*65'),
+        ValueListMatches([
+          SingleValue<double>(101080, Source.network, Property.pressure,
+              tier: 2),
+        ]));
+  });
+
+  test('should parse XDR with temperature and RH', () {
+    expect(
+        NmeaParser(true).parseString(r'$YDXDR,C,23.6,C,Air,H,57.9,P,Air*47'),
+        ValueListMatches([
+          SingleValue<double>(23.6, Source.network, Property.airTemperature,
+              tier: 2),
+          SingleValue<double>(57.9, Source.network, Property.relativeHumidity,
+              tier: 2),
         ]));
   });
 

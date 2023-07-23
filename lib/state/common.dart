@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import 'data_element.dart';
 
+const double barToPascals = 10000;
 const double metersPerSecondToKnots = 1.94384;
 const double metersToKilometers = 0.001;
 const double metersToNauticalMiles = 0.000539957;
@@ -30,6 +31,7 @@ const Set<Source> _networkOnly = {Source.network};
 /// The various types of data that can be displayed, including the
 /// sources we expect to find it on.
 enum Property {
+  airTemperature('Air temperature', 'Air', Dimension.temperature),
   apparentWindAngle('Apparent wind angle', 'AWA', Dimension.angle),
   apparentWindSpeed('Apparent wind speed', 'AWS', Dimension.speed),
   courseOverGround('Course over ground', 'COG', Dimension.bearing),
@@ -37,6 +39,7 @@ enum Property {
   currentDrift('Drift', 'Drift', Dimension.speed),
   depthWithOffset('Depth', 'Depth', Dimension.depth),
   depthUncalibrated('Depth at sensor', 'XDR Depth', Dimension.depth),
+  dewPoint('Dew point', 'DewPt', Dimension.temperature),
   distanceTotal('Total distance', 'Log', Dimension.distance),
   distanceTrip('Trip distance', 'Trip', Dimension.distance),
   gpsPosition('GPS position', 'GPS', Dimension.position),
@@ -49,6 +52,7 @@ enum Property {
   pitch('Pitch angle', 'Pitch', Dimension.angle),
   pressure('Air pressure', 'Pressure', Dimension.pressure),
   rateOfTurn('Rate of turn', 'ROT', Dimension.angularRate),
+  relativeHumidity('Relative Humidity', 'RH', Dimension.percentage),
   roll('Roll angle', 'Roll', Dimension.angle),
   rudderAngle('Rudder angle', 'Rudder', Dimension.angle),
   speedOverGround('Speed over ground', 'SOG', Dimension.speed),
@@ -119,6 +123,7 @@ enum Dimension {
       nativeUnits: 'meters',
       derivationFriendly: true),
   integer(type: SingleValue<int>, nativeUnits: 'N/A'),
+  percentage(type: SingleValue<double>, nativeUnits: 'N/A'),
   position(type: DoubleValue<double>, nativeUnits: 'lat/long degrees'),
   pressure(
       type: SingleValue<double>,

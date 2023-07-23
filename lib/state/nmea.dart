@@ -24,7 +24,7 @@ const _ignoredMessages = {
   // Ignore detailed satellite information and GPS datum.
   'ALM', 'GBS', 'GSA', 'GSV', 'DTM', 'GRS',
   // Ignore obsolete messages that haven't been explicitly requested.
-  'MDA', 'DBK', 'DBS', 'HDT', 'MWD', 'VWT', 'VWR',
+  'DBK', 'DBS', 'HDT', 'MWD', 'VWT', 'VWR',
 };
 
 /// The time between count events.
@@ -275,6 +275,29 @@ List<Value> _createNmeaValues(String type, List<String> fields) {
       return [
         DoubleValue(lat, long, Source.network, Property.gpsPosition, tier: 2)
       ];
+    case 'MDA':
+      _validateFieldCount(fields, 20);
+      var ret = <SingleValue<double>>[];
+      if (fields[2].isNotEmpty) {
+        _validateFieldValue(fields, index: 3, expected: 'B');
+        ret.add(SingleValue(double.parse(fields[2]) * barToPascals,
+            Source.network, Property.pressure));
+      }
+      if (fields[4].isNotEmpty) {
+        _validateFieldValue(fields, index: 5, expected: 'C');
+        ret.add(SingleValue(
+            double.parse(fields[4]), Source.network, Property.airTemperature));
+      }
+      if (fields[8].isNotEmpty) {
+        ret.add(SingleValue(double.parse(fields[8]), Source.network,
+            Property.relativeHumidity));
+      }
+      if (fields[10].isNotEmpty) {
+        _validateFieldValue(fields, index: 11, expected: 'C');
+        ret.add(SingleValue(
+            double.parse(fields[10]), Source.network, Property.dewPoint));
+      }
+      return ret;
     case 'MWV':
       _validateFieldCount(fields, 5);
       _validateValidityIndicator(fields, index: 4);
@@ -539,19 +562,31 @@ double _parseVariation(String valueString, String direction) {
 
 /// Parses a variation magniture and sign, returning a positive value for West.
 List<Value> _parseXdrMeasurement(List<String> fields, int startIndex) {
-  switch (fields[startIndex + 3].toLowerCase()) {
-    case 'pitch':
+  switch ('${fields[startIndex]}-${fields[startIndex + 3].toLowerCase()}') {
+    case 'A-pitch':
       _validateFieldValue(fields, index: startIndex + 2, expected: 'D');
       final value = double.parse(fields[startIndex + 1]);
       return [SingleValue(value, Source.network, Property.pitch)];
-    case 'roll':
+    case 'A-roll':
       _validateFieldValue(fields, index: startIndex + 2, expected: 'D');
       final value = double.parse(fields[startIndex + 1]);
       return [SingleValue(value, Source.network, Property.roll)];
-    case 'baro':
+    case 'P-baro':
       _validateFieldValue(fields, index: startIndex + 2, expected: 'P');
       final value = double.parse(fields[startIndex + 1]);
-      return [SingleValue(value, Source.network, Property.pressure)];
+      return [SingleValue(value, Source.network, Property.pressure, tier: 2)];
+    case 'C-air':
+      _validateFieldValue(fields, index: startIndex + 2, expected: 'C');
+      final value = double.parse(fields[startIndex + 1]);
+      return [
+        SingleValue(value, Source.network, Property.airTemperature, tier: 2)
+      ];
+    case 'H-air':
+      _validateFieldValue(fields, index: startIndex + 2, expected: 'P');
+      final value = double.parse(fields[startIndex + 1]);
+      return [
+        SingleValue(value, Source.network, Property.relativeHumidity, tier: 2)
+      ];
     default:
       return [];
   }

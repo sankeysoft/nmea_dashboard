@@ -106,6 +106,16 @@ void main() {
         equals("45° 0' 0.0\" S\n60° 0' 0.0\" E"));
   });
 
+  test('RH should be formatted appropriately', () {
+    String format(double number, String name) {
+      final val =
+          SingleValue(number, Source.network, Property.relativeHumidity);
+      return formattersFor(val.property.dimension)[name]!.format(val);
+    }
+
+    expect(format(87, 'percent'), equals('87.0'));
+  });
+
   test('pressure should be formatted appropriately', () {
     String format(double number, String name) {
       final val = SingleValue(number, Source.network, Property.pressure);

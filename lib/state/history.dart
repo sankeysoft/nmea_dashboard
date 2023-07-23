@@ -3,7 +3,6 @@
 // of the MIT license. See the LICENCE.md file for details.
 
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:collection/collection.dart';
 import 'package:flutter/widgets.dart';
