@@ -94,7 +94,7 @@ class DataSet with ChangeNotifier {
           element =
               ConsistentDataElement.newForProperty(source, property, staleness);
         }
-        // Some elements support history and should be told
+        // Some elements support history and should be told about the manager.
         if (element is WithHistory) {
           element.registerManager(_historyManager);
         }

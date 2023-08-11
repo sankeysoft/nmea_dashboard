@@ -29,7 +29,6 @@ class _Value extends StatelessWidget {
   Widget build(BuildContext context) {
     final element = Provider.of<DataElement>(context);
     final value = element.value;
-    final text = (value == null) ? formatter.invalid : formatter.format(value);
 
     return DefaultTextStyle(
       style: Theme.of(context).textTheme.headlineLarge!,
@@ -39,7 +38,7 @@ class _Value extends StatelessWidget {
         heightFactor: formatter.heightFraction,
         child: FittedBox(
           fit: BoxFit.contain,
-          child: Text(text, textAlign: TextAlign.center),
+          child: Text(formatter.format(value), textAlign: TextAlign.center),
         ),
       ),
     );

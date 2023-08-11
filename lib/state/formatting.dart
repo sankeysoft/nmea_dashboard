@@ -10,14 +10,21 @@ abstract class Formatter<V> {
   final String longName;
   final String? units;
   final double heightFraction;
-  final String invalid;
   final Type valueType = V;
 
-  Formatter(this.longName, this.units, this.invalid,
-      {this.heightFraction = 1.0});
+  Formatter(this.longName, this.units, {this.heightFraction = 1.0});
 
   /// Returns the formatted string to display the supplied input.
-  String format(V input);
+  String format(V? input);
+}
+
+/// A formatter that can also generate a scalar number for each input,
+/// e.g. for graphing.
+abstract class NumericFormatter<V> extends Formatter<V> {
+  NumericFormatter(super.longName, super.units, {super.heightFraction});
+
+  /// Returns a numeric representation of the supplied input.
+  double? toNumber(V? input);
 }
 
 /// Returns a map of allowable formatters for the supplied dimension.
@@ -25,55 +32,54 @@ Map<String, Formatter> formattersFor(Dimension? dimension) {
   return (dimension == null) ? {} : _formatters[dimension]!;
 }
 
-/// A formatter that is able to convert numbers to and from a target range.
-abstract class ConvertingFormatter<V> extends Formatter<V> {
-  ConvertingFormatter(super.longName, super.units, super.invalid,
-      {super.heightFraction});
-
-  /// Returns a convertion of the supplied input to the units displayed
-  /// by this formatter.
-  double convert(double input);
+/// A numeric formatter that is able to reverse conversion toNumber.
+abstract class ConvertingFormatter<V> extends NumericFormatter<V> {
+  ConvertingFormatter(super.longName, super.units, {super.heightFraction});
 
   /// Returns a convertion of the supplied input in the units displayed
   /// by this formatter back to the native units for the dimension.
-  double unconvert(double input);
+  V? fromNumber(double? input);
 }
 
 /// A formatter to format floating point numbers with a fixed number of DPs.
 class SimpleFormatter extends ConvertingFormatter<SingleValue<double>> {
+  final String invalid;
   final double scale;
   final int dp;
 
   SimpleFormatter(
-      super.longName, super.units, super.invalid, this.scale, this.dp);
+      super.longName, super.units, this.invalid, this.scale, this.dp);
 
   /// Returns a convertion of the supplied input to the units displayed
   /// by this formatter.
   @override
-  double convert(double input) {
-    return input * scale;
+  double? toNumber(SingleValue<double>? input) {
+    return (input == null) ? null : input.data * scale;
   }
 
   /// Returns a convertion of the supplied input in the units displayed
   /// by this formatter back to the native units for the dimension.
   @override
-  double unconvert(double input) {
-    return input / scale;
+  SingleValue<double>? fromNumber(double? input) {
+    return (input == null) ? null : SingleValue(input / scale);
   }
 
   @override
-  String format(SingleValue<double> input) {
-    return convert(input.value).toStringAsFixed(dp);
+  String format(SingleValue<double>? input) {
+    final number = toNumber(input);
+    return (number == null) ? invalid : number.toStringAsFixed(dp);
   }
 }
 
 /// A formatted to format integers.
 class IntegerFormatter extends Formatter<SingleValue<int>> {
-  IntegerFormatter(super.longName, super.units, super.invalid);
+  final String invalid;
+
+  IntegerFormatter(super.longName, super.units, this.invalid);
 
   @override
-  String format(SingleValue input) {
-    return input.value.toString();
+  String format(SingleValue<int>? input) {
+    return (input == null) ? invalid : input.data.toString();
   }
 }
 
@@ -81,13 +87,14 @@ class IntegerFormatter extends Formatter<SingleValue<int>> {
 class PositionFormatter extends Formatter<DoubleValue<double>> {
   final bool includeSeconds;
 
-  PositionFormatter(longName, this.includeSeconds)
-      : super(longName, ' ', '---- ---\n---- ---');
+  PositionFormatter(longName, this.includeSeconds) : super(longName, ' ');
 
   @override
-  String format(DoubleValue<double> input) {
-    return '${_formatComponent(input.first, 'N', 'S')}\n'
-        '${_formatComponent(input.second, 'E', 'W')}';
+  String format(DoubleValue<double>? input) {
+    return (input == null)
+        ? '---- ---\n---- ---'
+        : '${_formatComponent(input.first, 'N', 'S')}\n'
+            '${_formatComponent(input.second, 'E', 'W')}';
   }
 
   String _formatComponent(value, positiveDir, negativeDir) {
@@ -105,43 +112,65 @@ class PositionFormatter extends Formatter<DoubleValue<double>> {
 
 /// A formatter based on a custom function.
 class CustomFormatter<V> extends Formatter<V> {
-  final Function function;
+  final String Function(V?) function;
 
-  CustomFormatter(super.longName, super.units, super.invalid, this.function,
+  CustomFormatter(super.longName, super.units, this.function,
       {super.heightFraction});
 
   @override
-  String format(V input) {
+  String format(V? input) {
     return function(input);
+  }
+}
+
+/// A formatter based on custom conversion, unconvertion, and format functions
+class CustomNumericFormatter<V> extends NumericFormatter<V> {
+  final double? Function(V?) conversion;
+  final String Function(V?) formatting;
+
+  CustomNumericFormatter(super.longName, super.units,
+      {super.heightFraction,
+      required this.conversion,
+      required this.formatting});
+
+  @override
+  double? toNumber(V? input) {
+    return conversion(input);
+  }
+
+  @override
+  String format(V? input) {
+    return formatting(input);
   }
 }
 
 /// A formatter based on custom conversion, unconvertion, and format functions
 class CustomConvertingFormatter
     extends ConvertingFormatter<SingleValue<double>> {
+  final String invalid;
   final double Function(double) conversion;
   final double Function(double) unconversion;
   final String Function(double) formatting;
 
-  CustomConvertingFormatter(super.longName, super.units, super.invalid,
+  CustomConvertingFormatter(super.longName, super.units, this.invalid,
       {super.heightFraction,
       required this.conversion,
       required this.unconversion,
       required this.formatting});
 
   @override
-  double convert(double input) {
-    return conversion(input);
+  double? toNumber(SingleValue<double>? input) {
+    return (input == null) ? null : conversion(input.data);
   }
 
   @override
-  double unconvert(double input) {
-    return unconversion(input);
+  SingleValue<double>? fromNumber(double? input) {
+    return (input == null) ? null : SingleValue(unconversion(input));
   }
 
   @override
-  String format(SingleValue<double> input) {
-    return formatting(convert(input.value));
+  String format(SingleValue<double>? input) {
+    return (input == null) ? invalid : formatting(conversion(input.data));
   }
 }
 
@@ -154,23 +183,40 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
     'degreesPerSec': SimpleFormatter('deg/sec', '°/s', '--.-', 1.0, 1),
   },
   Dimension.bearing: {
-    'true': CustomFormatter<AugmentedBearing>(
-        'true', '°T', '---', (value) => _bearingString(value.bearing, 'T')),
-    'mag': CustomFormatter<AugmentedBearing>('magnetic', '°M', '---', (value) {
-      if (value.variation == null) {
-        return 'no magnetic\nvariation';
-      }
-      return _bearingString((value.bearing + value.variation) % 360.0, 'M');
-    }),
+    'true': CustomNumericFormatter<AugmentedBearing>('true', '°T',
+        conversion: (value) => value?.bearing,
+        formatting: (value) =>
+            (value == null) ? '---' : _bearingString(value.bearing, 'T')),
+    'mag': CustomNumericFormatter<AugmentedBearing>('magnetic', '°M',
+        conversion: (value) => (value?.variation == null)
+            ? null
+            : (value!.bearing + value.variation!) % 360.0,
+        formatting: (value) {
+          if (value == null) {
+            return '---';
+          } else if (value.variation == null) {
+            return 'no magnetic\nvariation';
+          } else {
+            return _bearingString(
+                (value.bearing + value.variation!) % 360.0, 'M');
+          }
+        }),
   },
   Dimension.crossTrackError: {
-    'meters':
-        CustomFormatter<SingleValue<double>>('meters', null, '---', (value) {
-      return _xteString(value.value, 1.0, 'm');
-    }),
-    'feet': CustomFormatter<SingleValue<double>>('feet', null, '---', (value) {
-      return _xteString(value.value, metersToFeet, 'ft');
-    }),
+    'meters': CustomNumericFormatter<SingleValue<double>>(
+      'meters',
+      null,
+      conversion: (value) => value?.data,
+      formatting: (value) =>
+          (value == null) ? '---' : _xteString(value.data, 'm'),
+    ),
+    'feet': CustomNumericFormatter<SingleValue<double>>(
+      'feet',
+      null,
+      conversion: (value) => (value == null) ? null : value.data * metersToFeet,
+      formatting: (value) =>
+          (value == null) ? '---' : _xteString(value.data * metersToFeet, 'ft'),
+    ),
   },
   Dimension.distance: {
     'km': SimpleFormatter('km', 'km', '---.--', metersToKilometers, 2),
@@ -214,14 +260,15 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
     // to an annoying scaling that changes every second. Try to prevent that
     // with a heightFraction heuristic although some wide fonts or unusual
     // screen sizes may still run into issues.
-    'hms': CustomFormatter<SingleValue<DateTime>>('H:M:S', null, '--:--:--',
-        (data) => DateFormat('Hms').format(data.value),
+    'hms': CustomFormatter<SingleValue<DateTime>>('H:M:S', null,
+        (val) => val == null ? '--:--:--' : DateFormat('Hms').format(val.data),
         heightFraction: 0.7),
     'ymdhms': CustomFormatter<SingleValue<DateTime>>(
         'Y-M-D H:M:S',
         'Y-M-D',
-        '-------\n--:--:--',
-        (data) => DateFormat('yyyy-MM-dd\nHH:mm:ss').format(data.value)),
+        (val) => val == null
+            ? '-------\n--:--:--'
+            : DateFormat('yyyy-MM-dd\nHH:mm:ss').format(val.data)),
   },
 };
 
@@ -230,12 +277,11 @@ String _bearingString(double number, String suffix) {
   return rounded.toString().padLeft(3, '0') + suffix;
 }
 
-String _xteString(double value, double conversion, String units) {
-  // Treat +/- 1 meter as good enough.
-  if (value >= -1 && value <= 1) {
+String _xteString(double number, String units) {
+  // Treat +/- 1 of whatever input we're working in as good enough.
+  if (number >= -1 && number <= 1) {
     return 'On Track';
   }
-  final converted = (value * conversion).round().abs();
-  final guidance = (value < 0) ? 'Steer Left' : 'Steer Right';
-  return '$converted $units\n$guidance';
+  final guidance = (number < 0) ? 'Steer Left' : 'Steer Right';
+  return '${number.round().abs()} $units\n$guidance';
 }

@@ -68,6 +68,9 @@ abstract class DataElement<V extends Value, U extends Value>
   /// The current value of the element.
   V? get value => _value;
 
+  /// The current tier of the element.
+  int? get tier => _tier;
+
   /// Invalidates the value held by this element.
   void invalidateValue() {
     if (_value != null) {
@@ -81,7 +84,7 @@ abstract class DataElement<V extends Value, U extends Value>
 
   /// Updates the value held by this element, returning true if the new value
   /// was accepted.
-  bool updateValue(final U newValue) {
+  bool updateValue(final BoundValue<U> newValue) {
     if (newValue.property != property) {
       throw InvalidTypeException(
           'Tried to update $property DataElement with ${newValue.property} value');
@@ -109,7 +112,7 @@ abstract class DataElement<V extends Value, U extends Value>
     }
 
     // Convert and store the new value and notify on change.
-    final V newStoredValue = convertValue(newValue);
+    final V newStoredValue = convertValue(newValue.value);
     if (newStoredValue != _value) {
       _value = newStoredValue;
       if (lastUpdateStopwatch.isRunning &&
@@ -157,11 +160,12 @@ class ConsistentDataElement<V extends Value> extends DataElement<V, V> {
   }
 }
 
-mixin WithHistory<U extends Value, V extends Value> on DataElement<U, V> {
-  late final Map<HistoryInterval, OptionalHistory> _histories = Map.fromEntries(
-      HistoryInterval.values.map((i) => MapEntry(i, OptionalHistory(i, id))));
+mixin WithHistory<V extends Value, U extends Value> on DataElement<V, U> {
+  late final Map<HistoryInterval, OptionalHistory<V>> _histories =
+      Map.fromEntries(HistoryInterval.values
+          .map((i) => MapEntry(i, OptionalHistory<V>(i, id))));
 
-  void addHistoryValue(final SingleValue<double> newValue) {
+  void addHistoryValue(final V newValue) {
     for (final history in _histories.values) {
       history.addValue(newValue);
     }
@@ -186,10 +190,10 @@ class SingleValueDoubleConsistentDataElement
       super.source, super.property, super.staleness);
 
   @override
-  bool updateValue(final SingleValue<double> newValue) {
+  bool updateValue(final BoundValue<SingleValue<double>> newValue) {
     final accepted = super.updateValue(newValue);
     if (accepted) {
-      addHistoryValue(newValue);
+      addHistoryValue(newValue.value);
     }
     return accepted;
   }
@@ -197,7 +201,8 @@ class SingleValueDoubleConsistentDataElement
 
 /// A special case element for displaying bearings using a reference variation
 class BearingDataElement
-    extends DataElement<AugmentedBearing, SingleValue<double>> {
+    extends DataElement<AugmentedBearing, SingleValue<double>>
+    with WithHistory {
   // Only output a log warning for discarding mag heading due to missing
   // variation once each time the condition occurs.
   static bool loggedMissingVariation = false;
@@ -208,7 +213,9 @@ class BearingDataElement
       : super('${source.name}_${property.name}', property, staleness);
 
   @override
-  bool updateValue(final SingleValue<double> newValue) {
+  bool updateValue(final BoundValue<SingleValue<double>> newValue) {
+    late bool accepted;
+
     /// Handle the special case of the element storing heading, which can
     /// accept either true headings or magnetic headings that it converts.
     if (newValue.property == Property.headingMag &&
@@ -222,22 +229,26 @@ class BearingDataElement
         }
         return false;
       }
-      final trueHeading = (newValue.value - variationValue.value) % 360.0;
-      final result = super.updateValue(SingleValue<double>(
-          trueHeading, newValue.source, Property.heading,
+      final trueHeading = (newValue.value.data - variationValue.data) % 360.0;
+      accepted = super.updateValue(BoundValue(
+          newValue.source, Property.heading, SingleValue<double>(trueHeading),
           tier: newValue.tier));
       loggedMissingVariation = false;
-      return result;
     } else {
-      return super.updateValue(newValue);
+      accepted = super.updateValue(newValue);
     }
+    if (accepted && _value != null) {
+      addHistoryValue(_value!);
+    }
+    return accepted;
   }
 
   @override
   AugmentedBearing convertValue(SingleValue<double> newValue) {
-    // Just store the variation each time we receive a new bearing. This means we can't
-    // update the output if the variation changes without bearing updates but since
-    // variation changes far less frequently thats unlikely to be a problem.
+    // Just store the variation each time we receive a new bearing. This means
+    // we can't update the output if the variation changes without bearing
+    // updates but since variation changes far less frequently thats unlikely
+    // to be a problem.
     return AugmentedBearing(newValue, variation.value);
   }
 }
@@ -259,24 +270,25 @@ class DerivedDataElement
     // Update self when the sourceElement sends a notification.
     _sourceElement.addListener(() {
       final sourceValue = _sourceElement.value;
-      if (sourceValue == null) {
+      final sourceConverted = _formatter.toNumber(sourceValue);
+      // Convert the source value to the target units and check its not null
+      if (sourceConverted == null) {
         invalidateValue();
       } else {
-        // Convert the source value to the target units, apply the operation,
-        // then convert it back to the native units for its dimension.
-        final sourceConverted = _formatter.convert(sourceValue.value);
+        // Apply the operation then convert back to the native units for its
+        // dimension.
         final derivedConverted = _operation.apply(sourceConverted, _operand);
-        final derived = _formatter.unconvert(derivedConverted);
-        updateValue(SingleValue(derived, Source.derived, sourceValue.property));
+        updateValue(BoundValue(Source.derived, _sourceElement.property,
+            _formatter.fromNumber(derivedConverted)));
       }
     });
   }
 
   @override
-  bool updateValue(final SingleValue<double> newValue) {
+  bool updateValue(final BoundValue<SingleValue<double>> newValue) {
     final accepted = super.updateValue(newValue);
-    if (accepted) {
-      addHistoryValue(newValue);
+    if (accepted && _value != null) {
+      addHistoryValue(_value!);
     }
     return accepted;
   }

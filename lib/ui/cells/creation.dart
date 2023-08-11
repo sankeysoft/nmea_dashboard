@@ -61,9 +61,8 @@ Cell createCell(DataSet dataset, DataCellSpec spec) {
         _log.warning('Could not find ${spec.historyInterval} interval');
         return NotFoundCell(spec: spec);
       }
-      if (formatter is! ConvertingFormatter) {
-        _log.warning(
-            'History formatter ${formatter.longName} is not converting');
+      if (formatter is! NumericFormatter) {
+        _log.warning('History formatter ${formatter.longName} is not numeric');
         return NotFoundCell(spec: spec);
       }
       if (element is! WithHistory) {

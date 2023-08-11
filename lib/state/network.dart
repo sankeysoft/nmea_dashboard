@@ -18,11 +18,11 @@ const _networkErrorRetry = Duration(seconds: 15);
 
 final _log = Logger('Network');
 
-/// Returns an infinite stream of valid values read from a port specified in the supplied
-/// network settings, logging any errors. Guaranteed to return (potentially null) values
-/// at least every _timeout seconds even if no network traffic is present to enable
-/// cancelling.
-Stream<Value?> valuesFromNetwork(NetworkSettings settings) {
+/// Returns an infinite stream of valid bound values read from a port specified
+/// in the supplied network settings, logging any errors. Guaranteed to return
+/// (potentially null) values at least every _timeout seconds even if no network
+/// traffic is present to enable cancelling.
+Stream<BoundValue?> valuesFromNetwork(NetworkSettings settings) {
   NmeaParser parser = NmeaParser(settings.requireChecksum);
   switch (settings.mode) {
     case NetworkMode.tcpConnect:
@@ -32,10 +32,11 @@ Stream<Value?> valuesFromNetwork(NetworkSettings settings) {
   }
 }
 
-/// Returns an infinite stream of valid values read from the supplied TCP address and port, logging any errors,
-/// guaranteed to return (potentially null) values at least every _timeout seconds even if no network
-/// traffic is present to enable cancelling.
-Stream<Value?> _valuesFromTcpConnect(
+/// Returns an infinite stream of valid bound values read from the supplied TCP
+/// address and port, logging any errors, guaranteed to return (potentially
+/// null) values at least every _timeout seconds even if no network traffic is
+/// present to enable cancelling.
+Stream<BoundValue?> _valuesFromTcpConnect(
     InternetAddress ipAddress, int portNum, NmeaParser parser) async* {
   _log.info('Starting TCP stream on $ipAddress:$portNum');
   try {
@@ -58,10 +59,12 @@ Stream<Value?> _valuesFromTcpConnect(
   }
 }
 
-/// Returns an infinite stream of valid values read from the supplied network port, logging any errors,
-/// guaranteed to return (potentially null) values at least every _timeout seconds even if no network
-/// traffic is present to enable cancelling.
-Stream<Value?> _valuesFromUdpListen(int portNum, NmeaParser parser) async* {
+/// Returns an infinite stream of valid bound values read from the supplied
+/// network port, logging any errors, guaranteed to return (potentially null)
+/// values at least every _timeout seconds even if no network traffic is present
+/// to enable cancelling.
+Stream<BoundValue?> _valuesFromUdpListen(
+    int portNum, NmeaParser parser) async* {
   _log.info('Starting UDP listen stream on $portNum');
   try {
     while (true) {
@@ -94,7 +97,7 @@ Stream<Uint8List> _periodicEmptyPackets() {
 /// logging any errors, guaranteed to return (potentially null) values at
 /// least every _timeout seconds even if no network traffic is present to
 /// enable cancelling.
-Stream<Value?> _valuesFromPackets(
+Stream<BoundValue?> _valuesFromPackets(
     Stream<Uint8List> packetStream, NmeaParser parser) async* {
   var remaining = '';
   await for (final packet

@@ -12,14 +12,15 @@ const _interval = Duration(seconds: 1);
 
 /// Returns an infinite stream of valid values read from the local device
 /// network port, logging any errors.
-Stream<Value> valuesFromLocalDevice() {
+Stream<BoundValue> valuesFromLocalDevice() {
   return StreamGroup.merge([
     Stream.periodic(_interval, (_) {
-      return SingleValue(DateTime.now(), Source.local, Property.localTime);
+      return BoundValue<SingleValue<DateTime>>(
+          Source.local, Property.localTime, SingleValue(DateTime.now()));
     }),
     Stream.periodic(_interval, (_) {
-      return SingleValue(
-          DateTime.now().toUtc(), Source.local, Property.utcTime);
+      return BoundValue<SingleValue<DateTime>>(
+          Source.local, Property.utcTime, SingleValue(DateTime.now().toUtc()));
     })
   ]);
 }

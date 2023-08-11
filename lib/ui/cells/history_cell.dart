@@ -18,7 +18,7 @@ class HistoryCell extends HeadingContentsCell {
   HistoryCell(
       {required OptionalHistory history,
       required DataElement element,
-      required ConvertingFormatter formatter,
+      required NumericFormatter formatter,
       required DataCellSpec spec,
       key})
       : super(
@@ -31,7 +31,7 @@ class HistoryCell extends HeadingContentsCell {
 }
 
 class _Graph extends StatelessWidget {
-  final ConvertingFormatter formatter;
+  final NumericFormatter formatter;
 
   const _Graph(this.formatter);
 
@@ -53,23 +53,50 @@ class _Graph extends StatelessWidget {
   }
 }
 
+class _FormattedHistory {
+  final bool validData;
+  final double? min;
+  final double? max;
+  final List<double?> values;
+
+  _FormattedHistory(this.validData, this.min, this.max, this.values);
+
+  static _FormattedHistory calculate(
+      History history, NumericFormatter formatter) {
+    bool validData = false;
+    double? min;
+    double? max;
+    List<double?> values = List.filled(history.values.length, null);
+
+    for (int i = 0; i < history.values.length; i++) {
+      final d = formatter.toNumber(history.values[i]);
+      if (d != null) {
+        if (min == null || d <= min) {
+          min = d;
+        }
+        if (max == null || d >= max) {
+          max = d;
+        }
+        validData = true;
+      }
+      values[i] = d;
+    }
+    return _FormattedHistory(validData, min, max, values);
+  }
+}
+
 class _YAxis {
-  final double minNative;
   final double minDisplay;
-  final double maxNative;
   final double maxDisplay;
   final int tickCount;
   final int _formatDp;
 
-  _YAxis(this.minNative, this.minDisplay, this.maxNative, this.maxDisplay,
-      this.tickCount, this._formatDp);
+  _YAxis(this.minDisplay, this.maxDisplay, this.tickCount, this._formatDp);
 
-  static _YAxis calculate(History history, ConvertingFormatter formatter) {
+  static _YAxis calculate(_FormattedHistory formattedHistory) {
     // Default to fixed values if the history does not yet have a range.
-    double minNative = history.min ?? 0;
-    double maxNative = history.max ?? 1;
-    double minDisplay = formatter.convert(minNative);
-    double maxDisplay = formatter.convert(maxNative);
+    double minDisplay = formattedHistory.min ?? 0;
+    double maxDisplay = formattedHistory.max ?? 1;
 
     // Find the distance we want between tick marks to give about 1-4 ticks.
     final logRange = log(max(maxDisplay - minDisplay, 0.2)) / ln10;
@@ -93,12 +120,9 @@ class _YAxis {
         : ((minDisplay - 0.0001) / tickSpacing).floorToDouble() * tickSpacing;
     maxDisplay =
         ((maxDisplay + 0.0001) / tickSpacing).ceilToDouble() * tickSpacing;
-    minNative = formatter.unconvert(minDisplay);
-    maxNative = formatter.unconvert(maxDisplay);
     final tickCount = ((maxDisplay - minDisplay) / tickSpacing).round() + 1;
 
-    return _YAxis(
-        minNative, minDisplay, maxNative, maxDisplay, tickCount, formatDp);
+    return _YAxis(minDisplay, maxDisplay, tickCount, formatDp);
   }
 
   String format(double value) {
@@ -135,7 +159,7 @@ class _XAxis {
 
 class _GraphPainter extends CustomPainter {
   final History history;
-  final ConvertingFormatter formatter;
+  final NumericFormatter formatter;
   final ThemeData theme;
   DateTime? _lastPaintEvt;
 
@@ -143,8 +167,11 @@ class _GraphPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // First calculate and validate the information we need for the axes.
-    final yAxis = _YAxis.calculate(history, formatter);
+    // First translate the native values in the history to display coordinates.
+    final _FormattedHistory formattedHistory =
+        _FormattedHistory.calculate(history, formatter);
+    // Calculate and validate the information we need for the axes.
+    final yAxis = _YAxis.calculate(formattedHistory);
     final xAxis = _XAxis.calculate(history);
 
     // If we have enough height to comfortably fit the *max* number of tick
@@ -153,7 +180,6 @@ class _GraphPainter extends CustomPainter {
     final minText = layoutText(yAxis.format(yAxis.minDisplay));
     final charHeight = minText.height;
     bool drawGrid = (size.height > minText.height * 12);
-    bool validData = (history.min != null && history.max != null);
 
     late final double yAxisWidth;
     late final Size plotSize;
@@ -179,12 +205,18 @@ class _GraphPainter extends CustomPainter {
       plotOffset = Offset(yAxisWidth, 0);
     }
 
-    paintPlot(canvas, plotSize, plotOffset, yAxis);
-    if (drawGrid && validData) {
-      // Avoid the grid if we paint status text explaining lack of data.
-      paintXGrid(canvas, plotSize, plotOffset, xAxis);
-      paintYGrid(canvas, plotSize, plotOffset, yAxis);
+    // The components we paint depend on if we've got valid data and a grid.
+    paintBackground(canvas, plotSize, plotOffset);
+    if (formattedHistory.validData) {
+      paintPlot(canvas, plotSize, plotOffset, yAxis, formattedHistory.values);
+      if (drawGrid) {
+        paintXGrid(canvas, plotSize, plotOffset, xAxis);
+        paintYGrid(canvas, plotSize, plotOffset, yAxis);
+      }
+    } else {
+      paintAccumulationMessage(canvas, plotSize, plotOffset);
     }
+    paintBorder(canvas, plotSize, plotOffset);
 
     _lastPaintEvt = history.endValueTime;
   }
@@ -285,16 +317,44 @@ class _GraphPainter extends CustomPainter {
     }
   }
 
+  /// Paints the plot background, which is the color that remains for invalid
+  /// data windows.
+  void paintBackground(Canvas canvas, Size size, Offset offset) {
+    canvas.drawRect(
+        Rect.fromLTWH(offset.dx, offset.dy, size.width, size.height),
+        Paint()..color = theme.colorScheme.surfaceTint);
+  }
+
+  /// Paints the plot border.
+  void paintBorder(Canvas canvas, Size size, Offset offset) {
+    // Finish with a grey border.
+    canvas.drawRect(
+        Rect.fromLTWH(offset.dx, offset.dy, size.width, size.height),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2
+          ..color = theme.colorScheme.primaryContainer);
+  }
+
+  /// Paints a message explaining why no data is present yet.
+  void paintAccumulationMessage(Canvas canvas, Size size, Offset offset) {
+    // Draw status text instead of the actual graph.
+    final endTime = intl.DateFormat("HH:mm:ss")
+        .format(history.endValueTime.add(history.interval.segment).toLocal());
+    final text = layoutText('Accumulating\nhistory until\n$endTime',
+        align: TextAlign.center);
+    final txtOffset = Offset(offset.dx + size.width / 2 - text.width / 2,
+        offset.dy + size.height / 2 - text.height / 2);
+    text.paint(canvas, txtOffset);
+  }
+
   /// Paints the actual plot and the surrounding grid.
-  void paintPlot(Canvas canvas, Size size, Offset offset, _YAxis yAxis) {
+  void paintPlot(Canvas canvas, Size size, Offset offset, _YAxis yAxis,
+      List<double?> values) {
     final segWidth = size.width / history.values.length;
-    final rangeNative = max(yAxis.maxNative - yAxis.minNative, 0.01);
+    final rangeDisplay = max(yAxis.maxDisplay - yAxis.minDisplay, 0.01);
     final y0 = offset.dy + size.height;
 
-    final greyStroke = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..color = theme.colorScheme.primaryContainer;
     final whiteFill = Paint()
       ..style = PaintingStyle.fill
       ..color = theme.colorScheme.primary;
@@ -302,71 +362,47 @@ class _GraphPainter extends CustomPainter {
       ..style = PaintingStyle.fill
       ..color = theme.colorScheme.onPrimary;
 
-    // Start with a grey background representing the defualt of invalid data.
-    canvas.drawRect(
-        Rect.fromLTWH(offset.dx, offset.dy, size.width, size.height),
-        Paint()..color = theme.colorScheme.surfaceTint);
-
-    if (history.min == null || history.max == null) {
-      // If there is no history min/max there will be no data. Draw status text
-      // instead of the actual graph.
-      // TODO: Probably cleaner having a separate method poplulate text driven
-      // by the master paint method?
-      final endTime = intl.DateFormat("HH:mm:ss")
-          .format(history.endValueTime.add(history.interval.segment).toLocal());
-      final text = layoutText('Accumulating\nhistory until\n$endTime',
-          align: TextAlign.center);
-      final txtOffset = Offset(offset.dx + size.width / 2 - text.width / 2,
-          offset.dy + size.height / 2 - text.height / 2);
-      text.paint(canvas, txtOffset);
-    } else {
-      // Draw rectangular black and bargraph white paths for each chunk of valid
-      // data.
-      Path? whitePath;
-      Path? blackPath;
-      for (int i = 0; i < history.values.length + 1; i++) {
-        /// Deliberately iterate one more to close any previous shape.
-        final x = segWidth * i + offset.dx;
-        if (i >= history.values.length || history.values[i] == null) {
-          // Draw the previous shape if we had one.
-          if (blackPath != null) {
-            blackPath.lineTo(x, offset.dy);
-            blackPath.lineTo(x, y0);
-            blackPath.close();
-            canvas.drawPath(blackPath, blackFill);
-            blackPath = null;
-          }
-          if (whitePath != null) {
-            whitePath.lineTo(x, y0);
-            whitePath.close();
-            canvas.drawPath(whitePath, whiteFill);
-            whitePath = null;
-          }
-        } else {
-          final y = y0 -
-              min((history.values[i]! - yAxis.minNative) / rangeNative, 1.0) *
-                  size.height;
-          // Create new paths if needed.
-          if (blackPath == null) {
-            blackPath = Path();
-            blackPath.moveTo(x, y0);
-            blackPath.lineTo(x, offset.dy);
-          }
-          if (whitePath == null) {
-            whitePath = Path();
-            whitePath.moveTo(x, y0);
-          }
-          // Draw this bar in the bar graph.
-          whitePath.lineTo(x, y);
-          whitePath.relativeLineTo(segWidth, 0);
+    // Draw rectangular black and bargraph white paths for each chunk of valid
+    // data.
+    Path? whitePath;
+    Path? blackPath;
+    for (int i = 0; i < values.length + 1; i++) {
+      /// Deliberately iterate one more to close any previous shape.
+      final x = segWidth * i + offset.dx;
+      if (i >= values.length || values[i] == null) {
+        // Draw the previous shape if we had one.
+        if (blackPath != null) {
+          blackPath.lineTo(x, offset.dy);
+          blackPath.lineTo(x, y0);
+          blackPath.close();
+          canvas.drawPath(blackPath, blackFill);
+          blackPath = null;
         }
+        if (whitePath != null) {
+          whitePath.lineTo(x, y0);
+          whitePath.close();
+          canvas.drawPath(whitePath, whiteFill);
+          whitePath = null;
+        }
+      } else {
+        final y = y0 -
+            min((values[i]! - yAxis.minDisplay) / rangeDisplay, 1.0) *
+                size.height;
+        // Create new paths if needed.
+        if (blackPath == null) {
+          blackPath = Path();
+          blackPath.moveTo(x, y0);
+          blackPath.lineTo(x, offset.dy);
+        }
+        if (whitePath == null) {
+          whitePath = Path();
+          whitePath.moveTo(x, y0);
+        }
+        // Draw this bar in the bar graph.
+        whitePath.lineTo(x, y);
+        whitePath.relativeLineTo(segWidth, 0);
       }
     }
-
-    // Finish with a grey border.
-    canvas.drawRect(
-        Rect.fromLTWH(offset.dx, offset.dy, size.width, size.height),
-        greyStroke);
   }
 
   @override

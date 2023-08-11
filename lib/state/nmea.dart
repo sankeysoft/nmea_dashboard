@@ -122,13 +122,13 @@ class NmeaParser {
   }
 
   /// Attempts to parse the supplied string as a NMEA0183 message, returning
-  /// one or more values if parsing the message contents was successful or
+  /// one or more bound values if parsing the message contents was successful or
   /// zero values if parsing was unsucessful but the failure mode should not be
   /// logged (e.g. a benign problem that has already been logged). Throws an
   /// exception if parsing errors were encountered and the first time a new
   /// unsupported message or a message with no data is received.
   /// If requireChecksum is true messages without a checksum are rejected.
-  List<Value> parseString(String string) {
+  List<BoundValue> parseString(String string) {
     if (string.startsWith('!')) {
       // Silently discard the encapsulated (e.g. AIS) sentences which are often
       // on the network.
@@ -163,7 +163,7 @@ class NmeaParser {
     }
 
     // Pass everything else to the helper that understands message types.
-    late final List<Value> values;
+    late final List<BoundValue> values;
     try {
       values = _createNmeaValues(type, fields);
     } on UnsupportedMessageException {
@@ -204,7 +204,7 @@ void _validateChecksum(payload, checksumString) {
 /// from the supplied type string and field list, throwing a FormatException
 /// if unsuccessful or an UnsupportedMessageException if the message type is
 /// not recognized.
-List<Value> _createNmeaValues(String type, List<String> fields) {
+List<BoundValue> _createNmeaValues(String type, List<String> fields) {
   switch (type) {
     case 'BWR':
       _validateMinFieldCount(fields, 12);
@@ -229,23 +229,23 @@ List<Value> _createNmeaValues(String type, List<String> fields) {
       final depth = double.parse(fields[0]);
       final offset = fields[1].isEmpty ? 0.0 : double.parse(fields[1]);
       return [
-        SingleValue(depth + offset, Source.network, Property.depthWithOffset),
-        SingleValue(depth, Source.network, Property.depthUncalibrated),
+        _boundSingleValue(depth + offset, Property.depthWithOffset),
+        _boundSingleValue(depth, Property.depthUncalibrated),
       ];
     case 'HDG':
       _validateFieldCount(fields, 5);
-      // TODO: Consider supporting a case where mag heading is not know it this
-      //       ever arises.
+      // TODO: Currently we support mag-only but not true-only. Consider
+      //       supporting mag heading being missing if this ever arises.
       final magHdg = double.parse(fields[0]);
       if (fields[3].isEmpty) {
         // Support equipment which does not know variation.
-        return [SingleValue(magHdg, Source.network, Property.headingMag)];
+        return [_boundSingleValue(magHdg, Property.headingMag)];
       }
       final variation = _parseVariation(fields[3], fields[4]);
       final trueHdg = (magHdg - variation) % 360.0;
       return [
-        SingleValue(variation, Source.network, Property.variation),
-        SingleValue(trueHdg, Source.network, Property.heading),
+        _boundSingleValue(variation, Property.variation),
+        _boundSingleValue(trueHdg, Property.heading),
       ];
     case 'HDM':
       _validateFieldCount(fields, 2);
@@ -258,46 +258,40 @@ List<Value> _createNmeaValues(String type, List<String> fields) {
       // Note we do not support messages where the position is missing.
       final lat = _parseLatitude(fields[1], fields[2]);
       final long = _parseLongitude(fields[3], fields[4]);
-      var ret = <Value>[
-        DoubleValue(lat, long, Source.network, Property.gpsPosition)
-      ];
-      if (fields[7].isNotEmpty) {
-        ret.add(SingleValue(
-            double.parse(fields[7]), Source.network, Property.gpsHdop));
+      final position = _boundDoubleValue(lat, long, Property.gpsPosition);
+      final hdop = _parseSingleValue(fields[7], Property.gpsHdop);
+      if (hdop == null) {
+        return [position];
+      } else {
+        return [position, hdop];
       }
-      return ret;
     case 'GLL':
       _validateMinFieldCount(fields, 6);
       // Note we do not support messages where the position is missing.
       _validateValidityIndicator(fields, index: 5);
       final lat = _parseLatitude(fields[0], fields[1]);
       final long = _parseLongitude(fields[2], fields[3]);
-      return [
-        DoubleValue(lat, long, Source.network, Property.gpsPosition, tier: 2)
-      ];
+      return [_boundDoubleValue(lat, long, Property.gpsPosition, tier: 2)];
     case 'MDA':
       _validateFieldCount(fields, 20);
-      var ret = <SingleValue<double>>[];
+      var ret = <BoundValue<SingleValue<double>>?>[];
       if (fields[2].isNotEmpty) {
         _validateFieldValue(fields, index: 3, expected: 'B');
-        ret.add(SingleValue(double.parse(fields[2]) * barToPascals,
-            Source.network, Property.pressure));
+        ret.add(_parseSingleValue(fields[2], Property.pressure,
+            divisor: 1 / barToPascals));
       }
       if (fields[4].isNotEmpty) {
         _validateFieldValue(fields, index: 5, expected: 'C');
-        ret.add(SingleValue(
-            double.parse(fields[4]), Source.network, Property.airTemperature));
+        ret.add(_parseSingleValue(fields[4], Property.airTemperature));
       }
       if (fields[8].isNotEmpty) {
-        ret.add(SingleValue(double.parse(fields[8]), Source.network,
-            Property.relativeHumidity));
+        ret.add(_parseSingleValue(fields[8], Property.relativeHumidity));
       }
       if (fields[10].isNotEmpty) {
         _validateFieldValue(fields, index: 11, expected: 'C');
-        ret.add(SingleValue(
-            double.parse(fields[10]), Source.network, Property.dewPoint));
+        ret.add(_parseSingleValue(fields[10], Property.dewPoint));
       }
-      return ret;
+      return ret.whereNotNull().toList();
     case 'MWV':
       _validateFieldCount(fields, 5);
       _validateValidityIndicator(fields, index: 4);
@@ -306,9 +300,9 @@ List<Value> _createNmeaValues(String type, List<String> fields) {
       final speed = double.parse(fields[2]) /
           (fields[3] == 'K' ? metersPerSecondToKnots : 1.0);
       return [
-        SingleValue(angle, Source.network,
+        _boundSingleValue(angle,
             relative ? Property.apparentWindAngle : Property.trueWindDirection),
-        SingleValue(speed, Source.network,
+        _boundSingleValue(speed,
             relative ? Property.apparentWindSpeed : Property.trueWindSpeed),
       ];
     case 'MTW':
@@ -331,9 +325,9 @@ List<Value> _createNmeaValues(String type, List<String> fields) {
       final bearing = double.parse(fields[10]);
       final xte = _parseCrossTrackError(fields[1], fields[2]);
       return [
-        SingleValue(range, Source.network, Property.waypointRange, tier: 2),
-        SingleValue(bearing, Source.network, Property.waypointBearing, tier: 2),
-        SingleValue(xte, Source.network, Property.crossTrackError, tier: 2),
+        _boundSingleValue(range, Property.waypointRange, tier: 2),
+        _boundSingleValue(bearing, Property.waypointBearing, tier: 2),
+        _boundSingleValue(xte, Property.crossTrackError, tier: 2),
       ];
     case 'RMC':
       _validateMinFieldCount(fields, 11);
@@ -353,26 +347,18 @@ List<Value> _createNmeaValues(String type, List<String> fields) {
       final month = int.parse(fields[8].substring(2, 4));
       final year = 2000 + int.parse(fields[8].substring(4, 6));
       final dt = DateTime.utc(year, month, day, hour, minute, second);
-      var ret = <Value>[
-        DoubleValue(lat, long, Source.network, Property.gpsPosition, tier: 3),
-        SingleValue(dt, Source.network, Property.utcTime, tier: 2),
+      var ret = <BoundValue?>[
+        _boundDoubleValue(lat, long, Property.gpsPosition, tier: 3),
+        _boundSingleValue(dt, Property.utcTime, tier: 2),
       ];
-      if (fields[6].isNotEmpty) {
-        final sog = double.parse(fields[6]) / metersPerSecondToKnots;
-        ret.add(SingleValue(sog, Source.network, Property.speedOverGround,
-            tier: 2));
-      }
-      if (fields[7].isNotEmpty) {
-        final cog = double.parse(fields[7]);
-        ret.add(SingleValue(cog, Source.network, Property.courseOverGround,
-            tier: 2));
-      }
+      ret.add(_parseSingleValue(fields[6], Property.speedOverGround,
+          divisor: metersPerSecondToKnots, tier: 2));
+      ret.add(_parseSingleValue(fields[7], Property.courseOverGround, tier: 2));
       if (fields[9].isNotEmpty) {
         final variation = _parseVariation(fields[9], fields[10]);
-        ret.add(SingleValue(variation, Source.network, Property.variation,
-            tier: 2));
+        ret.add(_boundSingleValue(variation, Property.variation, tier: 2));
       }
-      return ret;
+      return ret.whereNotNull().toList();
     case 'RSA':
       _validateFieldCount(fields, 4);
       _validateValidityIndicator(fields, index: 1);
@@ -416,7 +402,7 @@ List<Value> _createNmeaValues(String type, List<String> fields) {
       ].whereNotNull().toList();
     case 'XDR':
       _validateMinFieldCount(fields, 4);
-      final List<Value> values = [];
+      final List<BoundValue> values = [];
       for (int i = 0; i < fields.length - 3; i += 4) {
         values.addAll(_parseXdrMeasurement(fields, i));
       }
@@ -428,7 +414,7 @@ List<Value> _createNmeaValues(String type, List<String> fields) {
       _validateFieldValue(fields, index: 4, expected: 'N');
       final xte = _parseCrossTrackError(fields[2], fields[3]);
       return [
-        SingleValue(xte, Source.network, Property.crossTrackError),
+        _boundSingleValue(xte, Property.crossTrackError),
       ];
     case 'ZDA':
       _validateFieldCount(fields, 6);
@@ -442,16 +428,17 @@ List<Value> _createNmeaValues(String type, List<String> fields) {
       final month = int.parse(fields[2]);
       final year = int.parse(fields[3]);
       final dt = DateTime.utc(year, month, day, hour, minute, second);
-      return [SingleValue(dt, Source.network, Property.utcTime)];
+      return [_boundSingleValue(dt, Property.utcTime)];
     default:
       throw UnsupportedMessageException();
   }
 }
 
-// Parse a SingleValue<double> from the supplied input, returning null if the
-// input was empty and throwing a FormatException if it was not a valid number.
-// Optionally divides the
-SingleValue<double>? _parseSingleValue(String input, Property property,
+// Parse a BoundValue<SingleValue<double>> from the supplied input, returning
+// null if the input was empty and throwing a FormatException if it was not a
+// valid number. Optionally divides the parsed input by the supplied divisor.
+BoundValue<SingleValue<double>>? _parseSingleValue(
+    String input, Property property,
     {double? divisor, int tier = 1}) {
   if (input.isEmpty) {
     return null;
@@ -460,7 +447,21 @@ SingleValue<double>? _parseSingleValue(String input, Property property,
   if (divisor != null) {
     number = number / divisor;
   }
-  return SingleValue(number, Source.network, property, tier: tier);
+  return _boundSingleValue(number, property, tier: tier);
+}
+
+// Created a BoundValue<SingleValue<double>> from the supplied input.
+BoundValue<SingleValue<T>> _boundSingleValue<T>(T number, Property property,
+    {int tier = 1}) {
+  return BoundValue(Source.network, property, SingleValue(number), tier: tier);
+}
+
+// Created a BoundValue<DoubleValue<double>> from the supplied input.
+BoundValue<DoubleValue<double>> _boundDoubleValue(
+    double first, double second, Property property,
+    {int tier = 1}) {
+  return BoundValue(Source.network, property, DoubleValue(first, second),
+      tier: tier);
 }
 
 /// Validates fields contains the expected number of entries.
@@ -560,33 +561,29 @@ double _parseVariation(String valueString, String direction) {
   }
 }
 
-/// Parses a variation magniture and sign, returning a positive value for West.
-List<Value> _parseXdrMeasurement(List<String> fields, int startIndex) {
+/// Parses a single transducer measurement, ignoring unknown properties.
+List<BoundValue> _parseXdrMeasurement(List<String> fields, int startIndex) {
   switch ('${fields[startIndex]}-${fields[startIndex + 3].toLowerCase()}') {
     case 'A-pitch':
       _validateFieldValue(fields, index: startIndex + 2, expected: 'D');
       final value = double.parse(fields[startIndex + 1]);
-      return [SingleValue(value, Source.network, Property.pitch)];
+      return [_boundSingleValue(value, Property.pitch)];
     case 'A-roll':
       _validateFieldValue(fields, index: startIndex + 2, expected: 'D');
       final value = double.parse(fields[startIndex + 1]);
-      return [SingleValue(value, Source.network, Property.roll)];
+      return [_boundSingleValue(value, Property.roll)];
     case 'P-baro':
       _validateFieldValue(fields, index: startIndex + 2, expected: 'P');
       final value = double.parse(fields[startIndex + 1]);
-      return [SingleValue(value, Source.network, Property.pressure, tier: 2)];
+      return [_boundSingleValue(value, Property.pressure, tier: 2)];
     case 'C-air':
       _validateFieldValue(fields, index: startIndex + 2, expected: 'C');
       final value = double.parse(fields[startIndex + 1]);
-      return [
-        SingleValue(value, Source.network, Property.airTemperature, tier: 2)
-      ];
+      return [_boundSingleValue(value, Property.airTemperature, tier: 2)];
     case 'H-air':
       _validateFieldValue(fields, index: startIndex + 2, expected: 'P');
       final value = double.parse(fields[startIndex + 1]);
-      return [
-        SingleValue(value, Source.network, Property.relativeHumidity, tier: 2)
-      ];
+      return [_boundSingleValue(value, Property.relativeHumidity, tier: 2)];
     default:
       return [];
   }

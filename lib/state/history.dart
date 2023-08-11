@@ -26,9 +26,9 @@ const Duration _saveInterval = Duration(minutes: 1);
 const Duration _timerInterval = Duration(seconds: 2);
 
 /// A simple PODO for timer events.
-class _HistoryEvent implements Comparable<_HistoryEvent> {
+class _HistoryEvent<V extends Value> implements Comparable<_HistoryEvent> {
   final DateTime time;
-  final History history;
+  final History<V> history;
 
   _HistoryEvent(this.time, this.history);
 
@@ -45,12 +45,13 @@ abstract class HistoryManager {
   void registerEvent(DateTime time, History history);
 
   /// Writes the supplied history information into a shared preference.
-  void save(String dataId, HistoryInterval interval, List<double?> values,
-      DateTime endValueTime);
+  void save<V extends Value>(String dataId, HistoryInterval interval,
+      List<V?> values, DateTime endValueTime);
 
   /// Creates a new history, using data retrieved from shared preferences where
   /// possible.
-  History restoreHistory(HistoryInterval interval, String dataId);
+  History<V> restoreHistory<V extends Value>(
+      HistoryInterval interval, String dataId);
 
   /// Returns the shared prefs key used to store a history.
   static String key(String dataId, HistoryInterval interval) {
@@ -93,31 +94,32 @@ class HistoryManagerImpl extends HistoryManager {
 
   /// Writes the supplied history information into a shared preference.
   @override
-  void save(String dataId, HistoryInterval interval, List<double?> values,
-      DateTime endValueTime) {
+  void save<V extends Value>(String dataId, HistoryInterval interval,
+      List<V?> values, DateTime endValueTime) {
     // Shared prefs does not have well matched datatypes, best we can do is
     // a list of strings. Start with the segment duration as a sanity check.
     List<String> output = [
       interval.segment.inSeconds.toString(),
       endValueTime.millisecondsSinceEpoch.toString()
     ];
-    output.addAll(values.map((v) => (v == null) ? '' : v.toString()));
+    output.addAll(values.map((v) => (v == null) ? '' : v.serialize()));
     prefs.setStringList(HistoryManager.key(dataId, interval), output);
   }
 
   /// Creates a new history, using data retrieved from shared preferences where
   /// possible.
   @override
-  History restoreHistory(HistoryInterval interval, String dataId) {
+  History<V> restoreHistory<V extends Value>(
+      HistoryInterval interval, String dataId) {
     final data = prefs.getStringList(HistoryManager.key(dataId, interval));
     if (data == null) {
       _log.info('No stored history for $dataId, creating a new object');
-      return History(interval, dataId, this);
+      return History<V>(interval, dataId, this);
     }
     if (data.length != interval.count + 2) {
       _log.warning(
           'Stored history for $dataId ${interval.name} wrong length (${data.length})');
-      return History(interval, dataId, this);
+      return History<V>(interval, dataId, this);
     }
 
     final segment = int.tryParse(data[0]);
@@ -130,7 +132,8 @@ class HistoryManagerImpl extends HistoryManager {
     final endValueTime = DateTime.fromMillisecondsSinceEpoch(
         int.tryParse(data[1]) ?? 0,
         isUtc: true);
-    final values = data.sublist(2).map((v) => double.tryParse(v)).toList();
+    final values =
+        data.sublist(2).map((str) => Value.deserialize<V>(str)).toList();
     return History(interval, dataId, this,
         previousEndValueTime: endValueTime, previousValues: values);
   }
@@ -139,7 +142,7 @@ class HistoryManagerImpl extends HistoryManager {
 /// A optionally present history of the average value of some property over a
 /// sequence of time segments. Only present when one or more change notifiers
 /// are connected.
-class OptionalHistory with ChangeNotifier {
+class OptionalHistory<V extends Value> with ChangeNotifier {
   /// The interval that we store over.
   final HistoryInterval interval;
 
@@ -150,7 +153,7 @@ class OptionalHistory with ChangeNotifier {
   HistoryManager? _manager;
 
   /// The history, populated while this object has a manager and listeners.
-  History? _inner;
+  History<V>? _inner;
 
   OptionalHistory(this.interval, this.dataId);
 
@@ -175,41 +178,22 @@ class OptionalHistory with ChangeNotifier {
   /// Pass its events up to our own listeners.
   void _createInnerIfNeeded() {
     if (_manager != null && hasListeners && _inner == null) {
-      _inner = _manager!.restoreHistory(interval, dataId);
+      _inner = _manager!.restoreHistory<V>(interval, dataId);
       _inner!.addListener(() => notifyListeners());
     }
   }
 
   /// Adds a new value into the history.
-  void addValue(final SingleValue<double> newValue) {
+  void addValue(V newValue) {
     _inner?.addValue(newValue);
   }
 
   History? get inner => _inner;
 }
 
-/// A class to accumulate values within some time window.
-class _Accumulator {
-  int count;
-  double? total;
-
-  _Accumulator() : count = 0;
-
-  // Adds a new value into this accumulator.
-  add(double value) {
-    count += 1;
-    total = (total == null) ? value : total! + value;
-  }
-
-  /// Returns the average of the values added into this accumulator.
-  double? average() {
-    return (total == null) ? null : total! / count;
-  }
-}
-
 /// A history of the average value of some property over a sequence of time
 /// segments. Values are null where no data was received.
-class History with ChangeNotifier {
+class History<V extends Value> with ChangeNotifier {
   /// This class's logger.
   static final _log = Logger('History');
 
@@ -220,10 +204,13 @@ class History with ChangeNotifier {
   final String dataId;
 
   /// The array of recent values.
-  final List<double?> _values;
+  final List<V?> _values;
 
   /// A manager for persistence.
   final HistoryManager _manager;
+
+  /// A class to accumulate data over an interval.
+  final ValueAccumulator<V> _accumulator;
 
   /// The time at the end of the last segment in values.
   DateTime _endValueTime;
@@ -231,19 +218,10 @@ class History with ChangeNotifier {
   /// The end value time of the last save.
   DateTime _lastSaveEvt;
 
-  /// A class to accumulate data over an interval.
-  _Accumulator _accumulator;
-
-  /// The minimum and maximum values, only populated if some data is present.
-  double? _min;
-  double? _max;
-
   History(this.interval, this.dataId, this._manager,
-      {DateTime? now,
-      DateTime? previousEndValueTime,
-      List<double?>? previousValues})
+      {DateTime? now, DateTime? previousEndValueTime, List<V?>? previousValues})
       : _values = List.filled(interval.count, null, growable: true),
-        _accumulator = _Accumulator(),
+        _accumulator = ValueAccumulator.forType(V) as ValueAccumulator<V>,
         _endValueTime = truncateUtcToDuration(
             now ?? DateTime.now().toUtc(), interval.segment),
         _lastSaveEvt = DateTime.fromMillisecondsSinceEpoch(0, isUtc: true) {
@@ -261,7 +239,6 @@ class History with ChangeNotifier {
       for (int i = 0; i + srcStartIndex < previousValues.length; i++) {
         values[i] = previousValues[srcStartIndex + i];
       }
-      _updateMinMax();
     }
     _manager.registerEvent(_endValueTime.add(interval.segment), this);
   }
@@ -270,8 +247,7 @@ class History with ChangeNotifier {
   /// the next.
   void endSegment(DateTime now) {
     // Read the current accumlator and start a new one.
-    final average = _accumulator.average();
-    _accumulator = _Accumulator();
+    final average = _accumulator.getAndClear();
 
     // Potentially we are being called way later than the end of the segment we
     // were accumulating, figure out how many we should slide the array down.
@@ -296,7 +272,6 @@ class History with ChangeNotifier {
         _values.addAll(List.filled(interval.count, null));
       }
       _endValueTime = _endValueTime.add(interval.segment * segmentCount);
-      _updateMinMax();
       notifyListeners();
       if (_endValueTime.isAfter(_lastSaveEvt.add(_saveInterval))) {
         _manager.save(dataId, interval, values, endValueTime);
@@ -308,33 +283,13 @@ class History with ChangeNotifier {
     _manager.registerEvent(_endValueTime.add(interval.segment), this);
   }
 
-  /// Recalculates the minimums and maximums from _value.
-  void _updateMinMax() {
-    _min = null;
-    _max = null;
-    for (final v in _values) {
-      if (v != null) {
-        if (_min == null || v <= _min!) {
-          _min = v;
-        }
-        if (_max == null || v >= _max!) {
-          _max = v;
-        }
-      }
-    }
-  }
-
   /// Adds a new value into the history.
-  void addValue(final SingleValue<double> newValue) {
-    _accumulator.add(newValue.value);
+  void addValue(final V newValue) {
+    _accumulator.add(newValue);
   }
 
   /// The historical values of the element.
-  List<double?> get values => _values;
-
-  /// The minimum and maximum values of the element.
-  double? get min => _min;
-  double? get max => _max;
+  List<V?> get values => _values;
 
   /// The end time of the last segment tracked.
   DateTime get endValueTime => _endValueTime;

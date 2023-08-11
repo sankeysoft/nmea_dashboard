@@ -2,6 +2,8 @@
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:provider/provider.dart';
@@ -94,10 +96,11 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
 
     final dimension = dataElement?.property.dimension;
     if (!formattersFor(dimension).keys.contains(_format)) {
+      debugger();
       _format = null;
     }
     if (_type == CellType.history &&
-        formattersFor(dimension)[_format] is! ConvertingFormatter) {
+        formattersFor(dimension)[_format] is! NumericFormatter) {
       _format = null;
     }
   }
@@ -126,6 +129,7 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
               _buildNameField()
             ])),
             buildSaveButton(postSaver: () {
+              debugger();
               // By this stage all the fields will have saved back to our state
               // and we can be confident all the fields are populated. Just
               // create a new spec from these (reusing the previous key) and ask
@@ -222,6 +226,7 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
     final dimension = _dataSet.sources[_source]?[_element]?.property.dimension;
     final Map<String, Formatter> eligibleFormatters = formattersFor(dimension);
 
+    debugger();
     return buildDropdownBox(
         label: 'Format',
         items: eligibleFormatters.entries
@@ -231,6 +236,7 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
         initialValue:
             eligibleFormatters.keys.contains(_format) ? _format : null,
         onChanged: (String? value) {
+          debugger();
           setState(() {
             _format = value;
           });
