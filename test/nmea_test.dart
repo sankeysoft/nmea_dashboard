@@ -4,60 +4,21 @@
 
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/nmea.dart';
+import 'package:nmea_dashboard/state/values.dart';
 import 'package:test/test.dart';
 
-const double _floatTolerance = 0.0001;
+import 'utils.dart';
 
-class ValueListMatches extends Matcher {
-  ValueListMatches(List<Value> expected) : _expected = expected;
+BoundValue<SingleValue<T>> _boundSingleValue<T>(T data, Property property,
+    {int tier = 1}) {
+  return BoundValue(Source.network, property, SingleValue(data), tier: tier);
+}
 
-  final List<Value> _expected;
-
-  @override
-  bool matches(Object? item, Map<dynamic, dynamic> matchState) {
-    // TODO: Once I have more time to spend on matcher best practices I'm sure
-    // there is a cleaner way to do this. Delegating to matcher for a single
-    // value would be a way of breaking it up at least.
-    final actual = item as List<Value>;
-    if (actual.length != _expected.length) {
-      return false;
-    }
-    for (int i = 0; i < _expected.length; i++) {
-      final e = _expected[i];
-      final a = actual[i];
-      if (a.source != e.source ||
-          a.property != e.property ||
-          a.tier != e.tier) {
-        return false;
-      }
-      if (e is SingleValue<double>) {
-        final a_ = a as SingleValue<double>;
-        if ((a_.value - e.value).abs() > _floatTolerance) {
-          return false;
-        }
-      } else if (e is SingleValue<DateTime>) {
-        final a_ = a as SingleValue<DateTime>;
-        if (a_.value != e.value) {
-          return false;
-        }
-      } else if (e is DoubleValue<double>) {
-        final a_ = a as DoubleValue<double>;
-        if ((a_.first - e.first).abs() > _floatTolerance ||
-            (a.second - e.second).abs() > _floatTolerance) {
-          return false;
-        }
-      } else {
-        throw UnimplementedError('No matcher for value type: $e');
-      }
-    }
-    return true;
-  }
-
-  @override
-  Description describe(Description description) {
-    final formatted = _expected.map((e) => '  ${e.runtimeType}:$e');
-    return description.add('Value list matches [\n${formatted.join("\n")}\n]');
-  }
+BoundValue<DoubleValue<T>> _boundDoubleValue<T>(
+    T first, T second, Property property,
+    {int tier = 1}) {
+  return BoundValue(Source.network, property, DoubleValue(first, second),
+      tier: tier);
 }
 
 void main() {
@@ -69,10 +30,9 @@ void main() {
   test('should accept missing checksum iff checksum not required', () {
     expect(
         NmeaParser(false).parseString(r'$YDDPT,18.56,-1.61,140.0'),
-        ValueListMatches([
-          SingleValue<double>(16.95, Source.network, Property.depthWithOffset),
-          SingleValue<double>(
-              18.56, Source.network, Property.depthUncalibrated),
+        BoundValueListMatches([
+          _boundSingleValue(16.95, Property.depthWithOffset),
+          _boundSingleValue(18.56, Property.depthUncalibrated),
         ]));
     expect(() => NmeaParser(true).parseString(r'$YDDPT,18.56,-1.61,140.0'),
         throwsFormatException);
@@ -82,7 +42,7 @@ void main() {
     expect(
         NmeaParser(true).parseString(
             r'$YDGSV,5,1,18,65,75,281,19,10,69,352,25,88,65,332,27,87,61,137,15*7C'),
-        ValueListMatches([]));
+        BoundValueListMatches([]));
   });
 
   test('should increment message counts', () {
@@ -104,29 +64,26 @@ void main() {
     expect(
         NmeaParser(true).parseString(
             r'$YDBWR,203514.60,3740.2436,N,12222.6994,W,148.0,T,134.9,M,0.11,N,0,A*4C'),
-        ValueListMatches([
-          SingleValue<double>(
-              203.71993, Source.network, Property.waypointRange),
-          SingleValue<double>(148, Source.network, Property.waypointBearing),
+        BoundValueListMatches([
+          _boundSingleValue(203.71993, Property.waypointRange),
+          _boundSingleValue(148.0, Property.waypointBearing),
         ]));
   });
 
   test('should support DBT', () {
     expect(
         NmeaParser(true).parseString(r'$SDDBT,58.10,f,17.71,M,,F*24'),
-        ValueListMatches([
-          SingleValue<double>(17.71, Source.network, Property.depthUncalibrated,
-              tier: 2),
+        BoundValueListMatches([
+          _boundSingleValue(17.71, Property.depthUncalibrated, tier: 2),
         ]));
   });
 
   test('should parse DPT', () {
     expect(
         NmeaParser(true).parseString(r'$YDDPT,18.56,-1.61,140.0,*67'),
-        ValueListMatches([
-          SingleValue<double>(16.95, Source.network, Property.depthWithOffset),
-          SingleValue<double>(
-              18.56, Source.network, Property.depthUncalibrated),
+        BoundValueListMatches([
+          _boundSingleValue(16.95, Property.depthWithOffset),
+          _boundSingleValue(18.56, Property.depthUncalibrated),
         ]));
   });
 
@@ -134,33 +91,32 @@ void main() {
     final parser = NmeaParser(true);
     expect(() => parser.parseString(r'$IIDPT,,0.0*6E'), throwsFormatException);
     expect(parser.emptyCounts.total, 1);
-    expect(parser.parseString(r'$IIDPT,,0.0*6E'), ValueListMatches([]));
+    expect(parser.parseString(r'$IIDPT,,0.0*6E'), BoundValueListMatches([]));
     expect(parser.emptyCounts.total, 2);
   });
 
   test('should parse HDG with variation', () {
     expect(
         NmeaParser(true).parseString(r'$YDHDG,7.3,,,13.1,E*08'),
-        ValueListMatches([
-          SingleValue<double>(-13.1, Source.network, Property.variation),
-          SingleValue<double>(20.4, Source.network, Property.heading),
+        BoundValueListMatches([
+          _boundSingleValue(-13.1, Property.variation),
+          _boundSingleValue(20.4, Property.heading),
         ]));
   });
 
   test('should parse HDG without variation', () {
     expect(
         NmeaParser(true).parseString(r'$YDHDG,173.8,,,,*59'),
-        ValueListMatches([
-          SingleValue<double>(173.8, Source.network, Property.headingMag),
+        BoundValueListMatches([
+          _boundSingleValue(173.8, Property.headingMag),
         ]));
   });
 
   test('should parse HDM', () {
     expect(
         NmeaParser(true).parseString(r'$IIHDM,143.3,M*27'),
-        ValueListMatches([
-          SingleValue<double>(143.3, Source.network, Property.headingMag,
-              tier: 2),
+        BoundValueListMatches([
+          _boundSingleValue(143.3, Property.headingMag, tier: 2),
         ]));
   });
 
@@ -168,10 +124,9 @@ void main() {
     expect(
         NmeaParser(true).parseString(
             r'$YDGGA,170202.60,3749.3097,N,12228.9446,W,1,12,0.86,,M,-29.70,M,,*76'),
-        ValueListMatches([
-          DoubleValue<double>(
-              37.82182833, -122.48241, Source.network, Property.gpsPosition),
-          SingleValue<double>(0.86, Source.network, Property.gpsHdop),
+        BoundValueListMatches([
+          _boundDoubleValue(37.82182833, -122.48241, Property.gpsPosition),
+          _boundSingleValue(0.86, Property.gpsHdop),
         ]));
   });
 
@@ -179,9 +134,8 @@ void main() {
     expect(
         NmeaParser(true).parseString(
             r'$YDGGA,170202.60,3749.3097,N,12228.9446,W,1,12,,,M,-29.70,M,,*66'),
-        ValueListMatches([
-          DoubleValue<double>(
-              37.82183, -122.48241, Source.network, Property.gpsPosition),
+        BoundValueListMatches([
+          _boundDoubleValue(37.82183, -122.48241, Property.gpsPosition),
         ]));
   });
 
@@ -189,9 +143,8 @@ void main() {
     expect(
         NmeaParser(true)
             .parseString(r'$YDGLL,3748.8322,N,12230.6429,W,171453.24,A,A*7A'),
-        ValueListMatches([
-          DoubleValue<double>(
-              37.81387, -122.51072, Source.network, Property.gpsPosition,
+        BoundValueListMatches([
+          _boundDoubleValue(37.81387, -122.51072, Property.gpsPosition,
               tier: 2),
         ]));
   });
@@ -200,10 +153,10 @@ void main() {
     expect(
         NmeaParser(true)
             .parseString(r'$YDMDA,,I,,B,23.9,C,,C,55.5,,14.4,C,,T,,M,,N,,M*15'),
-        ValueListMatches([
-          SingleValue<double>(23.9, Source.network, Property.airTemperature),
-          SingleValue<double>(55.5, Source.network, Property.relativeHumidity),
-          SingleValue<double>(14.4, Source.network, Property.dewPoint)
+        BoundValueListMatches([
+          _boundSingleValue(23.9, Property.airTemperature),
+          _boundSingleValue(55.5, Property.relativeHumidity),
+          _boundSingleValue(14.4, Property.dewPoint)
         ]));
   });
 
@@ -211,28 +164,26 @@ void main() {
     expect(
         NmeaParser(true).parseString(
             r'$YDMDA,29.8902,I,1.0122,B,,C,,C,,,,C,,T,,M,,N,,M*3F'),
-        ValueListMatches([
-          SingleValue<double>(10122, Source.network, Property.pressure),
+        BoundValueListMatches([
+          _boundSingleValue(10122.0, Property.pressure),
         ]));
   });
 
   test('should parse MWV with apparent', () {
     expect(
         NmeaParser(true).parseString(r'$YDMWV,354.9,R,0.9,M,A*21'),
-        ValueListMatches([
-          SingleValue<double>(
-              354.9, Source.network, Property.apparentWindAngle),
-          SingleValue<double>(0.9, Source.network, Property.apparentWindSpeed),
+        BoundValueListMatches([
+          _boundSingleValue(354.9, Property.apparentWindAngle),
+          _boundSingleValue(0.9, Property.apparentWindSpeed),
         ]));
   });
 
   test('should parse MWV with true', () {
     expect(
         NmeaParser(true).parseString(r'$YDMWV,352.5,T,0.6,M,A*22'),
-        ValueListMatches([
-          SingleValue<double>(
-              352.5, Source.network, Property.trueWindDirection),
-          SingleValue<double>(0.6, Source.network, Property.trueWindSpeed),
+        BoundValueListMatches([
+          _boundSingleValue(352.5, Property.trueWindDirection),
+          _boundSingleValue(0.6, Property.trueWindSpeed),
         ]));
   });
 
@@ -240,14 +191,10 @@ void main() {
     expect(
         NmeaParser(true).parseString(
             r'$YDRMB,A,0.100,L,0,0,3740.2436,N,12222.6994,W,0.11,148.0,0.0,V,A*4F'),
-        ValueListMatches([
-          SingleValue<double>(203.71993, Source.network, Property.waypointRange,
-              tier: 2),
-          SingleValue<double>(148, Source.network, Property.waypointBearing,
-              tier: 2),
-          SingleValue<double>(
-              -185.1999, Source.network, Property.crossTrackError,
-              tier: 2),
+        BoundValueListMatches([
+          _boundSingleValue(203.71993, Property.waypointRange, tier: 2),
+          _boundSingleValue(148.0, Property.waypointBearing, tier: 2),
+          _boundSingleValue(-185.1999, Property.crossTrackError, tier: 2),
         ]));
   });
 
@@ -255,42 +202,38 @@ void main() {
     expect(
         NmeaParser(true).parseString(
             r'$GPRMC,230830,A,1755.039,N,06443.653,W,5.50,357.0,250803,3.0,W*4B'),
-        ValueListMatches([
-          DoubleValue<double>(
-              17.917317, -64.72755, Source.network, Property.gpsPosition,
+        BoundValueListMatches([
+          _boundDoubleValue(17.917317, -64.72755, Property.gpsPosition,
               tier: 3),
-          SingleValue<DateTime>(DateTime.utc(2003, 08, 25, 23, 08, 30),
-              Source.network, Property.utcTime,
+          _boundSingleValue(
+              DateTime.utc(2003, 08, 25, 23, 08, 30), Property.utcTime,
               tier: 2),
-          SingleValue<double>(2.82945, Source.network, Property.speedOverGround,
-              tier: 2),
-          SingleValue<double>(357.0, Source.network, Property.courseOverGround,
-              tier: 2),
-          SingleValue<double>(3.0, Source.network, Property.variation, tier: 2),
+          _boundSingleValue(2.82945, Property.speedOverGround, tier: 2),
+          _boundSingleValue(357.0, Property.courseOverGround, tier: 2),
+          _boundSingleValue(3.0, Property.variation, tier: 2),
         ]));
   });
 
   test('should parse RSA', () {
     expect(
         NmeaParser(true).parseString(r'$YDRSA,2.8,A,,V*6E'),
-        ValueListMatches([
-          SingleValue<double>(2.8, Source.network, Property.rudderAngle),
+        BoundValueListMatches([
+          _boundSingleValue(2.8, Property.rudderAngle),
         ]));
   });
   test('should parse VDR', () {
     expect(
         NmeaParser(true).parseString(r'$YDVDR,88.4,T,75.3,M,1.6,N*26'),
-        ValueListMatches([
-          SingleValue<double>(88.4, Source.network, Property.currentSet),
-          SingleValue<double>(0.82311, Source.network, Property.currentDrift),
+        BoundValueListMatches([
+          _boundSingleValue(88.4, Property.currentSet),
+          _boundSingleValue(0.82311, Property.currentDrift),
         ]));
   });
   test('should parse VHW', () {
     expect(
         NmeaParser(true).parseString(r'$YDVHW,339.8,T,326.7,M,1.3,N,2.4,K,*61'),
-        ValueListMatches([
-          SingleValue<double>(
-              0.6667, Source.network, Property.speedThroughWater),
+        BoundValueListMatches([
+          _boundSingleValue(0.6667, Property.speedThroughWater),
         ]));
   });
 
@@ -299,18 +242,17 @@ void main() {
     expect(() => parser.parseString(r'$VWVHW,,T,,M,,N,,K*54'),
         throwsFormatException);
     expect(parser.emptyCounts.total, 1);
-    expect(parser.parseString(r'$VWVHW,,T,,M,,N,,K*54'), ValueListMatches([]));
+    expect(parser.parseString(r'$VWVHW,,T,,M,,N,,K*54'),
+        BoundValueListMatches([]));
     expect(parser.emptyCounts.total, 2);
   });
 
   test('should parse VLW', () {
     expect(
         NmeaParser(true).parseString(r'$YDVLW,363.135,N,181.393,N*50'),
-        ValueListMatches([
-          SingleValue<double>(
-              672525.7752, Source.network, Property.distanceTotal),
-          SingleValue<double>(
-              335939.7137, Source.network, Property.distanceTrip),
+        BoundValueListMatches([
+          _boundSingleValue(672525.7752, Property.distanceTotal),
+          _boundSingleValue(335939.7137, Property.distanceTrip),
         ]));
   });
 
@@ -318,10 +260,9 @@ void main() {
     expect(
         NmeaParser(true)
             .parseString(r'$YDVTG,210.9,T,197.8,M,0.6,N,1.2,K,A*21'),
-        ValueListMatches([
-          SingleValue<double>(210.9, Source.network, Property.courseOverGround),
-          SingleValue<double>(
-              0.33333, Source.network, Property.speedOverGround),
+        BoundValueListMatches([
+          _boundSingleValue(210.9, Property.courseOverGround),
+          _boundSingleValue(0.33333, Property.speedOverGround),
         ]));
   });
 
@@ -329,47 +270,43 @@ void main() {
     expect(
         NmeaParser(true).parseString(
             r'$YDXDR,A,-44.75,D,Yaw,A,1.00,D,Pitch,A,0.25,D,Roll*65'),
-        ValueListMatches([
-          SingleValue<double>(1.0, Source.network, Property.pitch),
-          SingleValue<double>(0.25, Source.network, Property.roll),
+        BoundValueListMatches([
+          _boundSingleValue(1.0, Property.pitch),
+          _boundSingleValue(0.25, Property.roll),
         ]));
   });
 
   test('should parse XDR with pressure', () {
     expect(
         NmeaParser(true).parseString(r'$YDXDR,P,101080,P,Baro*65'),
-        ValueListMatches([
-          SingleValue<double>(101080, Source.network, Property.pressure,
-              tier: 2),
+        BoundValueListMatches([
+          _boundSingleValue(101080.0, Property.pressure, tier: 2),
         ]));
   });
 
   test('should parse XDR with temperature and RH', () {
     expect(
         NmeaParser(true).parseString(r'$YDXDR,C,23.6,C,Air,H,57.9,P,Air*47'),
-        ValueListMatches([
-          SingleValue<double>(23.6, Source.network, Property.airTemperature,
-              tier: 2),
-          SingleValue<double>(57.9, Source.network, Property.relativeHumidity,
-              tier: 2),
+        BoundValueListMatches([
+          _boundSingleValue(23.6, Property.airTemperature, tier: 2),
+          _boundSingleValue(57.9, Property.relativeHumidity, tier: 2),
         ]));
   });
 
   test('should parse XTE', () {
     expect(
         NmeaParser(true).parseString(r'$YDXTE,A,A,1.000,R,N,A*26'),
-        ValueListMatches([
-          SingleValue<double>(
-              1851.9993, Source.network, Property.crossTrackError),
+        BoundValueListMatches([
+          _boundSingleValue(1851.9993, Property.crossTrackError),
         ]));
   });
 
   test('should parse ZDA', () {
     expect(
         NmeaParser(true).parseString(r'$YDZDA,171541.56,15,10,2022,,*6F'),
-        ValueListMatches([
-          SingleValue<DateTime>(DateTime.utc(2022, 10, 15, 17, 15, 41),
-              Source.network, Property.utcTime),
+        BoundValueListMatches([
+          _boundSingleValue(
+              DateTime.utc(2022, 10, 15, 17, 15, 41), Property.utcTime),
         ]));
   });
 }

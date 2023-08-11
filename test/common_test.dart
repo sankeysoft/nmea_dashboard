@@ -4,11 +4,22 @@
 
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/data_element.dart';
+import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:test/test.dart';
 
 void main() {
   // A lot of the early material in this module would only result in change
   // detector tests so skip testing it.
+  test('derivation friendly dimensions should have numeric formatters.', () {
+    for (final dim in Dimension.values) {
+      if (dim.derivationFriendly) {
+        for (final fmt in formattersFor(dim).values) {
+          fmt as NumericFormatter;
+        }
+      }
+    }
+  });
+
   test('add operation should give correct results', () {
     expect(Operation.add.apply(3, 2), 5);
     expect(Operation.add.reverse(3, 2), 1);
@@ -34,13 +45,5 @@ void main() {
     final dt = DateTime(2023, 6, 15, 14, 52, 36);
     expect(HistoryInterval.twelveHours.formatTime(dt), '14:52');
     expect(HistoryInterval.fortyEightHours.formatTime(dt), 'Jun 15');
-  });
-
-  test('SingleValue should copy metadata with new value', () {
-    final initial = SingleValue(3.4, Source.derived, Property.crossTrackError);
-    final copy = initial.copyWithNewValue(523.1);
-    expect(initial.source, copy.source);
-    expect(initial.property, copy.property);
-    expect(initial.value, isNot(equals(copy.value)));
   });
 }

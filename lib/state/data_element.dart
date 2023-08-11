@@ -9,6 +9,7 @@ import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:nmea_dashboard/state/history.dart';
+import 'package:nmea_dashboard/state/values.dart';
 
 /// The shortest time between triggering updates on an element.
 const _freshnessLimit = Duration(milliseconds: 800);

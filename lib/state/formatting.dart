@@ -4,6 +4,7 @@
 
 import 'package:intl/intl.dart';
 import 'package:nmea_dashboard/state/common.dart';
+import 'package:nmea_dashboard/state/values.dart';
 
 /// A transform to formatting values of a dimension for display.
 abstract class Formatter<V> {

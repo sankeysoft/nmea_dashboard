@@ -3,7 +3,7 @@
 // of the MIT license. See the LICENCE.md file for details.
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nmea_dashboard/state/common.dart';
+import 'package:nmea_dashboard/state/values.dart';
 
 const double _floatTolerance = 0.0001;
 
