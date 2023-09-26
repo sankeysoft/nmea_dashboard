@@ -165,7 +165,7 @@ void main() {
         NmeaParser(true).parseString(
             r'$YDMDA,29.8902,I,1.0122,B,,C,,C,,,,C,,T,,M,,N,,M*3F'),
         BoundValueListMatches([
-          _boundSingleValue(10122.0, Property.pressure),
+          _boundSingleValue(101220.0, Property.pressure),
         ]));
   });
 

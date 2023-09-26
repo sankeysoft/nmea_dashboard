@@ -237,7 +237,8 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
     'percent': SimpleFormatter('percent', '%', '--.-', 1.0, 1),
   },
   Dimension.pressure: {
-    'millibars': SimpleFormatter('millibar', 'mb', '----.-', 1 / 100.0, 1),
+    'millibars':
+        SimpleFormatter('millibar', 'mb', '----.-', pascalsToMillibar, 1),
     'inchHg': SimpleFormatter(
         'inches mercury', 'in.hg', '--.--', pascalsToInchesMercury, 2)
   },

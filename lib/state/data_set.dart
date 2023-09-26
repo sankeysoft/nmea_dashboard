@@ -7,13 +7,14 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:logging/logging.dart';
 
-import 'data_element.dart';
-import 'formatting.dart';
-import 'history.dart';
-import 'local.dart';
-import 'network.dart';
-import 'settings.dart';
-import 'common.dart';
+import 'package:nmea_dashboard/state/common.dart';
+import 'package:nmea_dashboard/state/data_element.dart';
+import 'package:nmea_dashboard/state/formatting.dart';
+import 'package:nmea_dashboard/state/history.dart';
+import 'package:nmea_dashboard/state/local.dart';
+import 'package:nmea_dashboard/state/network.dart';
+import 'package:nmea_dashboard/state/settings.dart';
+import 'package:nmea_dashboard/state/values.dart';
 
 /// The default staleness. Used for non-network sources and for the network
 /// until settings are read.

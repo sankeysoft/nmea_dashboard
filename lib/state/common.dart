@@ -3,16 +3,16 @@
 // of the MIT license. See the LICENCE.md file for details.
 
 import 'package:intl/intl.dart';
+import 'package:nmea_dashboard/state/data_element.dart';
 import 'package:nmea_dashboard/state/values.dart';
 
-import 'data_element.dart';
-
-const double barToPascals = 10000;
+const double barToPascals = 100000;
 const double metersPerSecondToKnots = 1.94384;
 const double metersToKilometers = 0.001;
 const double metersToNauticalMiles = 0.000539957;
 const double metersToFeet = 3.28084;
 const double pascalsToInchesMercury = 0.0002953;
+const double pascalsToMillibar = 0.01;
 
 const int serializationDp = 4;
 
