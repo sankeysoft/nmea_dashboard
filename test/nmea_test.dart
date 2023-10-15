@@ -169,7 +169,18 @@ void main() {
         ]));
   });
 
-  test('should parse MWV with apparent', () {
+  test('should parse MDA with pressure, water temp, and TWD', () {
+    expect(
+        NmeaParser(true).parseString(
+            r'$YDMDA,30.1767,I,1.0219,B,,C,20.4,C,,,,C,315.6,T,302.6,M,9.3,N,4.8,M*20'),
+        BoundValueListMatches([
+          _boundSingleValue(102190.0, Property.pressure),
+          _boundSingleValue(20.4, Property.waterTemperature),
+          _boundSingleValue(315.6, Property.trueWindDirection)
+        ]));
+  });
+
+  test('should parse MWV with apparent in m/s', () {
     expect(
         NmeaParser(true).parseString(r'$YDMWV,354.9,R,0.9,M,A*21'),
         BoundValueListMatches([
@@ -178,12 +189,38 @@ void main() {
         ]));
   });
 
-  test('should parse MWV with true', () {
+  test('should parse MWV with apparent in kmph', () {
+    expect(
+        NmeaParser(true).parseString(r'$YDMWV,354.9,R,3.24,K,A*1B'),
+        BoundValueListMatches([
+          _boundSingleValue(354.9, Property.apparentWindAngle),
+          _boundSingleValue(0.9, Property.apparentWindSpeed),
+        ]));
+  });
+
+  test('should parse MWV with true in m/s', () {
     expect(
         NmeaParser(true).parseString(r'$YDMWV,352.5,T,0.6,M,A*22'),
         BoundValueListMatches([
-          _boundSingleValue(352.5, Property.trueWindDirection),
+          _boundSingleValue(352.5, Property.trueWindAngle),
           _boundSingleValue(0.6, Property.trueWindSpeed),
+        ]));
+  });
+
+  test('should parse MWV with true in knots', () {
+    expect(
+        NmeaParser(true).parseString(r'$YDMWV,352.5,T,20.0,N,A*15'),
+        BoundValueListMatches([
+          _boundSingleValue(352.5, Property.trueWindAngle),
+          _boundSingleValue(10.28891, Property.trueWindSpeed),
+        ]));
+  });
+
+  test('should parse MTW', () {
+    expect(
+        NmeaParser(true).parseString(r'$YDMTW,20.4,C*08'),
+        BoundValueListMatches([
+          _boundSingleValue(20.4, Property.waterTemperature, tier: 2),
         ]));
   });
 

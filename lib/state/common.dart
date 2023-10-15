@@ -8,6 +8,7 @@ import 'package:nmea_dashboard/state/values.dart';
 
 const double barToPascals = 100000;
 const double metersPerSecondToKnots = 1.94384;
+const double metersPerSecondToKmph = 3.6;
 const double metersToKilometers = 0.001;
 const double metersToNauticalMiles = 0.000539957;
 const double metersToFeet = 3.28084;
@@ -60,6 +61,7 @@ enum Property {
   rudderAngle('Rudder angle', 'Rudder', Dimension.angle),
   speedOverGround('Speed over ground', 'SOG', Dimension.speed),
   speedThroughWater('Speed through water', 'STW', Dimension.speed),
+  trueWindAngle('True wind angle', 'TWA', Dimension.angle),
   trueWindDirection('True wind direction', 'TWD', Dimension.bearing),
   trueWindSpeed('True wind speed', 'TWS', Dimension.speed),
   utcTime('UTC datetime', 'UTC', Dimension.time,

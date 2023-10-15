@@ -31,6 +31,7 @@
 		{"source": "network", "element": "depthWithOffset", "format": "feet"},
 		{"source": "network", "element": "depthUncalibrated", "format": "feet"},
 		{"source": "network", "element": "trueWindSpeed", "format": "knots"},
+		{"source": "network", "element": "trueWindAngle", "format": "degrees"},
 		{"source": "network", "element": "trueWindDirection", "format": "true"},
 		{"source": "network", "element": "apparentWindSpeed", "format": "knots"},
 		{"source": "network", "element": "apparentWindAngle", "format": "degrees"},

@@ -197,7 +197,9 @@ void _validateChecksum(payload, checksumString) {
     xor ^= codeUnit;
   }
   if (xor != checksum) {
-    throw FormatException('Invalid checksum: expected $checksum, got $xor');
+    throw FormatException(
+        'Invalid checksum: expected 0x${checksum.toRadixString(16)}, '
+        'got 0x${xor.toRadixString(16)}');
   }
 }
 
@@ -285,6 +287,10 @@ List<BoundValue> _createNmeaValues(String type, List<String> fields) {
         _validateFieldValue(fields, index: 5, expected: 'C');
         ret.add(_parseSingleValue(fields[4], Property.airTemperature));
       }
+      if (fields[6].isNotEmpty) {
+        _validateFieldValue(fields, index: 7, expected: 'C');
+        ret.add(_parseSingleValue(fields[6], Property.waterTemperature));
+      }
       if (fields[8].isNotEmpty) {
         ret.add(_parseSingleValue(fields[8], Property.relativeHumidity));
       }
@@ -292,24 +298,41 @@ List<BoundValue> _createNmeaValues(String type, List<String> fields) {
         _validateFieldValue(fields, index: 11, expected: 'C');
         ret.add(_parseSingleValue(fields[10], Property.dewPoint));
       }
+      if (fields[12].isNotEmpty) {
+        _validateFieldValue(fields, index: 13, expected: 'T');
+        ret.add(_parseSingleValue(fields[12], Property.trueWindDirection));
+      }
       return ret.whereNotNull().toList();
     case 'MWV':
       _validateFieldCount(fields, 5);
       _validateValidityIndicator(fields, index: 4);
       final relative = (fields[1] == 'R');
       final angle = double.parse(fields[0]);
-      final speed = double.parse(fields[2]) /
-          (fields[3] == 'K' ? metersPerSecondToKnots : 1.0);
+      // Dart switch expressions failing to compile when I wrote these (even
+      // though I'm above the required Dart v3.0)
+      // TODO: Rewrite as a switch expression when possible.
+      late double divisor;
+      switch (fields[3]) {
+        case 'N':
+          divisor = metersPerSecondToKnots;
+          break;
+        case 'K':
+          divisor = metersPerSecondToKmph;
+          break;
+        default:
+          divisor = 1.0;
+      }
+      final speed = double.parse(fields[2]) / divisor;
       return [
         _boundSingleValue(angle,
-            relative ? Property.apparentWindAngle : Property.trueWindDirection),
+            relative ? Property.apparentWindAngle : Property.trueWindAngle),
         _boundSingleValue(speed,
             relative ? Property.apparentWindSpeed : Property.trueWindSpeed),
       ];
     case 'MTW':
       _validateFieldCount(fields, 2);
       _validateFieldValue(fields, index: 1, expected: 'C');
-      return [_parseSingleValue(fields[0], Property.waterTemperature)]
+      return [_parseSingleValue(fields[0], Property.waterTemperature, tier: 2)]
           .whereNotNull()
           .toList();
     case 'ROT':
