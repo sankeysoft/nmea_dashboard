@@ -24,8 +24,8 @@ const _ignoredMessages = {
   'APA', 'APB',
   // Ignore detailed satellite information and GPS datum.
   'ALM', 'GBS', 'GSA', 'GSV', 'DTM', 'GRS',
-  // Ignore obsolete messages that haven't been explicitly requested.
-  'DBK', 'DBS', 'HDT', 'MWD', 'VWT', 'VWR',
+  // Ignore other messages that haven't been explicitly requested.
+  'DBK', 'DBS', 'HDT', 'VWT', 'VWR',
 };
 
 /// The time between count events.
@@ -300,7 +300,20 @@ List<BoundValue> _createNmeaValues(String type, List<String> fields) {
       }
       if (fields[12].isNotEmpty) {
         _validateFieldValue(fields, index: 13, expected: 'T');
-        ret.add(_parseSingleValue(fields[12], Property.trueWindDirection));
+        ret.add(
+            _parseSingleValue(fields[12], Property.trueWindDirection, tier: 2));
+      }
+      return ret.whereNotNull().toList();
+    case 'MWD':
+      _validateFieldCount(fields, 8);
+      var ret = <BoundValue<SingleValue<double>>?>[];
+      if (fields[0].isNotEmpty) {
+        _validateFieldValue(fields, index: 1, expected: 'T');
+        ret.add(_parseSingleValue(fields[0], Property.trueWindDirection));
+      }
+      if (fields[6].isNotEmpty) {
+        _validateFieldValue(fields, index: 7, expected: 'M');
+        ret.add(_parseSingleValue(fields[6], Property.trueWindSpeed, tier: 2));
       }
       return ret.whereNotNull().toList();
     case 'MWV':

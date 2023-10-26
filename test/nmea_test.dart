@@ -176,7 +176,24 @@ void main() {
         BoundValueListMatches([
           _boundSingleValue(102190.0, Property.pressure),
           _boundSingleValue(20.4, Property.waterTemperature),
-          _boundSingleValue(315.6, Property.trueWindDirection)
+          _boundSingleValue(315.6, Property.trueWindDirection, tier: 2)
+        ]));
+  });
+
+  test('should parse MWD with direction', () {
+    expect(
+        NmeaParser(true).parseString(r'$YDMWD,154.7,T,141.8,M,12.1,N,6.2,M*64'),
+        BoundValueListMatches([
+          _boundSingleValue(154.7, Property.trueWindDirection),
+          _boundSingleValue(6.2, Property.trueWindSpeed, tier: 2),
+        ]));
+  });
+
+  test('should parse MWD with missing direction', () {
+    expect(
+        NmeaParser(true).parseString(r'$YDMWD,,T,,M,12.1,N,6.2,M*6F'),
+        BoundValueListMatches([
+          _boundSingleValue(6.2, Property.trueWindSpeed, tier: 2),
         ]));
   });
 
