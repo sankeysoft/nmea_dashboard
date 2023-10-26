@@ -96,7 +96,6 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
 
     final dimension = dataElement?.property.dimension;
     if (!formattersFor(dimension).keys.contains(_format)) {
-      debugger();
       _format = null;
     }
     if (_type == CellType.history &&
@@ -129,7 +128,6 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
               _buildNameField()
             ])),
             buildSaveButton(postSaver: () {
-              debugger();
               // By this stage all the fields will have saved back to our state
               // and we can be confident all the fields are populated. Just
               // create a new spec from these (reusing the previous key) and ask
@@ -226,7 +224,6 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
     final dimension = _dataSet.sources[_source]?[_element]?.property.dimension;
     final Map<String, Formatter> eligibleFormatters = formattersFor(dimension);
 
-    debugger();
     return buildDropdownBox(
         label: 'Format',
         items: eligibleFormatters.entries
@@ -236,7 +233,6 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
         initialValue:
             eligibleFormatters.keys.contains(_format) ? _format : null,
         onChanged: (String? value) {
-          debugger();
           setState(() {
             _format = value;
           });

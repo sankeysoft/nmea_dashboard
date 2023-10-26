@@ -179,7 +179,7 @@ class _GraphPainter extends CustomPainter {
     // marks we won't change format) then display ticks.
     final minText = layoutText(yAxis.format(yAxis.minDisplay));
     final charHeight = minText.height;
-    bool drawGrid = (size.height > minText.height * 12);
+    bool drawGrid = (size.height > minText.height * 8);
 
     late final double yAxisWidth;
     late final Size plotSize;
