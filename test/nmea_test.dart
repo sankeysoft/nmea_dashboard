@@ -347,6 +347,15 @@ void main() {
         ]));
   });
 
+  test('should parse XDR with spelled out barometer and vague temperature', () {
+    expect(
+        NmeaParser(true).parseString(
+            r'$WIXDR,P,1.0282,B,barometer,C,19.7,C,temperature*5D'),
+        BoundValueListMatches([
+          _boundSingleValue(102820.0, Property.pressure, tier: 2),
+        ]));
+  });
+
   test('should parse XTE', () {
     expect(
         NmeaParser(true).parseString(r'$YDXTE,A,A,1.000,R,N,A*26'),

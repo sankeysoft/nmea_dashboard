@@ -610,8 +610,16 @@ List<BoundValue> _parseXdrMeasurement(List<String> fields, int startIndex) {
       final value = double.parse(fields[startIndex + 1]);
       return [_boundSingleValue(value, Property.roll)];
     case 'P-baro':
-      _validateFieldValue(fields, index: startIndex + 2, expected: 'P');
-      final value = double.parse(fields[startIndex + 1]);
+    case 'P-barometer':
+      final dataType = fields[startIndex + 2];
+      var value = double.parse(fields[startIndex + 1]);
+      if (dataType == 'P') {
+        // Already in pascals
+      } else if (dataType == 'B') {
+        value *= barToPascals;
+      } else {
+        throw FormatException('Invalid pressure datatype: $dataType');
+      }
       return [_boundSingleValue(value, Property.pressure, tier: 2)];
     case 'C-air':
       _validateFieldValue(fields, index: startIndex + 2, expected: 'C');
