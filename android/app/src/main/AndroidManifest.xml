@@ -1,5 +1,4 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.jsankey.nmea_dashboard">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
    <application
         android:label="@string/app_label"
         android:description="@string/app_description"
