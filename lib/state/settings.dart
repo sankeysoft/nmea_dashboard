@@ -231,6 +231,7 @@ class UiSettings with ChangeNotifier {
 
   // This hardcoded list matches the assets we added to the pubspec.
   static const List<String> availableFonts = [
+    'Digital',
     'FredokaOne',
     'Inter',
     'Kanit',

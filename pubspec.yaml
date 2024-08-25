@@ -56,6 +56,9 @@ flutter:
     - assets/
   # Add assets for the hardcoded list of additional fonts we support.
   fonts:
+    - family: Digital
+      fonts:
+        - asset: fonts/DigitalNormal.otf
     - family: FredokaOne
       fonts:
         - asset: fonts/FredokaOne-Regular.ttf

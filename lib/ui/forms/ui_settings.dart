@@ -66,7 +66,8 @@ class _UiSettingsFormState extends StatefulFormState<_UiSettingsForm> {
     return buildDropdownBox(
       label: 'Value font',
       items: UiSettings.availableFonts.map((f) => buildItem(f)).toList(),
-      initialValue: _valueFont,
+      initialValue:
+          UiSettings.availableFonts.contains(_valueFont) ? _valueFont : null,
       onChanged: (value) {
         setState(() {
           if (value != null) {
@@ -83,7 +84,9 @@ class _UiSettingsFormState extends StatefulFormState<_UiSettingsForm> {
     return buildDropdownBox(
       label: 'Heading font',
       items: UiSettings.availableFonts.map((f) => buildItem(f)).toList(),
-      initialValue: _headingFont,
+      initialValue: UiSettings.availableFonts.contains(_headingFont)
+          ? _headingFont
+          : null,
       onChanged: (value) {
         setState(() {
           if (value != null) {
