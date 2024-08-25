@@ -11,9 +11,8 @@ import 'abstract.dart';
 
 /// A form that lets the user edit network settings.
 class NetworkSettingsPage extends StatefulFormPage {
-  NetworkSettingsPage({required NetworkSettings settings, key})
+  NetworkSettingsPage({required NetworkSettings settings, super.key})
       : super(
-            key: key,
             title: 'Network settings',
             actions: [const HelpButton('help_network_settings.md')],
             child: _NetworkSettingsForm(settings));

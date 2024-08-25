@@ -75,7 +75,7 @@ class _DrawerContent extends StatelessWidget {
     final networkSettings = Provider.of<NetworkSettings>(context);
     final uiSettings = Provider.of<UiSettings>(context);
     final packageInfo = Provider.of<Settings>(context).packageInfo;
-    final enabledColor = theme.colorScheme.onBackground;
+    final enabledColor = theme.colorScheme.onSurface;
     final enabledStyle = TextStyle(fontSize: 18, color: enabledColor);
 
     final headingStyle = TextStyle(
@@ -105,7 +105,7 @@ class _DrawerContent extends StatelessWidget {
             uiSettings.toggleNightMode();
           },
           activeColor: enabledColor,
-          checkColor: theme.colorScheme.background,
+          checkColor: theme.colorScheme.surface,
         ),
         ListTile(
           leading: Icon(Icons.lan_outlined, color: enabledColor),

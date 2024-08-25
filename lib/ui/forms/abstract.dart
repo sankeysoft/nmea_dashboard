@@ -56,7 +56,7 @@ class StatelessFormPage extends StatelessWidget {
                 constraints:
                     BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.background,
+                  color: theme.colorScheme.surface,
                 ),
                 child: content)));
   }
@@ -137,9 +137,9 @@ Widget buildCloseButton(BuildContext context) {
       text: 'CLOSE');
 }
 
-/// Diplays a standard snack bar with the provided text.
-void showSnackBar(BuildContext context, String text) {
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+/// Displays a standard snack bar with the provided text.
+void showSnackBar(ScaffoldMessengerState messenger, String text) {
+  messenger.showSnackBar(SnackBar(content: Text(text)));
 }
 
 AlertDialog buildConfirmationDialog(
@@ -214,7 +214,7 @@ class StatefulFormPage<T extends StatefulWidget> extends StatelessWidget {
                 constraints:
                     BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.background,
+                  color: theme.colorScheme.surface,
                 ),
                 child: child)));
   }

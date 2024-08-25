@@ -9,9 +9,8 @@ import 'abstract.dart';
 
 /// A form that lets the user edit user interface settings.
 class UiSettingsPage extends StatefulFormPage {
-  UiSettingsPage({required UiSettings settings, key})
+  UiSettingsPage({required UiSettings settings, super.key})
       : super(
-            key: key,
             title: 'User interface settings',
             actions: [const HelpButton('help_ui_settings.md')],
             child: _UiSettingsForm(settings));

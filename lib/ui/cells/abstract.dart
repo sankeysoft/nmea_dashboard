@@ -47,7 +47,7 @@ abstract class SpecCell extends Cell {
             },
             child: Container(
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.background,
+                  color: Theme.of(context).colorScheme.surface,
                 ),
                 margin: const EdgeInsets.all(6.0),
                 padding: const EdgeInsets.all(10.0),
@@ -64,18 +64,19 @@ enum _Component {
 
 abstract class HeadingContentsCell extends SpecCell {
   HeadingContentsCell(
-      {required heading, required units, required content, required spec, key})
+      {required heading,
+      required units,
+      required content,
+      required super.spec,
+      super.key})
       : super(
-            spec: spec,
-            key: key,
             content: CustomMultiChildLayout(
                 delegate: _CellContentLayoutDelegate(),
                 children: <Widget>[
-                  LayoutId(
-                      id: _Component.heading, child: _CellHeading(heading)),
-                  LayoutId(id: _Component.units, child: _CellUnits(units)),
-                  LayoutId(id: _Component.content, child: content),
-                ]));
+              LayoutId(id: _Component.heading, child: _CellHeading(heading)),
+              LayoutId(id: _Component.units, child: _CellUnits(units)),
+              LayoutId(id: _Component.content, child: content),
+            ]));
 }
 
 class _CellContentLayoutDelegate extends MultiChildLayoutDelegate {

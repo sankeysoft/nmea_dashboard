@@ -10,9 +10,8 @@ import 'abstract.dart';
 
 /// A form that lets the user view and copy the log in real time.
 class ViewHelpPage extends StatelessFormPage {
-  ViewHelpPage({required String filename, required String title, super.key})
+  ViewHelpPage({required String filename, required super.title, super.key})
       : super(
-            title: title,
             maxWidth: double.infinity,
             maxHeight: double.infinity,
             content: _ViewHelpContent(filename));

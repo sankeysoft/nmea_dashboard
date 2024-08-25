@@ -29,6 +29,7 @@ class _ResetButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final settings = Provider.of<PageSettings>(context);
+    final sm = ScaffoldMessenger.of(context);
     return IconButton(
         icon: const Icon(Icons.settings_backup_restore_outlined),
         onPressed: () => showDialog(
@@ -40,7 +41,7 @@ class _ResetButton extends StatelessWidget {
                     'with the defaults? This action cannot be undone.',
                 onPressed: () {
                   settings.useDefaults();
-                  showSnackBar(context, 'Reset page definitions to default');
+                  showSnackBar(sm, 'Reset page definitions to default');
                 })));
   }
 }
@@ -49,11 +50,12 @@ class _CopyButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final settings = Provider.of<PageSettings>(context);
+    final sm = ScaffoldMessenger.of(context);
     return IconButton(
         icon: const Icon(Icons.copy_all_outlined),
         onPressed: () {
-          Clipboard.setData(ClipboardData(text: settings.toJson())).then((_) =>
-              showSnackBar(context, 'Page definitions copied to clipboard'));
+          Clipboard.setData(ClipboardData(text: settings.toJson())).then(
+              (_) => showSnackBar(sm, 'Page definitions copied to clipboard'));
         });
   }
 }
@@ -62,15 +64,16 @@ class _PasteButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final settings = Provider.of<PageSettings>(context);
+    final sm = ScaffoldMessenger.of(context);
     return IconButton(
         icon: const Icon(Icons.content_paste_outlined),
         onPressed: () =>
             Clipboard.getData(Clipboard.kTextPlain).then((clipboardData) {
               final text = clipboardData?.text;
               if (text == null) {
-                showSnackBar(context, 'Clipboard does not contain text');
+                showSnackBar(sm, 'Clipboard does not contain text');
               } else if (!settings.useClipboard(text, dryRun: true)) {
-                showSnackBar(context,
+                showSnackBar(sm,
                     'Clipboard does not contain valid page definition json');
               } else {
                 showDialog(
@@ -83,8 +86,8 @@ class _PasteButton extends StatelessWidget {
                             'with the clipboard data? This action cannot be undone.',
                         onPressed: () {
                           settings.useClipboard(text);
-                          showSnackBar(context,
-                              'Pasted page definitions from clipboard');
+                          showSnackBar(
+                              sm, 'Pasted page definitions from clipboard');
                         }));
               }
             }));

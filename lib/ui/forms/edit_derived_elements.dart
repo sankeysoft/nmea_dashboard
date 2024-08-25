@@ -28,12 +28,12 @@ class _CopyButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final settings = Provider.of<DerivedDataSettings>(context);
+    final sm = ScaffoldMessenger.of(context);
     return IconButton(
         icon: const Icon(Icons.copy_all_outlined),
         onPressed: () {
           Clipboard.setData(ClipboardData(text: settings.toJson())).then((_) =>
-              showSnackBar(
-                  context, 'Derived data definitions copied to clipboard'));
+              showSnackBar(sm, 'Derived data definitions copied to clipboard'));
         });
   }
 }
@@ -42,15 +42,16 @@ class _PasteButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final settings = Provider.of<DerivedDataSettings>(context);
+    final sm = ScaffoldMessenger.of(context);
     return IconButton(
         icon: const Icon(Icons.content_paste_outlined),
         onPressed: () =>
             Clipboard.getData(Clipboard.kTextPlain).then((clipboardData) {
               final text = clipboardData?.text;
               if (text == null) {
-                showSnackBar(context, 'Clipboard does not contain text');
+                showSnackBar(sm, 'Clipboard does not contain text');
               } else if (!settings.useClipboard(text, dryRun: true)) {
-                showSnackBar(context,
+                showSnackBar(sm,
                     'Clipboard does not contain valid data definition json');
               } else {
                 showDialog(
@@ -63,7 +64,7 @@ class _PasteButton extends StatelessWidget {
                             'with the clipboard data? This action cannot be undone.',
                         onPressed: () {
                           settings.useClipboard(text);
-                          showSnackBar(context,
+                          showSnackBar(sm,
                               'Pasted derived data definitions from clipboard');
                         }));
               }

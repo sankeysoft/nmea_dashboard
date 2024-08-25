@@ -10,10 +10,9 @@ import 'package:provider/provider.dart';
 import 'abstract.dart';
 
 class CurrentValueCell extends HeadingContentsCell {
-  CurrentValueCell({required element, required formatter, required spec, key})
+  CurrentValueCell(
+      {required element, required formatter, required super.spec, super.key})
       : super(
-            spec: spec,
-            key: key,
             heading: spec.name ?? element.shortName ?? ' ',
             units: formatter.units ?? ' ',
             content: ChangeNotifierProvider<DataElement>.value(

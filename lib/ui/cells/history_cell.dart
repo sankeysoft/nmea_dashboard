@@ -9,7 +9,6 @@ import 'package:intl/intl.dart' as intl;
 import 'package:nmea_dashboard/state/data_element.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:nmea_dashboard/state/history.dart';
-import 'package:nmea_dashboard/state/specs.dart';
 import 'package:provider/provider.dart';
 
 import 'abstract.dart';
@@ -19,11 +18,9 @@ class HistoryCell extends HeadingContentsCell {
       {required OptionalHistory history,
       required DataElement element,
       required NumericFormatter formatter,
-      required DataCellSpec spec,
-      key})
+      required super.spec,
+      super.key})
       : super(
-            spec: spec,
-            key: key,
             heading: spec.name ?? history.interval.shortCellName(element),
             units: formatter.units ?? ' ',
             content: ChangeNotifierProvider<OptionalHistory>.value(

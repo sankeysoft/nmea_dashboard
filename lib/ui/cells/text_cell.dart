@@ -8,8 +8,8 @@ import 'abstract.dart';
 
 /// A cell to display a fixed text string.
 class TextCell extends SpecCell {
-  TextCell({required text, required spec, key})
-      : super(spec: spec, key: key, content: _TextContent(text));
+  TextCell({required text, required super.spec, super.key})
+      : super(content: _TextContent(text));
 }
 
 class _TextContent extends StatelessWidget {
@@ -29,13 +29,11 @@ class _TextContent extends StatelessWidget {
 
 /// A cell to display a spec that could not be resolved.
 class NotFoundCell extends TextCell {
-  NotFoundCell({required spec, key})
-      : super(text: 'Not Found', spec: spec, key: key);
+  NotFoundCell({required super.spec, super.key}) : super(text: 'Not Found');
 }
 
 /// An cell to display a spec whose source is Unset.
 class UnsetCell extends TextCell {
-  UnsetCell({required spec, key})
-      : super(
-            text: 'Hold here to select\ndata to display', spec: spec, key: key);
+  UnsetCell({required super.spec, super.key})
+      : super(text: 'Hold here to select\ndata to display');
 }

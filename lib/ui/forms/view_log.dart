@@ -40,11 +40,12 @@ class _ClearButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final logSet = Provider.of<LogSet>(context);
+    final sm = ScaffoldMessenger.of(context);
     return IconButton(
         icon: const Icon(Icons.settings_backup_restore_outlined),
         onPressed: () {
           logSet.clear();
-          showSnackBar(context, 'Cleared all log entries');
+          showSnackBar(sm, 'Cleared all log entries');
         });
   }
 }
@@ -61,8 +62,9 @@ class _CopyButton extends StatelessWidget {
 }
 
 void _copyLogToClipboard(BuildContext context, LogSet logSet) {
+  final sm = ScaffoldMessenger.of(context);
   Clipboard.setData(ClipboardData(text: logSet.toString()))
-      .then((_) => showSnackBar(context, 'Log copied to clipboard'));
+      .then((_) => showSnackBar(sm, 'Log copied to clipboard'));
 }
 
 class _ViewLogContent extends StatelessWidget {

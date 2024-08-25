@@ -24,10 +24,7 @@ ThemeData createThemeData(UiSettings settings) {
       onTertiary: palette.darkestBackground,
       error: Colors.red,
       onError: Colors.white,
-      // Background is used for the data cells.
-      background: palette.midBackground,
-      onBackground: palette.primary,
-      // Surface is used for the app bar and drawer.
+      // Surface is used for the data cells, app bar, and drawer.
       surface: palette.midBackground,
       onSurface: palette.primary,
       // Surface tint is used for tiles, the drawer header, and missing data
