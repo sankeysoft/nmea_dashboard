@@ -622,9 +622,17 @@ List<BoundValue> _parseXdrMeasurement(List<String> fields, int startIndex) {
       }
       return [_boundSingleValue(value, Property.pressure, tier: 2)];
     case 'C-air':
+    case 'C-tempair':
+    case 'C-airtemp':
       _validateFieldValue(fields, index: startIndex + 2, expected: 'C');
       final value = double.parse(fields[startIndex + 1]);
       return [_boundSingleValue(value, Property.airTemperature, tier: 2)];
+    case 'C-water':
+    case 'C-tempwater':
+    case 'C-watertemp':
+      _validateFieldValue(fields, index: startIndex + 2, expected: 'C');
+      final value = double.parse(fields[startIndex + 1]);
+      return [_boundSingleValue(value, Property.waterTemperature, tier: 2)];
     case 'H-air':
       _validateFieldValue(fields, index: startIndex + 2, expected: 'P');
       final value = double.parse(fields[startIndex + 1]);

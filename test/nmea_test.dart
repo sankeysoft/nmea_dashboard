@@ -347,6 +347,24 @@ void main() {
         ]));
   });
 
+  test('should parse XDR with spelled out air temperature', () {
+    expect(
+        NmeaParser(true).parseString(r'$IIXDR,C,15.70,C,TempAir*15'),
+        BoundValueListMatches([
+          _boundSingleValue(15.7, Property.airTemperature, tier: 2),
+        ]));
+  });
+
+  test('should parse XDR with spelled out water and air temperatures', () {
+    expect(
+        NmeaParser(true)
+            .parseString(r'$IIXDR,C,15.70,C,AirTemp,C,10.1,C,WaterTemp*72'),
+        BoundValueListMatches([
+          _boundSingleValue(15.7, Property.airTemperature, tier: 2),
+          _boundSingleValue(10.1, Property.waterTemperature, tier: 2),
+        ]));
+  });
+
   test('should parse XDR with spelled out barometer and vague temperature', () {
     expect(
         NmeaParser(true).parseString(
