@@ -212,8 +212,11 @@ List<BoundValue> _createNmeaValues(String type, List<String> fields) {
       _validateFieldValue(fields, index: 6, expected: 'T');
       _validateFieldValue(fields, index: 10, expected: 'N');
       return [
-        _parseSingleValue(fields[9], Property.waypointRange,
-            divisor: metersToNauticalMiles),
+        _parseSingleValue(
+          fields[9],
+          Property.waypointRange,
+          divisor: metersToNauticalMiles,
+        ),
         _parseSingleValue(fields[5], Property.waypointBearing),
       ].nonNulls.toList();
     case 'DBT':
@@ -319,20 +322,11 @@ List<BoundValue> _createNmeaValues(String type, List<String> fields) {
       _validateValidityIndicator(fields, index: 4);
       final relative = (fields[1] == 'R');
       final angle = double.parse(fields[0]);
-      // Dart switch expressions failing to compile when I wrote these (even
-      // though I'm above the required Dart v3.0)
-      // TODO: Rewrite as a switch expression when possible.
-      late double divisor;
-      switch (fields[3]) {
-        case 'N':
-          divisor = metersPerSecondToKnots;
-          break;
-        case 'K':
-          divisor = metersPerSecondToKmph;
-          break;
-        default:
-          divisor = 1.0;
-      }
+      final divisor = switch(fields[3]) {
+        'N' => metersPerSecondToKnots,
+        'K' => metersPerSecondToKmph,
+        _ => 1.0,
+      };
       final speed = double.parse(fields[2]) / divisor;
       return [
         _boundSingleValue(angle,
@@ -607,18 +601,6 @@ List<BoundValue> _parseXdrMeasurement(List<String> fields, int startIndex) {
       _validateFieldValue(fields, index: startIndex + 2, expected: 'D');
       final value = double.parse(fields[startIndex + 1]);
       return [_boundSingleValue(value, Property.roll)];
-    case 'P-baro':
-    case 'P-barometer':
-      final dataType = fields[startIndex + 2];
-      var value = double.parse(fields[startIndex + 1]);
-      if (dataType == 'P') {
-        // Already in pascals
-      } else if (dataType == 'B') {
-        value *= barToPascals;
-      } else {
-        throw FormatException('Invalid pressure datatype: $dataType');
-      }
-      return [_boundSingleValue(value, Property.pressure, tier: 2)];
     case 'C-air':
     case 'C-tempair':
     case 'C-airtemp':
@@ -631,10 +613,47 @@ List<BoundValue> _parseXdrMeasurement(List<String> fields, int startIndex) {
       _validateFieldValue(fields, index: startIndex + 2, expected: 'C');
       final value = double.parse(fields[startIndex + 1]);
       return [_boundSingleValue(value, Property.waterTemperature, tier: 2)];
+    case 'C-engine#0':
+      _validateFieldValue(fields, index: startIndex + 2, expected: 'C');
+      final value = double.parse(fields[startIndex + 1]);
+      return [_boundSingleValue(value, Property.engine1Temperature)];
+    case 'E-fuel#0':
+    case 'V-fuel#0':
+      _validateFieldValue(fields, index: startIndex + 2, expected: 'P');
+      final value = double.parse(fields[startIndex + 1]);
+      return [_boundSingleValue(value, Property.fuelLevel)];
     case 'H-air':
       _validateFieldValue(fields, index: startIndex + 2, expected: 'P');
       final value = double.parse(fields[startIndex + 1]);
       return [_boundSingleValue(value, Property.relativeHumidity, tier: 2)];
+    case 'P-baro':
+    case 'P-barometer':
+      final dataType = fields[startIndex + 2];
+      var value = double.parse(fields[startIndex + 1]);
+      if (dataType == 'P') {
+        // Already in pascals
+      } else if (dataType == 'B') {
+        value *= barToPascals;
+      } else {
+        throw FormatException('Invalid pressure datatype: $dataType');
+      }
+      return [_boundSingleValue(value, Property.pressure, tier: 2)];
+    case 'P-engineoil#0':
+      _validateFieldValue(fields, index: startIndex + 2, expected: 'P');
+      final value = double.parse(fields[startIndex + 1]);
+      return [_boundSingleValue(value, Property.engine1OilPressure)];
+    case 'T-engine#0':
+      _validateFieldValue(fields, index: startIndex + 2, expected: 'R');
+      final value = double.parse(fields[startIndex + 1]);
+      return [_boundSingleValue(value, Property.engine1Rpm)];
+    case 'U-battery#0':
+      _validateFieldValue(fields, index: startIndex + 2, expected: 'V');
+      final value = double.parse(fields[startIndex + 1]);
+      return [_boundSingleValue(value, Property.battery1Voltage)];
+    case 'U-battery#1':
+      _validateFieldValue(fields, index: startIndex + 2, expected: 'V');
+      final value = double.parse(fields[startIndex + 1]);
+      return [_boundSingleValue(value, Property.battery2Voltage)];
     default:
       return [];
   }

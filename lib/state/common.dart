@@ -14,6 +14,7 @@ const double metersToNauticalMiles = 0.000539957;
 const double metersToFeet = 3.28084;
 const double pascalsToInchesMercury = 0.0002953;
 const double pascalsToMillibar = 0.01;
+const double pascalsToPsi = 0.000145038;
 
 const int serializationDp = 4;
 
@@ -38,14 +39,20 @@ enum Property {
   airTemperature('Air temperature', 'Air', Dimension.temperature),
   apparentWindAngle('Apparent wind angle', 'AWA', Dimension.angle),
   apparentWindSpeed('Apparent wind speed', 'AWS', Dimension.speed),
+  battery1Voltage('Battery 1 Voltage', 'Batt 1', Dimension.voltage),
+  battery2Voltage('Battery 2 Voltage', 'Batt 2', Dimension.voltage),
   courseOverGround('Course over ground', 'COG', Dimension.bearing),
   currentSet('Set', 'Set', Dimension.bearing),
   currentDrift('Drift', 'Drift', Dimension.speed),
   depthWithOffset('Depth', 'Depth', Dimension.depth),
   depthUncalibrated('Depth at sensor', 'XDR Depth', Dimension.depth),
-  dewPoint('Dew point', 'DewPt', Dimension.temperature),
+  dewPoint('Dew point', 'Dew Pt', Dimension.temperature),
   distanceTotal('Total distance', 'Log', Dimension.distance),
   distanceTrip('Trip distance', 'Trip', Dimension.distance),
+  engine1Rpm('Engine 1 Speed', 'Eng Speed', Dimension.rotationalSpeed),
+  engine1OilPressure('Engine 1 Oil Pressure', 'Eng Pres', Dimension.pressure),
+  engine1Temperature('Engine 1 Coolant Temp', 'Eng Temp', Dimension.temperature),
+  fuelLevel('Fuel Level', 'Fuel', Dimension.percentage),
   gpsPosition('GPS position', 'GPS', Dimension.position),
   gpsHdop('GPS HDOP', 'HDOP', Dimension.depth),
   heading('Heading', 'Heading', Dimension.bearing),
@@ -134,12 +141,20 @@ enum Dimension {
       type: SingleValue<double>,
       nativeUnits: 'pascals',
       derivationFriendly: true),
+  rotationalSpeed(
+      type: SingleValue<double>,
+      nativeUnits: 'rpm',
+      derivationFriendly: true),
   speed(
       type: SingleValue<double>,
       nativeUnits: 'meters/sec',
       derivationFriendly: true),
   temperature(type: SingleValue<double>, nativeUnits: 'degrees celcius'),
-  time(type: SingleValue<DateTime>, nativeUnits: 'datetime');
+  time(type: SingleValue<DateTime>, nativeUnits: 'datetime'),
+  voltage(
+      type: SingleValue<double>,
+      nativeUnits: 'volts',
+      derivationFriendly: true);
 
   final Type type;
   final String nativeUnits;

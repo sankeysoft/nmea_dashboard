@@ -240,7 +240,12 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
     'millibars':
         SimpleFormatter('millibar', 'mb', '----.-', pascalsToMillibar, 1),
     'inchHg': SimpleFormatter(
-        'inches mercury', 'in.hg', '--.--', pascalsToInchesMercury, 2)
+        'inches mercury', 'in.hg', '--.--', pascalsToInchesMercury, 2),
+    'psi': SimpleFormatter(
+        'pounds per sq.inch', 'psi', '---.-', pascalsToPsi, 1)
+  },
+  Dimension.rotationalSpeed: {
+    'rpm': SimpleFormatter('rpm', 'rpm', '-.-', 1.0, 1),
   },
   Dimension.speed: {
     'metersPerSec': SimpleFormatter('m/sec', 'm/s', '-.-', 1.0, 1),
@@ -271,6 +276,9 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
         (val) => val == null
             ? '-------\n--:--:--'
             : DateFormat('yyyy-MM-dd\nHH:mm:ss').format(val.data)),
+  },
+  Dimension.voltage: {
+    'volts': SimpleFormatter('volts', 'V', '--.-', 1.0, 1),
   },
 };
 

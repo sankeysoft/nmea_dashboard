@@ -374,6 +374,45 @@ void main() {
         ]));
   });
 
+  test('should parse XDR with engine temp and pressure', () {
+    expect(
+        NmeaParser(true).parseString(
+            r'$IIXDR,P,100300.00,P,ENGINEOIL#0,C,85.0,C,ENGINE#0,U,26.44,V,ALTERNATOR#0*09'),
+        BoundValueListMatches([
+          _boundSingleValue(100300.0, Property.engine1OilPressure),
+          _boundSingleValue(85.0, Property.engine1Temperature),
+        ]));
+  });
+
+  test('should parse XDR with engine RPM', () {
+    expect(
+        NmeaParser(true).parseString(
+            r'$IIXDR,T,800.0,R,ENGINE#0*73'),
+        BoundValueListMatches([
+          _boundSingleValue(800.0, Property.engine1Rpm),
+        ]));
+  });
+
+  test('should parse XDR with battery voltages', () {
+    expect(
+        NmeaParser(true).parseString(
+            r'$IIXDR,U,27.5,V,BATTERY#0,U,26.0,V,BATTERY#1*4B'),
+        BoundValueListMatches([
+          _boundSingleValue(27.5, Property.battery1Voltage),
+          _boundSingleValue(26.0, Property.battery2Voltage),
+        ]));
+  });
+
+  test('should parse XDR with fuel level', () {
+    expect(
+        NmeaParser(true).parseString(
+            r'$IIXDR,E,50.00,P,FUEL#0*79'),
+        BoundValueListMatches([
+          _boundSingleValue(50.0, Property.fuelLevel),
+        ]));
+  });
+
+
   test('should parse XTE', () {
     expect(
         NmeaParser(true).parseString(r'$YDXTE,A,A,1.000,R,N,A*26'),

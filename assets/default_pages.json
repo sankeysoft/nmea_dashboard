@@ -45,7 +45,13 @@
 		{"source": "network", "element": "rudderAngle", "format": "degrees"},
 		{"source": "network", "element": "waypointRange", "format": "nm"},
 		{"source": "network", "element": "waypointBearing", "format": "true"},
-		{"source": "network", "element": "crossTrackError", "format": "feet"}
+		{"source": "network", "element": "crossTrackError", "format": "feet"},
+		{"source": "network", "element": "battery1Voltage", "format": "volts"},
+		{"source": "network", "element": "battery2Voltage", "format": "volts"},
+		{"source": "network", "element": "fuelLevel", "format": "percent"},
+		{"source": "network", "element": "engine1Rpm", "format": "rpm"},
+		{"source": "network", "element": "engine1OilPressure", "format": "psi"},
+		{"source": "network", "element": "engine1Temperature", "format": "farenheit"}
   ]
 }, {
   "name": "Medium",
