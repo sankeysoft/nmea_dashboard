@@ -36,7 +36,10 @@ Stream<BoundValue?> valuesFromNetwork(NetworkSettings settings) {
 /// null) values at least every _timeout seconds even if no network traffic is
 /// present to enable cancelling.
 Stream<BoundValue?> _valuesFromTcpConnect(
-    InternetAddress ipAddress, int portNum, NmeaParser parser) async* {
+  InternetAddress ipAddress,
+  int portNum,
+  NmeaParser parser,
+) async* {
   _log.info('Starting TCP stream on $ipAddress:$portNum');
   try {
     while (true) {
@@ -47,8 +50,10 @@ Stream<BoundValue?> _valuesFromTcpConnect(
         }
         socket.close();
       } on SocketException catch (e) {
-        _log.warning('Exception opening TCP stream on $ipAddress:$portNum. '
-            'Please check your network settings. ($e)');
+        _log.warning(
+          'Exception opening TCP stream on $ipAddress:$portNum. '
+          'Please check your network settings. ($e)',
+        );
         yield null;
         await Future.delayed(_networkErrorRetry);
       }
@@ -62,20 +67,23 @@ Stream<BoundValue?> _valuesFromTcpConnect(
 /// network port, logging any errors, guaranteed to return (potentially null)
 /// values at least every _timeout seconds even if no network traffic is present
 /// to enable cancelling.
-Stream<BoundValue?> _valuesFromUdpListen(
-    int portNum, NmeaParser parser) async* {
+Stream<BoundValue?> _valuesFromUdpListen(int portNum, NmeaParser parser) async* {
   _log.info('Starting UDP listen stream on $portNum');
   try {
     while (true) {
       try {
         var receiver = await UDP.bind(Endpoint.any(port: Port(portNum)));
         await for (final value in _valuesFromPackets(
-            receiver.asStream().map((d) => d?.data ?? _emptyPacket), parser)) {
+          receiver.asStream().map((d) => d?.data ?? _emptyPacket),
+          parser,
+        )) {
           yield value;
         }
       } on SocketException catch (e) {
-        _log.warning('Exception opening UDP listen on $portNum. '
-            'Please check your network settings. ($e)');
+        _log.warning(
+          'Exception opening UDP listen on $portNum. '
+          'Please check your network settings. ($e)',
+        );
         yield null;
         await Future.delayed(_networkErrorRetry);
       }
@@ -96,11 +104,9 @@ Stream<Uint8List> _periodicEmptyPackets() {
 /// logging any errors, guaranteed to return (potentially null) values at
 /// least every _timeout seconds even if no network traffic is present to
 /// enable cancelling.
-Stream<BoundValue?> _valuesFromPackets(
-    Stream<Uint8List> packetStream, NmeaParser parser) async* {
+Stream<BoundValue?> _valuesFromPackets(Stream<Uint8List> packetStream, NmeaParser parser) async* {
   String remaining = '';
-  await for (final packet
-      in StreamGroup.merge([packetStream, _periodicEmptyPackets()])) {
+  await for (final packet in StreamGroup.merge([packetStream, _periodicEmptyPackets()])) {
     parser.logAndClearIfNeeded();
     if (packet.isEmpty) {
       // Empty packets are included in the stream even if no traffic is

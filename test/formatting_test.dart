@@ -34,8 +34,7 @@ void main() {
 
   test('angles should be formatted appropriately', () {
     String format(double number, String name) {
-      return formattersFor(Property.pitch.dimension)[name]!
-          .format(SingleValue(number));
+      return formattersFor(Property.pitch.dimension)[name]!.format(SingleValue(number));
     }
 
     expect(format(4.321, 'degrees'), equals('4'));
@@ -44,8 +43,7 @@ void main() {
 
   test('angular rates should be formatted appropriately', () {
     String format(double number, String name) {
-      return formattersFor(Property.rateOfTurn.dimension)[name]!
-          .format(SingleValue(number));
+      return formattersFor(Property.rateOfTurn.dimension)[name]!.format(SingleValue(number));
     }
 
     expect(format(4.321, 'degreesPerSec'), equals('4.3'));
@@ -56,10 +54,11 @@ void main() {
     String format(double? bearing, double? variation, String name) {
       final val = (bearing == null)
           ? null
-          : AugmentedBearing(SingleValue(bearing),
-              variation == null ? null : SingleValue(variation));
-      return formattersFor(Property.trueWindDirection.dimension)[name]!
-          .format(val);
+          : AugmentedBearing(
+              SingleValue(bearing),
+              variation == null ? null : SingleValue(variation),
+            );
+      return formattersFor(Property.trueWindDirection.dimension)[name]!.format(val);
     }
 
     expect(format(null, null, 'true'), '---');
@@ -77,8 +76,10 @@ void main() {
     double? toNumber(double? bearing, double? variation, String name) {
       final val = (bearing == null)
           ? null
-          : AugmentedBearing(SingleValue(bearing),
-              variation == null ? null : SingleValue(variation));
+          : AugmentedBearing(
+              SingleValue(bearing),
+              variation == null ? null : SingleValue(variation),
+            );
       final fmt = formattersFor(Property.trueWindDirection.dimension)[name]!;
       return (fmt as NumericFormatter).toNumber(val);
     }
@@ -96,8 +97,9 @@ void main() {
 
   test('XTE should be formatted appropriately', () {
     String format(double? number, String name) {
-      return formattersFor(Property.crossTrackError.dimension)[name]!
-          .format(number == null ? null : SingleValue(number));
+      return formattersFor(
+        Property.crossTrackError.dimension,
+      )[name]!.format(number == null ? null : SingleValue(number));
     }
 
     expect(format(null, 'meters'), equals('---'));
@@ -111,8 +113,7 @@ void main() {
   test('XTE numeric conversion should be correct', () {
     double? toNumber(double? number, String name) {
       final fmt = formattersFor(Property.crossTrackError.dimension)[name]!;
-      return (fmt as NumericFormatter)
-          .toNumber(number == null ? null : SingleValue(number));
+      return (fmt as NumericFormatter).toNumber(number == null ? null : SingleValue(number));
     }
 
     expect(toNumber(null, 'meters'), equals(null));
@@ -125,8 +126,7 @@ void main() {
 
   test('distance should be formatted appropriately', () {
     String format(double number, String name) {
-      return formattersFor(Property.distanceTrip.dimension)[name]!
-          .format(SingleValue(number));
+      return formattersFor(Property.distanceTrip.dimension)[name]!.format(SingleValue(number));
     }
 
     expect(format(12345.67, 'km'), equals('12.35'));
@@ -137,23 +137,18 @@ void main() {
 
   test('position should be formatted appropriately', () {
     String format(double lat, double long, String name) {
-      return formattersFor(Property.gpsPosition.dimension)[name]!
-          .format(DoubleValue(lat, long));
+      return formattersFor(Property.gpsPosition.dimension)[name]!.format(DoubleValue(lat, long));
     }
 
     expect(format(0, 0, 'degMin'), equals("0° 0.000' N\n0° 0.000' E"));
-    expect(format(37.251, -122.50, 'degMin'),
-        equals("37° 15.060' N\n122° 30.000' W"));
-    expect(format(37.251, -122.50, 'degMinSec'),
-        equals("37° 15' 3.6\" N\n122° 30' 0.0\" W"));
-    expect(format(-45, 60.00, 'degMinSec'),
-        equals("45° 0' 0.0\" S\n60° 0' 0.0\" E"));
+    expect(format(37.251, -122.50, 'degMin'), equals("37° 15.060' N\n122° 30.000' W"));
+    expect(format(37.251, -122.50, 'degMinSec'), equals("37° 15' 3.6\" N\n122° 30' 0.0\" W"));
+    expect(format(-45, 60.00, 'degMinSec'), equals("45° 0' 0.0\" S\n60° 0' 0.0\" E"));
   });
 
   test('RH should be formatted appropriately', () {
     String format(double number, String name) {
-      return formattersFor(Property.relativeHumidity.dimension)[name]!
-          .format(SingleValue(number));
+      return formattersFor(Property.relativeHumidity.dimension)[name]!.format(SingleValue(number));
     }
 
     expect(format(87, 'percent'), equals('87.0'));
@@ -161,8 +156,7 @@ void main() {
 
   test('pressure should be formatted appropriately', () {
     String format(double number, String name) {
-      return formattersFor(Property.pressure.dimension)[name]!
-          .format(SingleValue(number));
+      return formattersFor(Property.pressure.dimension)[name]!.format(SingleValue(number));
     }
 
     expect(format(101326, 'millibars'), equals('1013.3'));
@@ -171,8 +165,7 @@ void main() {
 
   test('speed should be formatted appropriately', () {
     String format(double number, String name) {
-      return formattersFor(Property.speedOverGround.dimension)[name]!
-          .format(SingleValue(number));
+      return formattersFor(Property.speedOverGround.dimension)[name]!.format(SingleValue(number));
     }
 
     expect(format(5.4321, 'metersPerSec'), equals('5.4'));
@@ -182,8 +175,7 @@ void main() {
 
   test('temperature should be formatted appropriately', () {
     String format(double number, String name) {
-      return formattersFor(Property.waterTemperature.dimension)[name]!
-          .format(SingleValue(number));
+      return formattersFor(Property.waterTemperature.dimension)[name]!.format(SingleValue(number));
     }
 
     expect(format(5.4321, 'celcius'), equals('5.4'));
@@ -194,13 +186,10 @@ void main() {
 
   test('time should be formatted appropriately', () {
     String format(DateTime datetime, String name) {
-      return formattersFor(Property.utcTime.dimension)[name]!
-          .format(SingleValue(datetime));
+      return formattersFor(Property.utcTime.dimension)[name]!.format(SingleValue(datetime));
     }
 
-    expect(
-        format(DateTime.utc(2023, 4, 5, 7, 2, 37), 'hms'), equals('07:02:37'));
-    expect(format(DateTime.utc(2023, 4, 5, 7, 2, 37), 'ymdhms'),
-        equals('2023-04-05\n07:02:37'));
+    expect(format(DateTime.utc(2023, 4, 5, 7, 2, 37), 'hms'), equals('07:02:37'));
+    expect(format(DateTime.utc(2023, 4, 5, 7, 2, 37), 'ymdhms'), equals('2023-04-05\n07:02:37'));
   });
 }

@@ -71,8 +71,7 @@ enum Property {
   trueWindAngle('True wind angle', 'TWA', Dimension.angle),
   trueWindDirection('True wind direction', 'TWD', Dimension.bearing),
   trueWindSpeed('True wind speed', 'TWS', Dimension.speed),
-  utcTime('UTC datetime', 'UTC', Dimension.time,
-      sources: {Source.local, Source.network}),
+  utcTime('UTC datetime', 'UTC', Dimension.time, sources: {Source.local, Source.network}),
   localTime('Local datetime', 'Local', Dimension.time, sources: {Source.local}),
   variation('Magnetic variation', 'MagVar', Dimension.angle),
   waterTemperature('Water temperature', 'Water', Dimension.temperature),
@@ -92,8 +91,7 @@ enum Property {
   /// The sources that supply this property.
   final Set<Source> sources;
 
-  const Property(this.longName, this.shortName, this.dimension,
-      {this.sources = _networkOnly});
+  const Property(this.longName, this.shortName, this.dimension, {this.sources = _networkOnly});
 
   /// The uniqualified name of this literal in its enum, e.g. "speedOverGround".
   String get name => toString().split('.').last;
@@ -119,51 +117,27 @@ enum Source {
 
 /// The various types of dimension used across data elements.
 enum Dimension {
-  angle(
-      type: SingleValue<double>,
-      nativeUnits: 'degrees',
-      derivationFriendly: true),
+  angle(type: SingleValue<double>, nativeUnits: 'degrees', derivationFriendly: true),
   angularRate(type: SingleValue<double>, nativeUnits: 'degrees/sec'),
   bearing(type: SingleValue<double>, nativeUnits: 'degrees true'),
   crossTrackError(type: SingleValue<double>, nativeUnits: 'meters'),
-  distance(
-      type: SingleValue<double>,
-      nativeUnits: 'meters',
-      derivationFriendly: true),
-  depth(
-      type: SingleValue<double>,
-      nativeUnits: 'meters',
-      derivationFriendly: true),
+  distance(type: SingleValue<double>, nativeUnits: 'meters', derivationFriendly: true),
+  depth(type: SingleValue<double>, nativeUnits: 'meters', derivationFriendly: true),
   integer(type: SingleValue<int>, nativeUnits: 'N/A'),
   percentage(type: SingleValue<double>, nativeUnits: 'N/A'),
   position(type: DoubleValue<double>, nativeUnits: 'lat/long degrees'),
-  pressure(
-      type: SingleValue<double>,
-      nativeUnits: 'pascals',
-      derivationFriendly: true),
-  rotationalSpeed(
-      type: SingleValue<double>,
-      nativeUnits: 'rpm',
-      derivationFriendly: true),
-  speed(
-      type: SingleValue<double>,
-      nativeUnits: 'meters/sec',
-      derivationFriendly: true),
+  pressure(type: SingleValue<double>, nativeUnits: 'pascals', derivationFriendly: true),
+  rotationalSpeed(type: SingleValue<double>, nativeUnits: 'rpm', derivationFriendly: true),
+  speed(type: SingleValue<double>, nativeUnits: 'meters/sec', derivationFriendly: true),
   temperature(type: SingleValue<double>, nativeUnits: 'degrees celcius'),
   time(type: SingleValue<DateTime>, nativeUnits: 'datetime'),
-  voltage(
-      type: SingleValue<double>,
-      nativeUnits: 'volts',
-      derivationFriendly: true);
+  voltage(type: SingleValue<double>, nativeUnits: 'volts', derivationFriendly: true);
 
   final Type type;
   final String nativeUnits;
   final bool derivationFriendly;
 
-  const Dimension(
-      {required this.type,
-      required this.nativeUnits,
-      this.derivationFriendly = false});
+  const Dimension({required this.type, required this.nativeUnits, this.derivationFriendly = false});
 
   /// Returns a derivation operation from its unqualified name.
   static Dimension? fromString(String? name) {
@@ -229,14 +203,10 @@ enum CellType {
 
 /// A time interval over which historical data may be tracked.
 enum HistoryInterval {
-  fifteenMin('15 minutes', '15min', Duration(seconds: 10), 90,
-      Duration(minutes: 5), 'HH:mm'),
-  twoHours(
-      '2 hours', '2hr', Duration(minutes: 1), 120, Duration(hours: 1), 'HH:mm'),
-  twelveHours('12 hours', '12hr', Duration(minutes: 6), 120, Duration(hours: 3),
-      'HH:mm'),
-  fortyEightHours('48 hours', '48hr', Duration(minutes: 30), 96,
-      Duration(days: 1), 'MMM d');
+  fifteenMin('15 minutes', '15min', Duration(seconds: 10), 90, Duration(minutes: 5), 'HH:mm'),
+  twoHours('2 hours', '2hr', Duration(minutes: 1), 120, Duration(hours: 1), 'HH:mm'),
+  twelveHours('12 hours', '12hr', Duration(minutes: 6), 120, Duration(hours: 3), 'HH:mm'),
+  fortyEightHours('48 hours', '48hr', Duration(minutes: 30), 96, Duration(days: 1), 'MMM d');
 
   /// The string to display.
   final String display;
@@ -256,8 +226,14 @@ enum HistoryInterval {
   /// The string used to format times inside this interval.
   final String _format;
 
-  const HistoryInterval(this.display, this.short, this.segment, this.count,
-      this.tick, this._format);
+  const HistoryInterval(
+    this.display,
+    this.short,
+    this.segment,
+    this.count,
+    this.tick,
+    this._format,
+  );
 
   /// Returns a history interval from its unqualified name.
   static HistoryInterval? fromString(String? name) {

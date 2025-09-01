@@ -50,8 +50,7 @@ void main() {
     expect(DoubleValue.deserialize('ext/2.9'), null);
   });
 
-  test('AugmentedBearing without variation should serialize and deserialize.',
-      () {
+  test('AugmentedBearing without variation should serialize and deserialize.', () {
     final original = AugmentedBearing.fromNumbers(321.0, null);
     expect(original.toString(), '(Brg=321.0 Var=null)');
     var serialized = original.serialize();
@@ -87,17 +86,14 @@ void main() {
     final acc = ValueAccumulator.forType(AugmentedBearing);
     expect(acc.getAndClear(), null);
     acc.add(AugmentedBearing.fromNumbers(200.0, 5.0));
-    expect(acc.getAndClear(),
-        ValueMatches(AugmentedBearing.fromNumbers(200.0, 5.0)));
+    expect(acc.getAndClear(), ValueMatches(AugmentedBearing.fromNumbers(200.0, 5.0)));
     acc.add(AugmentedBearing.fromNumbers(100.0, null));
     acc.add(AugmentedBearing.fromNumbers(150.0, null));
-    expect(acc.getAndClear(),
-        ValueMatches(AugmentedBearing.fromNumbers(125.0, null)));
+    expect(acc.getAndClear(), ValueMatches(AugmentedBearing.fromNumbers(125.0, null)));
     acc.add(AugmentedBearing.fromNumbers(200.0, 5.0));
     acc.add(AugmentedBearing.fromNumbers(210.0, 10.0));
     acc.add(AugmentedBearing.fromNumbers(220.0, null));
-    expect(acc.getAndClear(),
-        ValueMatches(AugmentedBearing.fromNumbers(210.0, 7.5)));
+    expect(acc.getAndClear(), ValueMatches(AugmentedBearing.fromNumbers(210.0, 7.5)));
     expect(acc.getAndClear(), null);
   });
 }

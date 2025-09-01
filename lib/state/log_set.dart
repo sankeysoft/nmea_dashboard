@@ -17,7 +17,7 @@ class LogEntry {
   final DateTime time;
   final String message;
 
-  LogEntry(this.level, this.message): time = DateTime.now();
+  LogEntry(this.level, this.message) : time = DateTime.now();
 
   @override
   String toString() {

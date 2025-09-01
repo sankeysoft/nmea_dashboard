@@ -46,13 +46,16 @@ abstract class HistoryManager {
   void registerEvent(DateTime time, History history);
 
   /// Writes the supplied history information into a shared preference.
-  void save<V extends Value>(String dataId, HistoryInterval interval,
-      List<V?> values, DateTime endValueTime);
+  void save<V extends Value>(
+    String dataId,
+    HistoryInterval interval,
+    List<V?> values,
+    DateTime endValueTime,
+  );
 
   /// Creates a new history, using data retrieved from shared preferences where
   /// possible.
-  History<V> restoreHistory<V extends Value>(
-      HistoryInterval interval, String dataId);
+  History<V> restoreHistory<V extends Value>(HistoryInterval interval, String dataId);
 
   /// Returns the shared prefs key used to store a history.
   static String key(String dataId, HistoryInterval interval) {
@@ -95,13 +98,17 @@ class HistoryManagerImpl extends HistoryManager {
 
   /// Writes the supplied history information into a shared preference.
   @override
-  void save<V extends Value>(String dataId, HistoryInterval interval,
-      List<V?> values, DateTime endValueTime) {
+  void save<V extends Value>(
+    String dataId,
+    HistoryInterval interval,
+    List<V?> values,
+    DateTime endValueTime,
+  ) {
     // Shared prefs does not have well matched datatypes, best we can do is
     // a list of strings. Start with the segment duration as a sanity check.
     List<String> output = [
       interval.segment.inSeconds.toString(),
-      endValueTime.millisecondsSinceEpoch.toString()
+      endValueTime.millisecondsSinceEpoch.toString(),
     ];
     output.addAll(values.map((v) => (v == null) ? '' : v.serialize()));
     prefs.setStringList(HistoryManager.key(dataId, interval), output);
@@ -110,33 +117,35 @@ class HistoryManagerImpl extends HistoryManager {
   /// Creates a new history, using data retrieved from shared preferences where
   /// possible.
   @override
-  History<V> restoreHistory<V extends Value>(
-      HistoryInterval interval, String dataId) {
+  History<V> restoreHistory<V extends Value>(HistoryInterval interval, String dataId) {
     final data = prefs.getStringList(HistoryManager.key(dataId, interval));
     if (data == null) {
       _log.info('No stored history for $dataId, creating a new object');
       return History<V>(interval, dataId, this);
     }
     if (data.length != interval.count + 2) {
-      _log.warning(
-          'Stored history for $dataId ${interval.name} wrong length (${data.length})');
+      _log.warning('Stored history for $dataId ${interval.name} wrong length (${data.length})');
       return History<V>(interval, dataId, this);
     }
 
     final segment = int.tryParse(data[0]);
     if (segment == null || segment != interval.segment.inSeconds) {
-      _log.warning(
-          'Stored history for $dataId ${interval.name} wrong segment size ($segment)');
+      _log.warning('Stored history for $dataId ${interval.name} wrong segment size ($segment)');
       return History(interval, dataId, this);
     }
 
     final endValueTime = DateTime.fromMillisecondsSinceEpoch(
-        int.tryParse(data[1]) ?? 0,
-        isUtc: true);
-    final values =
-        data.sublist(2).map((str) => Value.deserialize<V>(str)).toList();
-    return History(interval, dataId, this,
-        previousEndValueTime: endValueTime, previousValues: values);
+      int.tryParse(data[1]) ?? 0,
+      isUtc: true,
+    );
+    final values = data.sublist(2).map((str) => Value.deserialize<V>(str)).toList();
+    return History(
+      interval,
+      dataId,
+      this,
+      previousEndValueTime: endValueTime,
+      previousValues: values,
+    );
   }
 }
 
@@ -219,24 +228,26 @@ class History<V extends Value> with ChangeNotifier {
   /// The end value time of the last save.
   DateTime _lastSaveEvt;
 
-  History(this.interval, this.dataId, this._manager,
-      {DateTime? now, DateTime? previousEndValueTime, List<V?>? previousValues})
-      : _values = List.filled(interval.count, null, growable: true),
-        _accumulator = ValueAccumulator.forType(V) as ValueAccumulator<V>,
-        _endValueTime = truncateUtcToDuration(
-            now ?? DateTime.now().toUtc(), interval.segment),
-        _lastSaveEvt = DateTime.fromMillisecondsSinceEpoch(0, isUtc: true) {
+  History(
+    this.interval,
+    this.dataId,
+    this._manager, {
+    DateTime? now,
+    DateTime? previousEndValueTime,
+    List<V?>? previousValues,
+  }) : _values = List.filled(interval.count, null, growable: true),
+       _accumulator = ValueAccumulator.forType(V) as ValueAccumulator<V>,
+       _endValueTime = truncateUtcToDuration(now ?? DateTime.now().toUtc(), interval.segment),
+       _lastSaveEvt = DateTime.fromMillisecondsSinceEpoch(0, isUtc: true) {
     if (previousEndValueTime != null && previousValues != null) {
       // Try to populate segment values from the old history if any are still
       // applicable.
       final previousSegmentOffset =
-          (endValueTime.difference(previousEndValueTime).inSeconds /
-                  interval.segment.inSeconds)
+          (endValueTime.difference(previousEndValueTime).inSeconds / interval.segment.inSeconds)
               .round();
       // Handle the case where the history had a different number of values
       // just in case.
-      final srcStartIndex =
-          previousValues.length + previousSegmentOffset - interval.count;
+      final srcStartIndex = previousValues.length + previousSegmentOffset - interval.count;
       for (int i = 0; i + srcStartIndex < previousValues.length; i++) {
         values[i] = previousValues[srcStartIndex + i];
       }
@@ -252,12 +263,13 @@ class History<V extends Value> with ChangeNotifier {
 
     // Potentially we are being called way later than the end of the segment we
     // were accumulating, figure out how many we should slide the array down.
-    final segmentCount =
-        (now.difference(_endValueTime).inSeconds / interval.segment.inSeconds)
-            .round();
+    final segmentCount = (now.difference(_endValueTime).inSeconds / interval.segment.inSeconds)
+        .round();
     if (segmentCount <= 0) {
-      _log.warning('Ignoring segment count $segmentCount updating history. '
-          'Time may have stepped backwards');
+      _log.warning(
+        'Ignoring segment count $segmentCount updating history. '
+        'Time may have stepped backwards',
+      );
     } else {
       if (segmentCount < _values.length) {
         // Remove old entries, add the new segment, and pad with nulls for

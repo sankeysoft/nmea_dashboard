@@ -10,10 +10,11 @@ import 'package:nmea_dashboard/ui/forms/abstract.dart';
 /// A form that lets the user view and copy the log in real time.
 class ViewHelpPage extends StatelessFormPage {
   ViewHelpPage({required String filename, required super.title, super.key})
-      : super(
-            maxWidth: double.infinity,
-            maxHeight: double.infinity,
-            content: _ViewHelpContent(filename));
+    : super(
+        maxWidth: double.infinity,
+        maxHeight: double.infinity,
+        content: _ViewHelpContent(filename),
+      );
 }
 
 class _ViewHelpContent extends StatelessWidget {
@@ -24,28 +25,31 @@ class _ViewHelpContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Form(
-        child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
           Expanded(child: _buildText(context)),
           const SizedBox(height: 15),
           buildCloseButton(context),
-        ]));
+        ],
+      ),
+    );
   }
 
   Widget _buildText(BuildContext context) {
     // Annoyingly Image assets can be read synchronously but text can't.
     return FutureBuilder(
-        future: rootBundle.loadString('assets/$_filename'),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.done) {
-            final data = snapshot.data ?? 'ASSET NOT FOUND';
-            return _buildThemedMarkdown(context, data);
-          } else {
-            return Center(child: _spinner());
-          }
-        });
+      future: rootBundle.loadString('assets/$_filename'),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done) {
+          final data = snapshot.data ?? 'ASSET NOT FOUND';
+          return _buildThemedMarkdown(context, data);
+        } else {
+          return Center(child: _spinner());
+        }
+      },
+    );
   }
 
   Widget _buildThemedMarkdown(BuildContext context, String data) {
@@ -53,13 +57,13 @@ class _ViewHelpContent extends StatelessWidget {
     return Theme(
       data: current.copyWith(
         textTheme: current.textTheme.copyWith(
-          bodyMedium:
-              TextStyle(fontSize: 16, color: current.colorScheme.primary),
+          bodyMedium: TextStyle(fontSize: 16, color: current.colorScheme.primary),
           headlineSmall: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              height: 2,
-              color: current.colorScheme.primaryContainer),
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            height: 2,
+            color: current.colorScheme.primaryContainer,
+          ),
           //bodyLarge: current.textTheme.bodyLarge!.copyWith(height: 10),
           //headlineSmall: current.textTheme.headlineSmall!.copyWith(height: 10),
         ),
@@ -69,7 +73,6 @@ class _ViewHelpContent extends StatelessWidget {
   }
 
   Widget _spinner() {
-    return const SizedBox(
-        height: 40, width: 40, child: CircularProgressIndicator());
+    return const SizedBox(height: 40, width: 40, child: CircularProgressIndicator());
   }
 }

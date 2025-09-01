@@ -99,23 +99,21 @@ class NmeaParser {
     if (successCounts.isEmpty) {
       _log.info('No messages received since $lastLogString');
     } else {
-      _log.info(
-          'Sucessfully parsed ${successCounts.total} messages: ${successCounts.summary}');
+      _log.info('Sucessfully parsed ${successCounts.total} messages: ${successCounts.summary}');
       successCounts.clear();
     }
     if (!emptyCounts.isEmpty) {
-      _log.info(
-          'Received ${emptyCounts.total} messages without data: ${emptyCounts.summary}');
+      _log.info('Received ${emptyCounts.total} messages without data: ${emptyCounts.summary}');
       emptyCounts.clear();
     }
     if (!unsupportedCounts.isEmpty) {
       _log.info(
-          'Received ${unsupportedCounts.total} unsupported messages: ${unsupportedCounts.summary}');
+        'Received ${unsupportedCounts.total} unsupported messages: ${unsupportedCounts.summary}',
+      );
       unsupportedCounts.clear();
     }
     if (!ignoredCounts.isEmpty) {
-      _log.info(
-          'Received ${ignoredCounts.total} ignored messages: ${ignoredCounts.summary}');
+      _log.info('Received ${ignoredCounts.total} ignored messages: ${ignoredCounts.summary}');
       ignoredCounts.clear();
     }
   }
@@ -141,8 +139,10 @@ class NmeaParser {
     // Try to validate a checksum if there is one, throw an error if there
     // isn't but we require checksums.
     if (string.length > 3 && string[string.length - 3] == '*') {
-      _validateChecksum(string.substring(1, string.length - 3),
-          string.substring(string.length - 2));
+      _validateChecksum(
+        string.substring(1, string.length - 3),
+        string.substring(string.length - 2),
+      );
       string = string.substring(0, string.length - 3);
     } else if (_requireChecksum) {
       throw const FormatException('Message did not end in a checksum');
@@ -196,8 +196,9 @@ void _validateChecksum(String payload, String checksumString) {
   }
   if (xor != checksum) {
     throw FormatException(
-        'Invalid checksum: expected 0x${checksum.toRadixString(16)}, '
-        'got 0x${xor.toRadixString(16)}');
+      'Invalid checksum: expected 0x${checksum.toRadixString(16)}, '
+      'got 0x${xor.toRadixString(16)}',
+    );
   }
 }
 
@@ -212,19 +213,13 @@ List<BoundValue> _createNmeaValues(String type, List<String> fields) {
       _validateFieldValue(fields, index: 6, expected: 'T');
       _validateFieldValue(fields, index: 10, expected: 'N');
       return [
-        _parseSingleValue(
-          fields[9],
-          Property.waypointRange,
-          divisor: metersToNauticalMiles,
-        ),
+        _parseSingleValue(fields[9], Property.waypointRange, divisor: metersToNauticalMiles),
         _parseSingleValue(fields[5], Property.waypointBearing),
       ].nonNulls.toList();
     case 'DBT':
       _validateFieldCount(fields, 6);
       _validateFieldValue(fields, index: 3, expected: 'M');
-      return [
-        _parseSingleValue(fields[2], Property.depthUncalibrated, tier: 2),
-      ].nonNulls.toList();
+      return [_parseSingleValue(fields[2], Property.depthUncalibrated, tier: 2)].nonNulls.toList();
     case 'DPT':
       _validateMinFieldCount(fields, 2);
       if (fields[0].isEmpty) {
@@ -254,9 +249,7 @@ List<BoundValue> _createNmeaValues(String type, List<String> fields) {
     case 'HDM':
       _validateFieldCount(fields, 2);
       _validateFieldValue(fields, index: 1, expected: 'M');
-      return [
-        _parseSingleValue(fields[0], Property.headingMag, tier: 2),
-      ].nonNulls.toList();
+      return [_parseSingleValue(fields[0], Property.headingMag, tier: 2)].nonNulls.toList();
     case 'GGA':
       _validateFieldCount(fields, 14);
       // Note we do not support messages where the position is missing.
@@ -281,8 +274,7 @@ List<BoundValue> _createNmeaValues(String type, List<String> fields) {
       var ret = <BoundValue<SingleValue<double>>?>[];
       if (fields[2].isNotEmpty) {
         _validateFieldValue(fields, index: 3, expected: 'B');
-        ret.add(_parseSingleValue(fields[2], Property.pressure,
-            divisor: 1 / barToPascals));
+        ret.add(_parseSingleValue(fields[2], Property.pressure, divisor: 1 / barToPascals));
       }
       if (fields[4].isNotEmpty) {
         _validateFieldValue(fields, index: 5, expected: 'C');
@@ -301,8 +293,7 @@ List<BoundValue> _createNmeaValues(String type, List<String> fields) {
       }
       if (fields[12].isNotEmpty) {
         _validateFieldValue(fields, index: 13, expected: 'T');
-        ret.add(
-            _parseSingleValue(fields[12], Property.trueWindDirection, tier: 2));
+        ret.add(_parseSingleValue(fields[12], Property.trueWindDirection, tier: 2));
       }
       return ret.nonNulls.toList();
     case 'MWD':
@@ -322,30 +313,24 @@ List<BoundValue> _createNmeaValues(String type, List<String> fields) {
       _validateValidityIndicator(fields, index: 4);
       final relative = (fields[1] == 'R');
       final angle = double.parse(fields[0]);
-      final divisor = switch(fields[3]) {
+      final divisor = switch (fields[3]) {
         'N' => metersPerSecondToKnots,
         'K' => metersPerSecondToKmph,
         _ => 1.0,
       };
       final speed = double.parse(fields[2]) / divisor;
       return [
-        _boundSingleValue(angle,
-            relative ? Property.apparentWindAngle : Property.trueWindAngle),
-        _boundSingleValue(speed,
-            relative ? Property.apparentWindSpeed : Property.trueWindSpeed),
+        _boundSingleValue(angle, relative ? Property.apparentWindAngle : Property.trueWindAngle),
+        _boundSingleValue(speed, relative ? Property.apparentWindSpeed : Property.trueWindSpeed),
       ];
     case 'MTW':
       _validateFieldCount(fields, 2);
       _validateFieldValue(fields, index: 1, expected: 'C');
-      return [_parseSingleValue(fields[0], Property.waterTemperature, tier: 2)]
-          .nonNulls
-          .toList();
+      return [_parseSingleValue(fields[0], Property.waterTemperature, tier: 2)].nonNulls.toList();
     case 'ROT':
       _validateFieldCount(fields, 2);
       _validateValidityIndicator(fields, index: 1);
-      return [_parseSingleValue(fields[0], Property.rateOfTurn, divisor: 60)]
-          .nonNulls
-          .toList();
+      return [_parseSingleValue(fields[0], Property.rateOfTurn, divisor: 60)].nonNulls.toList();
     case 'RMB':
       _validateMinFieldCount(fields, 13);
       _validateValidityIndicator(fields, index: 0);
@@ -380,8 +365,14 @@ List<BoundValue> _createNmeaValues(String type, List<String> fields) {
         _boundDoubleValue(lat, long, Property.gpsPosition, tier: 3),
         _boundSingleValue(dt, Property.utcTime, tier: 2),
       ];
-      ret.add(_parseSingleValue(fields[6], Property.speedOverGround,
-          divisor: metersPerSecondToKnots, tier: 2));
+      ret.add(
+        _parseSingleValue(
+          fields[6],
+          Property.speedOverGround,
+          divisor: metersPerSecondToKnots,
+          tier: 2,
+        ),
+      );
       ret.add(_parseSingleValue(fields[7], Property.courseOverGround, tier: 2));
       if (fields[9].isNotEmpty) {
         final variation = _parseVariation(fields[9], fields[10]);
@@ -391,34 +382,29 @@ List<BoundValue> _createNmeaValues(String type, List<String> fields) {
     case 'RSA':
       _validateFieldCount(fields, 4);
       _validateValidityIndicator(fields, index: 1);
-      return [_parseSingleValue(fields[0], Property.rudderAngle)]
-          .nonNulls
-          .toList();
+      return [_parseSingleValue(fields[0], Property.rudderAngle)].nonNulls.toList();
     case 'VDR':
       _validateFieldCount(fields, 6);
       _validateFieldValue(fields, index: 1, expected: 'T');
       _validateFieldValue(fields, index: 5, expected: 'N');
       return [
         _parseSingleValue(fields[0], Property.currentSet),
-        _parseSingleValue(fields[4], Property.currentDrift,
-            divisor: metersPerSecondToKnots)
+        _parseSingleValue(fields[4], Property.currentDrift, divisor: metersPerSecondToKnots),
       ].nonNulls.toList();
     case 'VHW':
       _validateMinFieldCount(fields, 8);
       _validateFieldValue(fields, index: 7, expected: 'K');
       return [
         // Need to convert from kmph (sigh).
-        _parseSingleValue(fields[6], Property.speedThroughWater, divisor: 3.6)
+        _parseSingleValue(fields[6], Property.speedThroughWater, divisor: 3.6),
       ].nonNulls.toList();
     case 'VLW':
       _validateMinFieldCount(fields, 4);
       _validateFieldValue(fields, index: 1, expected: 'N');
       _validateFieldValue(fields, index: 3, expected: 'N');
       return [
-        _parseSingleValue(fields[0], Property.distanceTotal,
-            divisor: metersToNauticalMiles),
-        _parseSingleValue(fields[2], Property.distanceTrip,
-            divisor: metersToNauticalMiles)
+        _parseSingleValue(fields[0], Property.distanceTotal, divisor: metersToNauticalMiles),
+        _parseSingleValue(fields[2], Property.distanceTrip, divisor: metersToNauticalMiles),
       ].nonNulls.toList();
     case 'VTG':
       _validateMinFieldCount(fields, 8);
@@ -427,7 +413,7 @@ List<BoundValue> _createNmeaValues(String type, List<String> fields) {
       return [
         _parseSingleValue(fields[0], Property.courseOverGround),
         // Need to convert from kmph (sigh).
-        _parseSingleValue(fields[6], Property.speedOverGround, divisor: 3.6)
+        _parseSingleValue(fields[6], Property.speedOverGround, divisor: 3.6),
       ].nonNulls.toList();
     case 'XDR':
       _validateMinFieldCount(fields, 4);
@@ -442,9 +428,7 @@ List<BoundValue> _createNmeaValues(String type, List<String> fields) {
       _validateValidityIndicator(fields, index: 1);
       _validateFieldValue(fields, index: 4, expected: 'N');
       final xte = _parseCrossTrackError(fields[2], fields[3]);
-      return [
-        _boundSingleValue(xte, Property.crossTrackError),
-      ];
+      return [_boundSingleValue(xte, Property.crossTrackError)];
     case 'ZDA':
       _validateFieldCount(fields, 6);
       if (fields[0].length < 6) {
@@ -467,8 +451,11 @@ List<BoundValue> _createNmeaValues(String type, List<String> fields) {
 // null if the input was empty and throwing a FormatException if it was not a
 // valid number. Optionally divides the parsed input by the supplied divisor.
 BoundValue<SingleValue<double>>? _parseSingleValue(
-    String input, Property property,
-    {double? divisor, int tier = 1}) {
+  String input,
+  Property property, {
+  double? divisor,
+  int tier = 1,
+}) {
   if (input.isEmpty) {
     return null;
   }
@@ -480,48 +467,49 @@ BoundValue<SingleValue<double>>? _parseSingleValue(
 }
 
 // Created a BoundValue<SingleValue<double>> from the supplied input.
-BoundValue<SingleValue<T>> _boundSingleValue<T>(T number, Property property,
-    {int tier = 1}) {
+BoundValue<SingleValue<T>> _boundSingleValue<T>(T number, Property property, {int tier = 1}) {
   return BoundValue(Source.network, property, SingleValue(number), tier: tier);
 }
 
 // Created a BoundValue<DoubleValue<double>> from the supplied input.
 BoundValue<DoubleValue<double>> _boundDoubleValue(
-    double first, double second, Property property,
-    {int tier = 1}) {
-  return BoundValue(Source.network, property, DoubleValue(first, second),
-      tier: tier);
+  double first,
+  double second,
+  Property property, {
+  int tier = 1,
+}) {
+  return BoundValue(Source.network, property, DoubleValue(first, second), tier: tier);
 }
 
 /// Validates fields contains the expected number of entries.
 void _validateFieldCount(List<String> fields, int expectedCount) {
   if (fields.length != expectedCount) {
-    throw FormatException(
-        'Expected $expectedCount fields, found ${fields.length}');
+    throw FormatException('Expected $expectedCount fields, found ${fields.length}');
   }
 }
 
 /// Validates fields contains at least the expected number of entries.
 void _validateMinFieldCount(List<String> fields, int minimumCount) {
   if (fields.length < minimumCount) {
-    throw FormatException(
-        'Expected at least $minimumCount fields, found ${fields.length}');
+    throw FormatException('Expected at least $minimumCount fields, found ${fields.length}');
   }
 }
 
 /// Validates a field contains the supplied value.
-void _validateFieldValue(List<String> fields,
-    {required int index, required String expected, String? message}) {
+void _validateFieldValue(
+  List<String> fields, {
+  required int index,
+  required String expected,
+  String? message,
+}) {
   if (fields[index] != expected) {
-    throw FormatException(
-        message ?? 'Expected $expected in field $index, got ${fields[index]}');
+    throw FormatException(message ?? 'Expected $expected in field $index, got ${fields[index]}');
   }
 }
 
 /// Validates a validity indicator fields is set to 'A'.
 void _validateValidityIndicator(List<String> fields, {required index}) {
-  _validateFieldValue(fields,
-      index: index, expected: 'A', message: 'Data marked invalid');
+  _validateFieldValue(fields, index: index, expected: 'A', message: 'Data marked invalid');
 }
 
 /// Parses a decimal encoded latitude and direction indicator.
@@ -529,8 +517,8 @@ double _parseLatitude(String valueString, String direction) {
   if (valueString.length < 7) {
     throw const FormatException('Latitude value wrong length');
   }
-  final value = double.parse(valueString.substring(0, 2)) +
-      (double.parse(valueString.substring(2)) / 60.0);
+  final value =
+      double.parse(valueString.substring(0, 2)) + (double.parse(valueString.substring(2)) / 60.0);
   switch (direction) {
     case 'N':
       return value;
@@ -546,8 +534,8 @@ double _parseLongitude(String valueString, String direction) {
   if (valueString.length < 8) {
     throw const FormatException('Longitude value wrong length');
   }
-  final value = double.parse(valueString.substring(0, 3)) +
-      (double.parse(valueString.substring(3)) / 60.0);
+  final value =
+      double.parse(valueString.substring(0, 3)) + (double.parse(valueString.substring(3)) / 60.0);
   switch (direction) {
     case 'E':
       return value;

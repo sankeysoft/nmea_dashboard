@@ -46,33 +46,34 @@ class NmeaDashboardApp extends StatelessWidget {
     /// Display the loading screen for at least the minimum time, potentially
     /// it could be diplayed longer if loading the setting takes a while.
     return FutureBuilder(
-        future: Future.wait([
-          Settings.create(),
-          HistoryManagerImpl.create(),
-          Future.delayed(loadingScreenTime)
-        ]),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.done) {
-            final settings = snapshot.data![0];
-            final historyManager = snapshot.data![1];
-            return MultiProvider(providers: [
+      future: Future.wait([
+        Settings.create(),
+        HistoryManagerImpl.create(),
+        Future.delayed(loadingScreenTime),
+      ]),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done) {
+          final settings = snapshot.data![0];
+          final historyManager = snapshot.data![1];
+          return MultiProvider(
+            providers: [
               ChangeNotifierProvider<LogSet>(create: (_) => _logSet),
               ChangeNotifierProvider<Settings>(create: (_) => settings),
-              ChangeNotifierProvider<NetworkSettings>(
-                  create: (_) => settings.network),
+              ChangeNotifierProvider<NetworkSettings>(create: (_) => settings.network),
               ChangeNotifierProvider<UiSettings>(create: (_) => settings.ui),
-              ChangeNotifierProvider<PageSettings>(
-                  create: (_) => settings.pages),
-              ChangeNotifierProvider<DerivedDataSettings>(
-                  create: (_) => settings.derived),
+              ChangeNotifierProvider<PageSettings>(create: (_) => settings.pages),
+              ChangeNotifierProvider<DerivedDataSettings>(create: (_) => settings.derived),
               ChangeNotifierProvider<DataSet>(
-                  create: (_) => DataSet(
-                      settings.network, settings.derived, historyManager)),
-            ], child: _ThemedApp());
-          } else {
-            return _LoadingPage();
-          }
-        });
+                create: (_) => DataSet(settings.network, settings.derived, historyManager),
+              ),
+            ],
+            child: _ThemedApp(),
+          );
+        } else {
+          return _LoadingPage();
+        }
+      },
+    );
   }
 }
 
@@ -81,26 +82,26 @@ class _LoadingPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
-        value: overlayStyle,
-        child: MaterialApp(
-          title: 'NMEA Dashboard',
-          theme: ThemeData.dark(),
-          home: Scaffold(
-            body: Center(
-              child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text("NMEA Dashboard",
-                        style: TextStyle(fontSize: 40)),
-                    const SizedBox(height: 30),
-                    Image.asset("assets/rounded_icon.png"),
-                    const SizedBox(height: 60),
-                    const SizedBox(
-                        width: 250, child: LinearProgressIndicator()),
-                  ]),
+      value: overlayStyle,
+      child: MaterialApp(
+        title: 'NMEA Dashboard',
+        theme: ThemeData.dark(),
+        home: Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text("NMEA Dashboard", style: TextStyle(fontSize: 40)),
+                const SizedBox(height: 30),
+                Image.asset("assets/rounded_icon.png"),
+                const SizedBox(height: 60),
+                const SizedBox(width: 250, child: LinearProgressIndicator()),
+              ],
             ),
           ),
-        ));
+        ),
+      ),
+    );
   }
 }
 
@@ -110,12 +111,13 @@ class _ThemedApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final uiSettings = Provider.of<UiSettings>(context);
     return AnnotatedRegion<SystemUiOverlayStyle>(
-        value: overlayStyle,
-        child: MaterialApp(
-          title: 'NMEA Dashboard',
-          theme: createThemeData(uiSettings),
-          home: _HomePage(),
-        ));
+      value: overlayStyle,
+      child: MaterialApp(
+        title: 'NMEA Dashboard',
+        theme: createThemeData(uiSettings),
+        home: _HomePage(),
+      ),
+    );
   }
 }
 
@@ -133,8 +135,11 @@ class SelectPageAction extends Action<SelectPageIntent> {
 
   @override
   Object? invoke(SelectPageIntent intent) {
-    controller.animateToPage(intent.page,
-        duration: const Duration(milliseconds: 400), curve: Curves.ease);
+    controller.animateToPage(
+      intent.page,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.ease,
+    );
     return null;
   }
 }
@@ -154,9 +159,8 @@ class _HomePage extends StatelessWidget {
         uiSettings.clearFirstRun();
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (context) => ViewHelpPage(
-                title: 'Welcome to NMEA Dashboard',
-                filename: 'help_overview.md'),
+            builder: (context) =>
+                ViewHelpPage(title: 'Welcome to NMEA Dashboard', filename: 'help_overview.md'),
           ),
         );
       }
@@ -170,27 +174,32 @@ class _HomePage extends StatelessWidget {
     });
 
     return Shortcuts(
-        shortcuts: const <ShortcutActivator, Intent>{
-          CharacterActivator('1'): SelectPageIntent(0),
-          CharacterActivator('2'): SelectPageIntent(1),
-          CharacterActivator('3'): SelectPageIntent(2),
-          CharacterActivator('4'): SelectPageIntent(3),
-          CharacterActivator('5'): SelectPageIntent(4),
-          CharacterActivator('6'): SelectPageIntent(5),
-          CharacterActivator('7'): SelectPageIntent(6),
-          CharacterActivator('8'): SelectPageIntent(7),
-          CharacterActivator('9'): SelectPageIntent(8),
-        },
-        child: Actions(
-            actions: {SelectPageIntent: SelectPageAction(controller)},
-            child: Focus(
-              autofocus: true,
-              child: PageView(
-                  controller: controller,
-                  children: dataSettings.dataPageSpecs.map((pageSpec) {
-                    return ChangeNotifierProvider<DataPageSpec>.value(
-                        value: pageSpec, child: const DataTablePage());
-                  }).toList()),
-            )));
+      shortcuts: const <ShortcutActivator, Intent>{
+        CharacterActivator('1'): SelectPageIntent(0),
+        CharacterActivator('2'): SelectPageIntent(1),
+        CharacterActivator('3'): SelectPageIntent(2),
+        CharacterActivator('4'): SelectPageIntent(3),
+        CharacterActivator('5'): SelectPageIntent(4),
+        CharacterActivator('6'): SelectPageIntent(5),
+        CharacterActivator('7'): SelectPageIntent(6),
+        CharacterActivator('8'): SelectPageIntent(7),
+        CharacterActivator('9'): SelectPageIntent(8),
+      },
+      child: Actions(
+        actions: {SelectPageIntent: SelectPageAction(controller)},
+        child: Focus(
+          autofocus: true,
+          child: PageView(
+            controller: controller,
+            children: dataSettings.dataPageSpecs.map((pageSpec) {
+              return ChangeNotifierProvider<DataPageSpec>.value(
+                value: pageSpec,
+                child: const DataTablePage(),
+              );
+            }).toList(),
+          ),
+        ),
+      ),
+    );
   }
 }

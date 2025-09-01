@@ -28,21 +28,18 @@ class DataTablePage extends StatelessWidget {
     final pageSpec = Provider.of<DataPageSpec>(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(pageSpec.name),
-        actions: [_EditPageButton()],
-      ),
+      appBar: AppBar(title: Text(pageSpec.name), actions: [_EditPageButton()]),
       drawer: Drawer(child: _DrawerContent()),
-      body: LayoutBuilder(builder: (context, constraints) {
-        return SizedBox.expand(
-          child: _Grid(
-              cells: pageSpec.cells
-                  .map((cellSpec) => createCell(dataSet, cellSpec))
-                  .toList(),
-              numColumns:
-                  _decideNumColumns(constraints, pageSpec.cells.length)),
-        );
-      }),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return SizedBox.expand(
+            child: _Grid(
+              cells: pageSpec.cells.map((cellSpec) => createCell(dataSet, cellSpec)).toList(),
+              numColumns: _decideNumColumns(constraints, pageSpec.cells.length),
+            ),
+          );
+        },
+      ),
     );
   }
 }
@@ -54,16 +51,18 @@ class _EditPageButton extends StatelessWidget {
     final pageSpec = Provider.of<DataPageSpec>(context);
     final settings = Provider.of<PageSettings>(context);
     return IconButton(
-        icon: const Icon(Icons.tune_outlined),
-        onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => EditPagePage(
-                    pageSpec: pageSpec,
-                    onCreate: (updatedSpec) {
-                      settings.setPage(updatedSpec);
-                    }),
-              ),
-            ));
+      icon: const Icon(Icons.tune_outlined),
+      onPressed: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => EditPagePage(
+            pageSpec: pageSpec,
+            onCreate: (updatedSpec) {
+              settings.setPage(updatedSpec);
+            },
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -78,23 +77,22 @@ class _DrawerContent extends StatelessWidget {
     final enabledColor = theme.colorScheme.onSurface;
     final enabledStyle = TextStyle(fontSize: 18, color: enabledColor);
 
-    final headingStyle = TextStyle(
-        color: enabledColor, fontWeight: FontWeight.bold, fontSize: 30);
+    final headingStyle = TextStyle(color: enabledColor, fontWeight: FontWeight.bold, fontSize: 30);
 
     return ListView(
       // Important: Remove any padding from the ListView.
       padding: EdgeInsets.zero,
       children: [
         DrawerHeader(
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceTint,
-            ),
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          decoration: BoxDecoration(color: theme.colorScheme.surfaceTint),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Text('NMEA Dashboard', style: headingStyle),
-              Text('Version: ${packageInfo.version}',
-                  style: headingStyle.copyWith(fontSize: 18)),
-            ])),
+              Text('Version: ${packageInfo.version}', style: headingStyle.copyWith(fontSize: 18)),
+            ],
+          ),
+        ),
         CheckboxListTile(
           title: Text('Night Mode', style: enabledStyle),
           secondary: Icon(Icons.dark_mode_outlined, color: enabledColor),
@@ -114,8 +112,7 @@ class _DrawerContent extends StatelessWidget {
             Navigator.pop(context);
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) =>
-                    NetworkSettingsPage(settings: networkSettings),
+                builder: (context) => NetworkSettingsPage(settings: networkSettings),
               ),
             );
           },
@@ -125,34 +122,27 @@ class _DrawerContent extends StatelessWidget {
           title: Text('Pages', style: enabledStyle),
           onTap: () {
             Navigator.pop(context);
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => EditPagesPage(),
-              ),
-            );
+            Navigator.of(context).push(MaterialPageRoute(builder: (context) => EditPagesPage()));
           },
         ),
         ListTile(
-            leading: Icon(Icons.hub_outlined, color: enabledColor),
-            title: Text('Derived Data', style: enabledStyle),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => EditDerivedElementsPage(),
-                ),
-              );
-            }),
+          leading: Icon(Icons.hub_outlined, color: enabledColor),
+          title: Text('Derived Data', style: enabledStyle),
+          onTap: () {
+            Navigator.pop(context);
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (context) => EditDerivedElementsPage()));
+          },
+        ),
         ListTile(
           leading: Icon(Icons.text_format_outlined, color: enabledColor),
           title: Text('UI Style', style: enabledStyle),
           onTap: () {
             Navigator.pop(context);
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => UiSettingsPage(settings: uiSettings),
-              ),
-            );
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (context) => UiSettingsPage(settings: uiSettings)));
           },
         ),
         ListTile(
@@ -160,11 +150,7 @@ class _DrawerContent extends StatelessWidget {
           title: Text('Debug Log', style: enabledStyle),
           onTap: () {
             Navigator.pop(context);
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => ViewLogPage(),
-              ),
-            );
+            Navigator.of(context).push(MaterialPageRoute(builder: (context) => ViewLogPage()));
           },
         ),
         ListTile(
@@ -174,9 +160,8 @@ class _DrawerContent extends StatelessWidget {
             Navigator.pop(context);
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) => ViewHelpPage(
-                    title: 'Help Overview & License',
-                    filename: 'help_overview.md'),
+                builder: (context) =>
+                    ViewHelpPage(title: 'Help Overview & License', filename: 'help_overview.md'),
               ),
             );
           },
@@ -204,16 +189,17 @@ class _Grid extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: List.generate((cells.length / numColumns).ceil(), (row) {
           return Expanded(
-              flex: 1,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                mainAxisSize: MainAxisSize.max,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: List.generate(numColumns, (col) {
-                  final num = row * numColumns + col;
-                  return num < cells.length ? cells[num] : const EmptyCell();
-                }),
-              ));
+            flex: 1,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisSize: MainAxisSize.max,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: List.generate(numColumns, (col) {
+                final num = row * numColumns + col;
+                return num < cells.length ? cells[num] : const EmptyCell();
+              }),
+            ),
+          );
         }),
       ),
     );
@@ -233,8 +219,7 @@ int _decideNumColumns(BoxConstraints constraints, int numElements) {
   double? lastError;
   for (int cols = 1; cols <= numElements; cols++) {
     final rows = (numElements / cols).ceil();
-    final aspect =
-        (constraints.maxWidth / cols) / (constraints.maxHeight / rows);
+    final aspect = (constraints.maxWidth / cols) / (constraints.maxHeight / rows);
     final error = (aspect - idealAspect).abs();
     // use the last one if if was closer to the ideal ratio.
     if (lastError != null && lastError < error) {

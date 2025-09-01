@@ -44,8 +44,7 @@ class ValueMatches extends Matcher {
           e.variation != null &&
           (a.variation! - e.variation!).abs() < _floatTolerance);
     } else {
-      throw UnimplementedError(
-          'No matcher for value type: ${_expected.runtimeType}');
+      throw UnimplementedError('No matcher for value type: ${_expected.runtimeType}');
     }
   }
 
@@ -95,9 +94,7 @@ class BoundValueListMatches extends Matcher {
     for (int i = 0; i < _expected.length; i++) {
       final e = _expected[i];
       final a = actual[i];
-      if (a.source != e.source ||
-          a.property != e.property ||
-          a.tier != e.tier) {
+      if (a.source != e.source || a.property != e.property || a.tier != e.tier) {
         return false;
       }
       if (!ValueMatches(e.value).matches(a.value, matchState)) {
@@ -110,7 +107,6 @@ class BoundValueListMatches extends Matcher {
   @override
   Description describe(Description description) {
     final formatted = _expected.map((e) => '  ${e.runtimeType}:$e');
-    return description
-        .add('BoundValue list matches [\n${formatted.join("\n")}\n]');
+    return description.add('BoundValue list matches [\n${formatted.join("\n")}\n]');
   }
 }

@@ -36,8 +36,11 @@ void main() {
   });
 
   test('HistoryInterval should format cell names', () {
-    final element = ConsistentDataElement(Source.network,
-        Property.apparentWindAngle, Staleness(const Duration(minutes: 1)));
+    final element = ConsistentDataElement(
+      Source.network,
+      Property.apparentWindAngle,
+      Staleness(const Duration(minutes: 1)),
+    );
     expect(HistoryInterval.twoHours.shortCellName(element), 'AWA (2hr)');
   });
 

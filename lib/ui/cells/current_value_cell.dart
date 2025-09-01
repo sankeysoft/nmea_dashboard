@@ -9,13 +9,19 @@ import 'package:nmea_dashboard/ui/cells/abstract.dart';
 import 'package:provider/provider.dart';
 
 class CurrentValueCell extends HeadingContentsCell {
-  CurrentValueCell(
-      {required DataElement element, required formatter, required super.spec, super.key})
-      : super(
-            heading: spec.name ?? (element.shortName.isEmpty ? ' ' : element.shortName),
-            units: formatter.units ?? ' ',
-            content: ChangeNotifierProvider<DataElement>.value(
-                value: element, child: _Value(formatter)));
+  CurrentValueCell({
+    required DataElement element,
+    required formatter,
+    required super.spec,
+    super.key,
+  }) : super(
+         heading: spec.name ?? (element.shortName.isEmpty ? ' ' : element.shortName),
+         units: formatter.units ?? ' ',
+         content: ChangeNotifierProvider<DataElement>.value(
+           value: element,
+           child: _Value(formatter),
+         ),
+       );
 }
 
 class _Value extends StatelessWidget {

@@ -48,8 +48,7 @@ class SimpleFormatter extends ConvertingFormatter<SingleValue<double>> {
   final double scale;
   final int dp;
 
-  SimpleFormatter(
-      super.longName, super.units, this.invalid, this.scale, this.dp);
+  SimpleFormatter(super.longName, super.units, this.invalid, this.scale, this.dp);
 
   /// Returns a convertion of the supplied input to the units displayed
   /// by this formatter.
@@ -95,7 +94,7 @@ class PositionFormatter extends Formatter<DoubleValue<double>> {
     return (input == null)
         ? '---- ---\n---- ---'
         : '${_formatComponent(input.first, 'N', 'S')}\n'
-            '${_formatComponent(input.second, 'E', 'W')}';
+              '${_formatComponent(input.second, 'E', 'W')}';
   }
 
   String _formatComponent(double value, String positiveDir, String negativeDir) {
@@ -115,8 +114,7 @@ class PositionFormatter extends Formatter<DoubleValue<double>> {
 class CustomFormatter<V> extends Formatter<V> {
   final String Function(V?) function;
 
-  CustomFormatter(super.longName, super.units, this.function,
-      {super.heightFraction});
+  CustomFormatter(super.longName, super.units, this.function, {super.heightFraction});
 
   @override
   String format(V? input) {
@@ -129,10 +127,13 @@ class CustomNumericFormatter<V> extends NumericFormatter<V> {
   final double? Function(V?) conversion;
   final String Function(V?) formatting;
 
-  CustomNumericFormatter(super.longName, super.units,
-      {super.heightFraction,
-      required this.conversion,
-      required this.formatting});
+  CustomNumericFormatter(
+    super.longName,
+    super.units, {
+    super.heightFraction,
+    required this.conversion,
+    required this.formatting,
+  });
 
   @override
   double? toNumber(V? input) {
@@ -146,18 +147,21 @@ class CustomNumericFormatter<V> extends NumericFormatter<V> {
 }
 
 /// A formatter based on custom conversion, unconvertion, and format functions
-class CustomConvertingFormatter
-    extends ConvertingFormatter<SingleValue<double>> {
+class CustomConvertingFormatter extends ConvertingFormatter<SingleValue<double>> {
   final String invalid;
   final double Function(double) conversion;
   final double Function(double) unconversion;
   final String Function(double) formatting;
 
-  CustomConvertingFormatter(super.longName, super.units, this.invalid,
-      {super.heightFraction,
-      required this.conversion,
-      required this.unconversion,
-      required this.formatting});
+  CustomConvertingFormatter(
+    super.longName,
+    super.units,
+    this.invalid, {
+    super.heightFraction,
+    required this.conversion,
+    required this.unconversion,
+    required this.formatting,
+  });
 
   @override
   double? toNumber(SingleValue<double>? input) {
@@ -177,46 +181,43 @@ class CustomConvertingFormatter
 
 /// A map of all the possible formatters for all dimensions.
 final Map<Dimension, Map<String, Formatter>> _formatters = {
-  Dimension.angle: {
-    'degrees': SimpleFormatter('Degrees', '°', '--', 1.0, 0),
-  },
-  Dimension.angularRate: {
-    'degreesPerSec': SimpleFormatter('deg/sec', '°/s', '--.-', 1.0, 1),
-  },
+  Dimension.angle: {'degrees': SimpleFormatter('Degrees', '°', '--', 1.0, 0)},
+  Dimension.angularRate: {'degreesPerSec': SimpleFormatter('deg/sec', '°/s', '--.-', 1.0, 1)},
   Dimension.bearing: {
-    'true': CustomNumericFormatter<AugmentedBearing>('true', '°T',
-        conversion: (value) => value?.bearing,
-        formatting: (value) =>
-            (value == null) ? '---' : _bearingString(value.bearing, 'T')),
-    'mag': CustomNumericFormatter<AugmentedBearing>('magnetic', '°M',
-        conversion: (value) => (value?.variation == null)
-            ? null
-            : (value!.bearing + value.variation!) % 360.0,
-        formatting: (value) {
-          if (value == null) {
-            return '---';
-          } else if (value.variation == null) {
-            return 'no magnetic\nvariation';
-          } else {
-            return _bearingString(
-                (value.bearing + value.variation!) % 360.0, 'M');
-          }
-        }),
+    'true': CustomNumericFormatter<AugmentedBearing>(
+      'true',
+      '°T',
+      conversion: (value) => value?.bearing,
+      formatting: (value) => (value == null) ? '---' : _bearingString(value.bearing, 'T'),
+    ),
+    'mag': CustomNumericFormatter<AugmentedBearing>(
+      'magnetic',
+      '°M',
+      conversion: (value) =>
+          (value?.variation == null) ? null : (value!.bearing + value.variation!) % 360.0,
+      formatting: (value) {
+        if (value == null) {
+          return '---';
+        } else if (value.variation == null) {
+          return 'no magnetic\nvariation';
+        } else {
+          return _bearingString((value.bearing + value.variation!) % 360.0, 'M');
+        }
+      },
+    ),
   },
   Dimension.crossTrackError: {
     'meters': CustomNumericFormatter<SingleValue<double>>(
       'meters',
       null,
       conversion: (value) => value?.data,
-      formatting: (value) =>
-          (value == null) ? '---' : _xteString(value.data, 'm'),
+      formatting: (value) => (value == null) ? '---' : _xteString(value.data, 'm'),
     ),
     'feet': CustomNumericFormatter<SingleValue<double>>(
       'feet',
       null,
       conversion: (value) => (value == null) ? null : value.data * metersToFeet,
-      formatting: (value) =>
-          (value == null) ? '---' : _xteString(value.data * metersToFeet, 'ft'),
+      formatting: (value) => (value == null) ? '---' : _xteString(value.data * metersToFeet, 'ft'),
     ),
   },
   Dimension.distance: {
@@ -226,39 +227,35 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
   Dimension.depth: {
     'meters': SimpleFormatter('meters', 'm', '--.-', 1.0, 1),
     'feet': SimpleFormatter('feet', 'ft', '--.-', metersToFeet, 1),
-    'fathoms': SimpleFormatter('fathoms', 'f', '-.--', metersToFeet / 6, 2)
+    'fathoms': SimpleFormatter('fathoms', 'f', '-.--', metersToFeet / 6, 2),
   },
   Dimension.integer: {'default': IntegerFormatter('default', null, '-')},
   Dimension.position: {
     'degMin': PositionFormatter('decimal min', false),
     'degMinSec': PositionFormatter('deg min sec', true),
   },
-  Dimension.percentage: {
-    'percent': SimpleFormatter('percent', '%', '--.-', 1.0, 1),
-  },
+  Dimension.percentage: {'percent': SimpleFormatter('percent', '%', '--.-', 1.0, 1)},
   Dimension.pressure: {
-    'millibars':
-        SimpleFormatter('millibar', 'mb', '----.-', pascalsToMillibar, 1),
-    'inchHg': SimpleFormatter(
-        'inches mercury', 'in.hg', '--.--', pascalsToInchesMercury, 2),
-    'psi': SimpleFormatter(
-        'pounds per sq.inch', 'psi', '---.-', pascalsToPsi, 1)
+    'millibars': SimpleFormatter('millibar', 'mb', '----.-', pascalsToMillibar, 1),
+    'inchHg': SimpleFormatter('inches mercury', 'in.hg', '--.--', pascalsToInchesMercury, 2),
+    'psi': SimpleFormatter('pounds per sq.inch', 'psi', '---.-', pascalsToPsi, 1),
   },
-  Dimension.rotationalSpeed: {
-    'rpm': SimpleFormatter('rpm', 'rpm', '-.-', 1.0, 1),
-  },
+  Dimension.rotationalSpeed: {'rpm': SimpleFormatter('rpm', 'rpm', '-.-', 1.0, 1)},
   Dimension.speed: {
     'metersPerSec': SimpleFormatter('m/sec', 'm/s', '-.-', 1.0, 1),
     'knots': SimpleFormatter('knots', 'kt', '-.-', metersPerSecondToKnots, 1),
-    'knots2dp':
-        SimpleFormatter('knots (2dp)', 'kt', '-.--', metersPerSecondToKnots, 2)
+    'knots2dp': SimpleFormatter('knots (2dp)', 'kt', '-.--', metersPerSecondToKnots, 2),
   },
   Dimension.temperature: {
     'celcius': SimpleFormatter('celcius', '°C', '--.-', 1.0, 1),
-    'farenheit': CustomConvertingFormatter('farenheit', '°F', '--.-',
-        conversion: (cel) => ((cel * 9.0 / 5.0) + 32.0),
-        unconversion: (far) => ((far - 32.0) / 9.0 * 5.0),
-        formatting: (far) => (far.toStringAsFixed(1)))
+    'farenheit': CustomConvertingFormatter(
+      'farenheit',
+      '°F',
+      '--.-',
+      conversion: (cel) => ((cel * 9.0 / 5.0) + 32.0),
+      unconversion: (far) => ((far - 32.0) / 9.0 * 5.0),
+      formatting: (far) => (far.toStringAsFixed(1)),
+    ),
   },
   Dimension.time: {
     // Rendering time without date is very wide, so unlike most other data it
@@ -267,19 +264,20 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
     // to an annoying scaling that changes every second. Try to prevent that
     // with a heightFraction heuristic although some wide fonts or unusual
     // screen sizes may still run into issues.
-    'hms': CustomFormatter<SingleValue<DateTime>>('H:M:S', null,
-        (val) => val == null ? '--:--:--' : DateFormat('Hms').format(val.data),
-        heightFraction: 0.7),
+    'hms': CustomFormatter<SingleValue<DateTime>>(
+      'H:M:S',
+      null,
+      (val) => val == null ? '--:--:--' : DateFormat('Hms').format(val.data),
+      heightFraction: 0.7,
+    ),
     'ymdhms': CustomFormatter<SingleValue<DateTime>>(
-        'Y-M-D H:M:S',
-        'Y-M-D',
-        (val) => val == null
-            ? '-------\n--:--:--'
-            : DateFormat('yyyy-MM-dd\nHH:mm:ss').format(val.data)),
+      'Y-M-D H:M:S',
+      'Y-M-D',
+      (val) =>
+          val == null ? '-------\n--:--:--' : DateFormat('yyyy-MM-dd\nHH:mm:ss').format(val.data),
+    ),
   },
-  Dimension.voltage: {
-    'volts': SimpleFormatter('volts', 'V', '--.-', 1.0, 1),
-  },
+  Dimension.voltage: {'volts': SimpleFormatter('volts', 'V', '--.-', 1.0, 1)},
 };
 
 String _bearingString(double number, String suffix) {

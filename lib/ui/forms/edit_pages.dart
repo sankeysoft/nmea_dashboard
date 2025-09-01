@@ -14,15 +14,16 @@ import 'package:nmea_dashboard/ui/forms/edit_page.dart';
 /// A form that lets the user edit the list of pages.
 class EditPagesPage extends StatelessFormPage {
   EditPagesPage({super.key})
-      : super(
-            title: 'Edit pages',
-            actions: [
-              _CopyButton(),
-              _PasteButton(),
-              _ResetButton(),
-              const HelpButton('help_edit_pages.md')
-            ],
-            content: _EditPagesContent());
+    : super(
+        title: 'Edit pages',
+        actions: [
+          _CopyButton(),
+          _PasteButton(),
+          _ResetButton(),
+          const HelpButton('help_edit_pages.md'),
+        ],
+        content: _EditPagesContent(),
+      );
 }
 
 class _ResetButton extends StatelessWidget {
@@ -31,18 +32,22 @@ class _ResetButton extends StatelessWidget {
     final settings = Provider.of<PageSettings>(context);
     final sm = ScaffoldMessenger.of(context);
     return IconButton(
-        icon: const Icon(Icons.settings_backup_restore_outlined),
-        onPressed: () => showDialog(
-            context: context,
-            builder: (context) => buildConfirmationDialog(
-                context: context,
-                title: 'Reset to default?',
-                content: 'Do you want to replace all pages and contents '
-                    'with the defaults? This action cannot be undone.',
-                onPressed: () {
-                  settings.useDefaults();
-                  showSnackBar(sm, 'Reset page definitions to default');
-                })));
+      icon: const Icon(Icons.settings_backup_restore_outlined),
+      onPressed: () => showDialog(
+        context: context,
+        builder: (context) => buildConfirmationDialog(
+          context: context,
+          title: 'Reset to default?',
+          content:
+              'Do you want to replace all pages and contents '
+              'with the defaults? This action cannot be undone.',
+          onPressed: () {
+            settings.useDefaults();
+            showSnackBar(sm, 'Reset page definitions to default');
+          },
+        ),
+      ),
+    );
   }
 }
 
@@ -52,11 +57,13 @@ class _CopyButton extends StatelessWidget {
     final settings = Provider.of<PageSettings>(context);
     final sm = ScaffoldMessenger.of(context);
     return IconButton(
-        icon: const Icon(Icons.copy_all_outlined),
-        onPressed: () {
-          Clipboard.setData(ClipboardData(text: settings.toJson())).then(
-              (_) => showSnackBar(sm, 'Page definitions copied to clipboard'));
-        });
+      icon: const Icon(Icons.copy_all_outlined),
+      onPressed: () {
+        Clipboard.setData(
+          ClipboardData(text: settings.toJson()),
+        ).then((_) => showSnackBar(sm, 'Page definitions copied to clipboard'));
+      },
+    );
   }
 }
 
@@ -66,31 +73,31 @@ class _PasteButton extends StatelessWidget {
     final settings = Provider.of<PageSettings>(context);
     final sm = ScaffoldMessenger.of(context);
     return IconButton(
-        icon: const Icon(Icons.content_paste_outlined),
-        onPressed: () =>
-            Clipboard.getData(Clipboard.kTextPlain).then((clipboardData) {
-              final text = clipboardData?.text;
-              if (text == null) {
-                showSnackBar(sm, 'Clipboard does not contain text');
-              } else if (!settings.useClipboard(text, dryRun: true)) {
-                showSnackBar(sm,
-                    'Clipboard does not contain valid page definition json');
-              } else {
-                showDialog(
-                    context: context,
-                    builder: (context) => buildConfirmationDialog(
-                        context: context,
-                        title: 'Load pages from clipboard?',
-                        content:
-                            'Do you want to replace all pages and contents '
-                            'with the clipboard data? This action cannot be undone.',
-                        onPressed: () {
-                          settings.useClipboard(text);
-                          showSnackBar(
-                              sm, 'Pasted page definitions from clipboard');
-                        }));
-              }
-            }));
+      icon: const Icon(Icons.content_paste_outlined),
+      onPressed: () => Clipboard.getData(Clipboard.kTextPlain).then((clipboardData) {
+        final text = clipboardData?.text;
+        if (text == null) {
+          showSnackBar(sm, 'Clipboard does not contain text');
+        } else if (!settings.useClipboard(text, dryRun: true)) {
+          showSnackBar(sm, 'Clipboard does not contain valid page definition json');
+        } else {
+          showDialog(
+            context: context,
+            builder: (context) => buildConfirmationDialog(
+              context: context,
+              title: 'Load pages from clipboard?',
+              content:
+                  'Do you want to replace all pages and contents '
+                  'with the clipboard data? This action cannot be undone.',
+              onPressed: () {
+                settings.useClipboard(text);
+                showSnackBar(sm, 'Pasted page definitions from clipboard');
+              },
+            ),
+          );
+        }
+      }),
+    );
   }
 }
 
@@ -99,20 +106,22 @@ class _EditPagesContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return Form(
       child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              // Need an intermediate `Material` between the form and the
-              // list tiles so the tile background renders correctly (see
-              // the `ListTile` documentation).
-              child: Material(
-                  child: Consumer<PageSettings>(
-                      builder: (context, settings, child) =>
-                          _buildReorderableList(context, settings))),
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            // Need an intermediate `Material` between the form and the
+            // list tiles so the tile background renders correctly (see
+            // the `ListTile` documentation).
+            child: Material(
+              child: Consumer<PageSettings>(
+                builder: (context, settings, child) => _buildReorderableList(context, settings),
+              ),
             ),
-            buildCloseButton(context),
-          ]),
+          ),
+          buildCloseButton(context),
+        ],
+      ),
     );
   }
 
@@ -136,31 +145,33 @@ class _EditPagesContent extends StatelessWidget {
     );
   }
 
-  Widget _buildPageTile(BuildContext context, PageSettings settings,
-      DataPageSpec spec, int index) {
+  Widget _buildPageTile(BuildContext context, PageSettings settings, DataPageSpec spec, int index) {
     return buildMovableDeletableTile(
-        key: spec.key,
-        index: index,
+      key: spec.key,
+      index: index,
+      context: context,
+      title: spec.name,
+      icon: const Icon(Icons.article_outlined),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => EditPagePage(
+            pageSpec: spec,
+            onCreate: (updatedSpec) {
+              settings.setPage(updatedSpec);
+            },
+          ),
+        ),
+      ),
+      onDeleteTap: () => showDialog(
         context: context,
-        title: spec.name,
-        icon: const Icon(Icons.article_outlined),
-        onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => EditPagePage(
-                    pageSpec: spec,
-                    onCreate: (updatedSpec) {
-                      settings.setPage(updatedSpec);
-                    }),
-              ),
-            ),
-        onDeleteTap: () => showDialog(
-            context: context,
-            builder: (context) => buildConfirmationDialog(
-                  context: context,
-                  title: 'Delete ${spec.name} page?',
-                  content: 'This action cannot be undone.',
-                  onPressed: () => settings.removePage(spec),
-                )));
+        builder: (context) => buildConfirmationDialog(
+          context: context,
+          title: 'Delete ${spec.name} page?',
+          content: 'This action cannot be undone.',
+          onPressed: () => settings.removePage(spec),
+        ),
+      ),
+    );
   }
 
   Widget _buildAddPageTile(BuildContext context, PageSettings settings) {
@@ -172,9 +183,11 @@ class _EditPagesContent extends StatelessWidget {
       icon: const Icon(Icons.add_outlined),
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) => EditPagePage(onCreate: (spec) {
-            settings.setPage(spec);
-          }),
+          builder: (context) => EditPagePage(
+            onCreate: (spec) {
+              settings.setPage(spec);
+            },
+          ),
         ),
       ),
     );

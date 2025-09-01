@@ -10,10 +10,11 @@ import 'package:nmea_dashboard/ui/forms/abstract.dart';
 /// A form that lets the user edit user interface settings.
 class UiSettingsPage extends StatefulFormPage {
   UiSettingsPage({required UiSettings settings, super.key})
-      : super(
-            title: 'User interface settings',
-            actions: [const HelpButton('help_ui_settings.md')],
-            child: _UiSettingsForm(settings));
+    : super(
+        title: 'User interface settings',
+        actions: [const HelpButton('help_ui_settings.md')],
+        child: _UiSettingsForm(settings),
+      );
 }
 
 /// The stateful form itself
@@ -44,29 +45,27 @@ class _UiSettingsFormState extends StatefulFormState<_UiSettingsForm> {
     return Form(
       key: formKey,
       child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-                child: ListView(
-                    children: [_buildValueField(), _buildHeadingField()])),
-            buildSaveButton(postSaver: () {
-              widget._settings
-                  .setFonts(valueFont: _valueFont, headingFont: _headingFont);
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: ListView(children: [_buildValueField(), _buildHeadingField()])),
+          buildSaveButton(
+            postSaver: () {
+              widget._settings.setFonts(valueFont: _valueFont, headingFont: _headingFont);
               Navigator.pop(context);
-            })
-          ]),
+            },
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildValueField() {
-    buildItem(String font) =>
-        DropdownEntry(value: font, text: font, font: font);
+    buildItem(String font) => DropdownEntry(value: font, text: font, font: font);
     return buildDropdownBox(
       label: 'Value font',
       items: UiSettings.availableFonts.map((f) => buildItem(f)).toList(),
-      initialValue:
-          UiSettings.availableFonts.contains(_valueFont) ? _valueFont : null,
+      initialValue: UiSettings.availableFonts.contains(_valueFont) ? _valueFont : null,
       onChanged: (value) {
         setState(() {
           if (value != null) {
@@ -78,14 +77,11 @@ class _UiSettingsFormState extends StatefulFormState<_UiSettingsForm> {
   }
 
   Widget _buildHeadingField() {
-    buildItem(String font) =>
-        DropdownEntry(value: font, text: font, font: font);
+    buildItem(String font) => DropdownEntry(value: font, text: font, font: font);
     return buildDropdownBox(
       label: 'Heading font',
       items: UiSettings.availableFonts.map((f) => buildItem(f)).toList(),
-      initialValue: UiSettings.availableFonts.contains(_headingFont)
-          ? _headingFont
-          : null,
+      initialValue: UiSettings.availableFonts.contains(_headingFont) ? _headingFont : null,
       onChanged: (value) {
         setState(() {
           if (value != null) {

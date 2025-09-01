@@ -16,8 +16,7 @@ const _testSource = Source.local;
 const _testProperty = Property.dewPoint;
 
 BoundValue<SingleValue<T>> _boundSingleValue<T>(T value, {int tier = 1}) {
-  return BoundValue(_testSource, _testProperty, SingleValue<T>(value),
-      tier: tier);
+  return BoundValue(_testSource, _testProperty, SingleValue<T>(value), tier: tier);
 }
 
 BoundValue<SingleValue<double>> _boundVariation(double value) {
@@ -35,7 +34,10 @@ BoundValue<SingleValue<double>> _boundMagHeading(double value) {
 void main() {
   test('data element should inialize with correct values', () {
     final element = ConsistentDataElement<SingleValue<double>>(
-        Source.local, Property.dewPoint, _staleness);
+      Source.local,
+      Property.dewPoint,
+      _staleness,
+    );
     expect(element.id, 'local_dewPoint');
     expect(element.property, Property.dewPoint);
     expect(element.storedType, SingleValue<double>);
@@ -47,8 +49,7 @@ void main() {
   });
 
   test('data element should accept values and remove when stale', () async {
-    final element =
-        ConsistentDataElement(_testSource, _testProperty, _staleness);
+    final element = ConsistentDataElement(_testSource, _testProperty, _staleness);
 
     expect(element.updateValue(_boundSingleValue(1.0)), true);
     expect(element.value, ValueMatches(SingleValue(1.0)));
@@ -56,11 +57,13 @@ void main() {
     expect(element.value, null);
   });
 
-  test('data element should notify listeners, except for fast updates',
-      () async {
+  test('data element should notify listeners, except for fast updates', () async {
     // Use a staleness high enough to not trigger by our freshness delays.
     final element = ConsistentDataElement(
-        _testSource, _testProperty, Staleness(const Duration(seconds: 3)));
+      _testSource,
+      _testProperty,
+      Staleness(const Duration(seconds: 3)),
+    );
     int eventCount = 0;
     element.addListener(() => eventCount++);
 
@@ -80,8 +83,7 @@ void main() {
   });
 
   test('data element should reject lower tier values if not stale', () {
-    final element =
-        ConsistentDataElement(_testSource, _testProperty, _staleness);
+    final element = ConsistentDataElement(_testSource, _testProperty, _staleness);
 
     element.updateValue(_boundSingleValue(1.0, tier: 3));
     expect(element.value, ValueMatches(SingleValue(1.0)));
@@ -96,8 +98,7 @@ void main() {
   });
 
   test('data element should accept lower tier values if stale', () async {
-    final element =
-        ConsistentDataElement(_testSource, _testProperty, _staleness);
+    final element = ConsistentDataElement(_testSource, _testProperty, _staleness);
 
     element.updateValue(_boundSingleValue(1.0, tier: 1));
     expect(element.value, ValueMatches(SingleValue(1.0)));
@@ -114,9 +115,11 @@ void main() {
 
   test('bearing data element should accept magnetic inputs', () {
     final variation = ConsistentDataElement<SingleValue<double>>(
-        _testSource, Property.variation, _staleness);
-    final bearing = BearingDataElement(
-        _testSource, variation, Property.heading, _staleness);
+      _testSource,
+      Property.variation,
+      _staleness,
+    );
+    final bearing = BearingDataElement(_testSource, variation, Property.heading, _staleness);
 
     // If variation is null, we will reject mag inputs.
     expect(bearing.value, null);
@@ -127,49 +130,46 @@ void main() {
     variation.updateValue(_boundVariation(10.0));
     expect(bearing.value, null);
     expect(bearing.updateValue(_boundMagHeading(45)), true);
-    expect(bearing.value,
-        ValueMatches(AugmentedBearing(SingleValue(35.0), SingleValue(10.0))));
+    expect(bearing.value, ValueMatches(AugmentedBearing(SingleValue(35.0), SingleValue(10.0))));
     expect(bearing.updateValue(_boundMagHeading(1)), true);
-    expect(bearing.value,
-        ValueMatches(AugmentedBearing(SingleValue(351.0), SingleValue(10.0))));
+    expect(bearing.value, ValueMatches(AugmentedBearing(SingleValue(351.0), SingleValue(10.0))));
   });
 
   test('bearing data element should accept true inputs', () {
     final variation = ConsistentDataElement<SingleValue<double>>(
-        _testSource, Property.variation, _staleness);
-    final bearing = BearingDataElement(
-        _testSource, variation, Property.heading, _staleness);
+      _testSource,
+      Property.variation,
+      _staleness,
+    );
+    final bearing = BearingDataElement(_testSource, variation, Property.heading, _staleness);
 
     // If variation is null, we accept true inputs.
     expect(bearing.value, null);
     expect(bearing.updateValue(_boundTrueHeading(45)), true);
-    expect(
-        bearing.value, ValueMatches(AugmentedBearing(SingleValue(45.0), null)));
+    expect(bearing.value, ValueMatches(AugmentedBearing(SingleValue(45.0), null)));
 
     // Once variation is set we still accept them.
     variation.updateValue(_boundVariation(10.0));
     expect(bearing.updateValue(_boundTrueHeading(55)), true);
-    expect(bearing.value,
-        ValueMatches(AugmentedBearing(SingleValue(55.0), SingleValue(10.0))));
+    expect(bearing.value, ValueMatches(AugmentedBearing(SingleValue(55.0), SingleValue(10.0))));
   });
 
   test('derived data element accepts updates', () async {
     final source = ConsistentDataElement<SingleValue<double>>(
-        _testSource, Property.depthUncalibrated, _staleness);
-    final formatter =
-        formattersFor(Dimension.depth)['feet'] as ConvertingFormatter;
-    final derived =
-        DerivedDataElement(_testName, source, formatter, Operation.add, 100);
+      _testSource,
+      Property.depthUncalibrated,
+      _staleness,
+    );
+    final formatter = formattersFor(Dimension.depth)['feet'] as ConvertingFormatter;
+    final derived = DerivedDataElement(_testName, source, formatter, Operation.add, 100);
 
     int eventCount = 0;
     derived.addListener(() => eventCount++);
 
     // We should echo updated on the source and pass through notification.
     expect(derived.value, null);
-    source.updateValue(
-        BoundValue(_testSource, Property.depthUncalibrated, SingleValue(5)));
-    expect(derived.value,
-        ValueMatches(SingleValue((5 * metersToFeet + 100) / metersToFeet)));
+    source.updateValue(BoundValue(_testSource, Property.depthUncalibrated, SingleValue(5)));
+    expect(derived.value, ValueMatches(SingleValue((5 * metersToFeet + 100) / metersToFeet)));
     expect(eventCount, 1);
 
     // And go stale when our souce does.
@@ -184,16 +184,17 @@ void main() {
     // run this test on that.
     final staleness = Staleness(const Duration(seconds: 1));
     final variation = ConsistentDataElement<SingleValue<double>>(
-        Source.network, Property.variation, staleness);
+      Source.network,
+      Property.variation,
+      staleness,
+    );
 
     for (final property in Property.values) {
       final DataElement element;
       if (property.dimension == Dimension.bearing) {
-        element =
-            BearingDataElement(Source.network, variation, property, staleness);
+        element = BearingDataElement(Source.network, variation, property, staleness);
       } else {
-        element = ConsistentDataElement.newForProperty(
-            Source.network, property, staleness);
+        element = ConsistentDataElement.newForProperty(Source.network, property, staleness);
       }
       if (element is WithHistory) {
         ValueAccumulator.forType(element.storedType);

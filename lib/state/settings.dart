@@ -29,10 +29,10 @@ class Settings with ChangeNotifier {
   final PackageInfo packageInfo;
 
   Settings(SharedPreferences prefs, String defaultPages, this.packageInfo)
-      : network = NetworkSettings(prefs),
-        derived = DerivedDataSettings(prefs),
-        ui = UiSettings(prefs),
-        pages = PageSettings(prefs, defaultPages);
+    : network = NetworkSettings(prefs),
+      derived = DerivedDataSettings(prefs),
+      ui = UiSettings(prefs),
+      pages = PageSettings(prefs, defaultPages);
 
   static Future<Settings> create() async {
     // Create all Futures then await them all. Futures.wait() would lose
@@ -40,8 +40,7 @@ class Settings with ChangeNotifier {
     final prefsFut = SharedPreferences.getInstance();
     final defaultPagesFut = _getDefaultPages();
     final packageInfoFut = PackageInfo.fromPlatform();
-    return Settings(
-        await prefsFut, await defaultPagesFut, await packageInfoFut);
+    return Settings(await prefsFut, await defaultPagesFut, await packageInfoFut);
   }
 }
 
@@ -54,8 +53,7 @@ class _PrefValue<T> {
   final SharedPreferences _prefs;
   final String _key;
   T _value;
-  _PrefValue(this._prefs, this._key, T defaultVal)
-      : _value = _read(_prefs, _key, defaultVal);
+  _PrefValue(this._prefs, this._key, T defaultVal) : _value = _read(_prefs, _key, defaultVal);
 
   T get value => _value;
 
@@ -96,9 +94,8 @@ class _PrefMappedValue<P, N> {
   final N Function(P) mapFn;
   final P Function(N) unmapFn;
 
-  _PrefMappedValue(SharedPreferences prefs, String key, N defaultVal,
-      this.mapFn, this.unmapFn)
-      : _prefValue = _PrefValue(prefs, key, unmapFn(defaultVal));
+  _PrefMappedValue(SharedPreferences prefs, String key, N defaultVal, this.mapFn, this.unmapFn)
+    : _prefValue = _PrefValue(prefs, key, unmapFn(defaultVal));
 
   N get value {
     _nativeValue ??= mapFn(_prefValue.value);
@@ -115,8 +112,11 @@ class _PrefMappedValue<P, N> {
 /// logging detailed messages containing `target` and returning null if
 /// any problems are found.
 List<T>? _validateJsonList<T>(
-    String input, T Function(Map<String, dynamic>) decoder, String target,
-    {int minimumLength = 0}) {
+  String input,
+  T Function(Map<String, dynamic>) decoder,
+  String target, {
+  int minimumLength = 0,
+}) {
   if (input.isEmpty) {
     _log.info('No $target found in shared preferences');
     return null;
@@ -158,29 +158,31 @@ class NetworkSettings with ChangeNotifier {
   final _PrefMappedValue<int, Duration> _staleness;
 
   NetworkSettings(SharedPreferences prefs)
-      : _mode = _PrefMappedValue(
-            prefs,
-            'network_mode',
-            NetworkMode.udpListen,
-            (p) => (p >= 0 && p < NetworkMode.values.length)
-                ? NetworkMode.values[p]
-                : NetworkMode.udpListen,
-            (n) => n.index),
-        _ipAddress = _PrefMappedValue(
-            prefs,
-            'network_address',
-            InternetAddress("192.168.4.1"),
-            (p) => InternetAddress(p),
-            (n) => n.address),
-        _port = _PrefValue(prefs, 'network_port', 2000),
-        _requireChecksum = _PrefValue(prefs, 'network_checksum', true),
-        _staleness = _PrefMappedValue(
-          prefs,
-          'network_staleness_seconds',
-          const Duration(seconds: 10),
-          (p) => Duration(seconds: p),
-          (n) => n.inSeconds,
-        );
+    : _mode = _PrefMappedValue(
+        prefs,
+        'network_mode',
+        NetworkMode.udpListen,
+        (p) => (p >= 0 && p < NetworkMode.values.length)
+            ? NetworkMode.values[p]
+            : NetworkMode.udpListen,
+        (n) => n.index,
+      ),
+      _ipAddress = _PrefMappedValue(
+        prefs,
+        'network_address',
+        InternetAddress("192.168.4.1"),
+        (p) => InternetAddress(p),
+        (n) => n.address,
+      ),
+      _port = _PrefValue(prefs, 'network_port', 2000),
+      _requireChecksum = _PrefValue(prefs, 'network_checksum', true),
+      _staleness = _PrefMappedValue(
+        prefs,
+        'network_staleness_seconds',
+        const Duration(seconds: 10),
+        (p) => Duration(seconds: p),
+        (n) => n.inSeconds,
+      );
 
   NetworkMode get mode => _mode.value;
   InternetAddress get ipAddress => _ipAddress.value;
@@ -188,12 +190,13 @@ class NetworkSettings with ChangeNotifier {
   bool get requireChecksum => _requireChecksum.value;
   Duration get staleness => _staleness.value;
 
-  void set(
-      {NetworkMode? mode,
-      int? port,
-      InternetAddress? ipAddress,
-      bool? requireChecksum,
-      Duration? staleness}) {
+  void set({
+    NetworkMode? mode,
+    int? port,
+    InternetAddress? ipAddress,
+    bool? requireChecksum,
+    Duration? staleness,
+  }) {
     if (mode != null) {
       _mode.set(mode);
     }
@@ -239,14 +242,14 @@ class UiSettings with ChangeNotifier {
     'Manrope',
     'Orbitron',
     'Roboto',
-    'Sniglet'
+    'Sniglet',
   ];
 
   UiSettings(SharedPreferences prefs)
-      : _firstRun = _PrefValue(prefs, 'ui_first_run', true),
-        _nightMode = _PrefValue(prefs, 'ui_night_mode', false),
-        _valueFont = _PrefValue(prefs, 'ui_value_font', 'Lexend'),
-        _headingFont = _PrefValue(prefs, 'ui_heading_font', 'Manrope');
+    : _firstRun = _PrefValue(prefs, 'ui_first_run', true),
+      _nightMode = _PrefValue(prefs, 'ui_night_mode', false),
+      _valueFont = _PrefValue(prefs, 'ui_value_font', 'Lexend'),
+      _headingFont = _PrefValue(prefs, 'ui_heading_font', 'Manrope');
 
   bool get firstRun => _firstRun.value;
   bool get nightMode => _nightMode.value;
@@ -342,12 +345,14 @@ class DerivedDataSettings with ChangeNotifier {
   /// Overwrites all data with elements from a json encoded string, making no
   /// changes if the string is not valid or if dryRun is true. Returns true on
   /// success.
-  bool _fromJson(
-      {required String json, required String source, bool dryRun = false}) {
+  bool _fromJson({required String json, required String source, bool dryRun = false}) {
     // Use the helper function to convert to a list of bare specs
     final specs = _validateJsonList(
-        json, (e) => DerivedDataSpec.fromJson(e), 'derived data settings',
-        minimumLength: 0);
+      json,
+      (e) => DerivedDataSpec.fromJson(e),
+      'derived data settings',
+      minimumLength: 0,
+    );
     // Leave with a failure if this didn't work or success we're dry running and
     // it did.
     if (specs == null) {
@@ -484,12 +489,14 @@ class PageSettings with ChangeNotifier {
   /// Overwrites all data with pages from a json encoded string, making no
   /// changes if the string is not valid or if dryRun is true. Returns true on
   /// success.
-  bool _fromJson(
-      {required String json, required String source, bool dryRun = false}) {
+  bool _fromJson({required String json, required String source, bool dryRun = false}) {
     // Use the helper function to convert to a list of bare specs
     final pageSpecs = _validateJsonList(
-        json, (p) => DataPageSpec.fromJson(p), 'page settings',
-        minimumLength: 1);
+      json,
+      (p) => DataPageSpec.fromJson(p),
+      'page settings',
+      minimumLength: 1,
+    );
     // Leave with a failure if this didn't work or success we're dry running and
     // it did.
     if (pageSpecs == null) {

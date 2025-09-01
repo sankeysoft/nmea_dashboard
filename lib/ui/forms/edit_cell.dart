@@ -15,10 +15,11 @@ import 'package:provider/provider.dart';
 /// A form that lets the user edit a data cell.
 class EditCellPage extends StatefulFormPage {
   EditCellPage({required DataCellSpec spec, super.key})
-      : super(
-            title: 'Edit cell',
-            actions: [const HelpButton('help_edit_cell.md')],
-            child: _EditCellForm(spec: spec));
+    : super(
+        title: 'Edit cell',
+        actions: [const HelpButton('help_edit_cell.md')],
+        child: _EditCellForm(spec: spec),
+      );
 }
 
 /// The stateful form itself
@@ -95,8 +96,7 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
     if (!formattersFor(dimension).keys.contains(_format)) {
       _format = null;
     }
-    if (_type == CellType.history &&
-        formattersFor(dimension)[_format] is! NumericFormatter) {
+    if (_type == CellType.history && formattersFor(dimension)[_format] is! NumericFormatter) {
       _format = null;
     }
   }
@@ -111,39 +111,48 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
     return Form(
       key: formKey,
       child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-                child: ListView(children: [
-              _buildSourceField(),
-              _buildElementField(),
-              _buildTypeField(),
-              _buildFormatField(),
-              _buildOverrideNameField(),
-              _buildNameField()
-            ])),
-            buildSaveButton(postSaver: () {
+        mainAxisAlignment: MainAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: ListView(
+              children: [
+                _buildSourceField(),
+                _buildElementField(),
+                _buildTypeField(),
+                _buildFormatField(),
+                _buildOverrideNameField(),
+                _buildNameField(),
+              ],
+            ),
+          ),
+          buildSaveButton(
+            postSaver: () {
               // By this stage all the fields will have saved back to our state
               // and we can be confident all the fields are populated. Just
               // create a new spec from these (reusing the previous key) and ask
               // the settings to use it.
-              final cellSpec = DataCellSpec(_source?.name ?? '', _element ?? '',
-                  _type?.name ?? '', _format ?? '',
-                  name: _isNameOverridden ? _nameController.text : null,
-                  historyInterval: _historyInterval?.name,
-                  key: widget.spec.key);
+              final cellSpec = DataCellSpec(
+                _source?.name ?? '',
+                _element ?? '',
+                _type?.name ?? '',
+                _format ?? '',
+                name: _isNameOverridden ? _nameController.text : null,
+                historyInterval: _historyInterval?.name,
+                key: widget.spec.key,
+              );
               _pageSettings.updateCell(cellSpec);
               Navigator.pop(context);
-            })
-          ]),
+            },
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildSourceField() {
-    final selectableSources =
-        Source.values.where((source) => source.selectable).toSet();
+    final selectableSources = Source.values.where((source) => source.selectable).toSet();
     return buildDropdownBox(
       label: 'Source',
       items: selectableSources.map((source) {
@@ -187,34 +196,39 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
   Widget _buildTypeField() {
     final List<DropdownEntry<_CellTypeAndAssociatedFields>> entries = [
       DropdownEntry(
-          value: _CellTypeAndAssociatedFields(CellType.current, null),
-          text: CellType.current.longName)
+        value: _CellTypeAndAssociatedFields(CellType.current, null),
+        text: CellType.current.longName,
+      ),
     ];
     if (_dataSet.sources[_source]?[_element] is WithHistory) {
-      entries.addAll(HistoryInterval.values.map((h) => DropdownEntry(
-          value: _CellTypeAndAssociatedFields(CellType.history, h),
-          text: 'History - ${h.display}')));
+      entries.addAll(
+        HistoryInterval.values.map(
+          (h) => DropdownEntry(
+            value: _CellTypeAndAssociatedFields(CellType.history, h),
+            text: 'History - ${h.display}',
+          ),
+        ),
+      );
     }
     final intended = _CellTypeAndAssociatedFields(_type, _historyInterval);
 
     return buildDropdownBox(
-        label: 'Display',
-        items: entries,
-        initialValue: entries.map((e) => e.value).toSet().contains(intended)
-            ? intended
-            : null,
-        onChanged: (_CellTypeAndAssociatedFields? value) {
-          setState(() {
-            _type = value?.type;
-            _historyInterval = value?.historyInterval;
-          });
-        },
-        validator: (value) {
-          if (value == null) {
-            return 'Type must be set';
-          }
-          return null;
+      label: 'Display',
+      items: entries,
+      initialValue: entries.map((e) => e.value).toSet().contains(intended) ? intended : null,
+      onChanged: (_CellTypeAndAssociatedFields? value) {
+        setState(() {
+          _type = value?.type;
+          _historyInterval = value?.historyInterval;
         });
+      },
+      validator: (value) {
+        if (value == null) {
+          return 'Type must be set';
+        }
+        return null;
+      },
+    );
   }
 
   Widget _buildFormatField() {
@@ -222,24 +236,23 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
     final Map<String, Formatter> eligibleFormatters = formattersFor(dimension);
 
     return buildDropdownBox(
-        label: 'Format',
-        items: eligibleFormatters.entries
-            .map((entry) =>
-                DropdownEntry(value: entry.key, text: entry.value.longName))
-            .toList(),
-        initialValue:
-            eligibleFormatters.keys.contains(_format) ? _format : null,
-        onChanged: (String? value) {
-          setState(() {
-            _format = value;
-          });
-        },
-        validator: (value) {
-          if (value == null) {
-            return 'Format must be set';
-          }
-          return null;
+      label: 'Format',
+      items: eligibleFormatters.entries
+          .map((entry) => DropdownEntry(value: entry.key, text: entry.value.longName))
+          .toList(),
+      initialValue: eligibleFormatters.keys.contains(_format) ? _format : null,
+      onChanged: (String? value) {
+        setState(() {
+          _format = value;
         });
+      },
+      validator: (value) {
+        if (value == null) {
+          return 'Format must be set';
+        }
+        return null;
+      },
+    );
   }
 
   Widget _buildOverrideNameField() {
@@ -268,15 +281,16 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
       }
     }
     return buildTextField(
-        label: 'Name',
-        enabled: enabled,
-        controller: _nameController,
-        maxLength: 20,
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return 'Name must not be empty';
-          }
-          return null;
-        });
+      label: 'Name',
+      enabled: enabled,
+      controller: _nameController,
+      maxLength: 20,
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Name must not be empty';
+        }
+        return null;
+      },
+    );
   }
 }

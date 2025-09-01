@@ -13,14 +13,11 @@ import 'package:provider/provider.dart';
 /// A form that lets the user edit the list of derived elements.
 class EditDerivedElementsPage extends StatelessFormPage {
   EditDerivedElementsPage({super.key})
-      : super(
-            title: 'Edit derived elements',
-            actions: [
-              _CopyButton(),
-              _PasteButton(),
-              const HelpButton('help_edit_derived_elements.md')
-            ],
-            content: _EditDerivedElementsContent());
+    : super(
+        title: 'Edit derived elements',
+        actions: [_CopyButton(), _PasteButton(), const HelpButton('help_edit_derived_elements.md')],
+        content: _EditDerivedElementsContent(),
+      );
 }
 
 class _CopyButton extends StatelessWidget {
@@ -29,11 +26,13 @@ class _CopyButton extends StatelessWidget {
     final settings = Provider.of<DerivedDataSettings>(context);
     final sm = ScaffoldMessenger.of(context);
     return IconButton(
-        icon: const Icon(Icons.copy_all_outlined),
-        onPressed: () {
-          Clipboard.setData(ClipboardData(text: settings.toJson())).then((_) =>
-              showSnackBar(sm, 'Derived data definitions copied to clipboard'));
-        });
+      icon: const Icon(Icons.copy_all_outlined),
+      onPressed: () {
+        Clipboard.setData(
+          ClipboardData(text: settings.toJson()),
+        ).then((_) => showSnackBar(sm, 'Derived data definitions copied to clipboard'));
+      },
+    );
   }
 }
 
@@ -43,31 +42,31 @@ class _PasteButton extends StatelessWidget {
     final settings = Provider.of<DerivedDataSettings>(context);
     final sm = ScaffoldMessenger.of(context);
     return IconButton(
-        icon: const Icon(Icons.content_paste_outlined),
-        onPressed: () =>
-            Clipboard.getData(Clipboard.kTextPlain).then((clipboardData) {
-              final text = clipboardData?.text;
-              if (text == null) {
-                showSnackBar(sm, 'Clipboard does not contain text');
-              } else if (!settings.useClipboard(text, dryRun: true)) {
-                showSnackBar(sm,
-                    'Clipboard does not contain valid data definition json');
-              } else {
-                showDialog(
-                    context: context,
-                    builder: (context) => buildConfirmationDialog(
-                        context: context,
-                        title: 'Load derived data from clipboard?',
-                        content:
-                            'Do you want to replace all derived data elements '
-                            'with the clipboard data? This action cannot be undone.',
-                        onPressed: () {
-                          settings.useClipboard(text);
-                          showSnackBar(sm,
-                              'Pasted derived data definitions from clipboard');
-                        }));
-              }
-            }));
+      icon: const Icon(Icons.content_paste_outlined),
+      onPressed: () => Clipboard.getData(Clipboard.kTextPlain).then((clipboardData) {
+        final text = clipboardData?.text;
+        if (text == null) {
+          showSnackBar(sm, 'Clipboard does not contain text');
+        } else if (!settings.useClipboard(text, dryRun: true)) {
+          showSnackBar(sm, 'Clipboard does not contain valid data definition json');
+        } else {
+          showDialog(
+            context: context,
+            builder: (context) => buildConfirmationDialog(
+              context: context,
+              title: 'Load derived data from clipboard?',
+              content:
+                  'Do you want to replace all derived data elements '
+                  'with the clipboard data? This action cannot be undone.',
+              onPressed: () {
+                settings.useClipboard(text);
+                showSnackBar(sm, 'Pasted derived data definitions from clipboard');
+              },
+            ),
+          );
+        }
+      }),
+    );
   }
 }
 
@@ -76,25 +75,26 @@ class _EditDerivedElementsContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return Form(
       child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              // Need an intermediate `Material` between the form and the
-              // list tiles so the tile background renders correctly (see
-              // the `ListTile` documentation).
-              child: Material(
-                  child: Consumer<DerivedDataSettings>(
-                      builder: (context, settings, child) =>
-                          _buildReorderableList(context, settings))),
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            // Need an intermediate `Material` between the form and the
+            // list tiles so the tile background renders correctly (see
+            // the `ListTile` documentation).
+            child: Material(
+              child: Consumer<DerivedDataSettings>(
+                builder: (context, settings, child) => _buildReorderableList(context, settings),
+              ),
             ),
-            buildCloseButton(context),
-          ]),
+          ),
+          buildCloseButton(context),
+        ],
+      ),
     );
   }
 
-  Widget _buildReorderableList(
-      BuildContext context, DerivedDataSettings settings) {
+  Widget _buildReorderableList(BuildContext context, DerivedDataSettings settings) {
     List<Widget> tiles = [];
     for (final spec in settings.derivedDataSpecs) {
       tiles.add(_buildElementTile(context, settings, spec, tiles.length));
@@ -114,32 +114,37 @@ class _EditDerivedElementsContent extends StatelessWidget {
     );
   }
 
-  Widget _buildElementTile(BuildContext context, DerivedDataSettings settings,
-      DerivedDataSpec spec, int index) {
+  Widget _buildElementTile(
+    BuildContext context,
+    DerivedDataSettings settings,
+    DerivedDataSpec spec,
+    int index,
+  ) {
     return buildMovableDeletableTile(
-        key: spec.key,
-        index: index,
+      key: spec.key,
+      index: index,
+      context: context,
+      title: spec.name,
+      icon: const Icon(Icons.data_object_outlined),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) =>
+              EditDerivedDataPage(spec: spec, onCreate: (spec) => settings.setElement(spec)),
+        ),
+      ),
+      onDeleteTap: () => showDialog(
         context: context,
-        title: spec.name,
-        icon: const Icon(Icons.data_object_outlined),
-        onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => EditDerivedDataPage(
-                    spec: spec, onCreate: (spec) => settings.setElement(spec)),
-              ),
-            ),
-        onDeleteTap: () => showDialog(
-            context: context,
-            builder: (context) => buildConfirmationDialog(
-                  context: context,
-                  title: 'Delete ${spec.name} element?',
-                  content: 'This action cannot be undone.',
-                  onPressed: () => settings.removeElement(spec),
-                )));
+        builder: (context) => buildConfirmationDialog(
+          context: context,
+          title: 'Delete ${spec.name} element?',
+          content: 'This action cannot be undone.',
+          onPressed: () => settings.removeElement(spec),
+        ),
+      ),
+    );
   }
 
-  Widget _buildAddElementTile(
-      BuildContext context, DerivedDataSettings settings) {
+  Widget _buildAddElementTile(BuildContext context, DerivedDataSettings settings) {
     // Use a list tile to make this look consistent, but note its not
     // actually in the list like the others.
     return buildStaticTile(
@@ -148,9 +153,11 @@ class _EditDerivedElementsContent extends StatelessWidget {
       icon: const Icon(Icons.add_outlined),
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) => EditDerivedDataPage(onCreate: (spec) {
-            settings.setElement(spec);
-          }),
+          builder: (context) => EditDerivedDataPage(
+            onCreate: (spec) {
+              settings.setElement(spec);
+            },
+          ),
         ),
       ),
     );

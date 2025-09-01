@@ -27,9 +27,9 @@ void main() {
     expect(entries[1].message, record2.message);
 
     expect(
-        logSet.toString(),
-        matches(
-            r'^\d{2}:\d{2}:\d{2} INFO Test info\n\d{2}:\d{2}:\d{2} WARNING Test warn$'));
+      logSet.toString(),
+      matches(r'^\d{2}:\d{2}:\d{2} INFO Test info\n\d{2}:\d{2}:\d{2} WARNING Test warn$'),
+    );
   });
 
   test('should clear entries', () {

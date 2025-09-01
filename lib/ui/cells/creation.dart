@@ -36,11 +36,9 @@ Cell createCell(DataSet dataset, DataCellSpec spec) {
     return NotFoundCell(spec: spec);
   }
 
-  final Formatter? formatter =
-      formattersFor(element.property.dimension)[spec.format];
+  final Formatter? formatter = formattersFor(element.property.dimension)[spec.format];
   if (formatter == null) {
-    _log.warning(
-        'Could not find ${spec.format} format for ${element.property.dimension}');
+    _log.warning('Could not find ${spec.format} format for ${element.property.dimension}');
     return NotFoundCell(spec: spec);
   }
 
@@ -51,11 +49,9 @@ Cell createCell(DataSet dataset, DataCellSpec spec) {
   }
   switch (type) {
     case CellType.current:
-      return CurrentValueCell(
-          element: element, formatter: formatter, spec: spec);
+      return CurrentValueCell(element: element, formatter: formatter, spec: spec);
     case CellType.history:
-      final HistoryInterval? interval =
-          HistoryInterval.fromString(spec.historyInterval);
+      final HistoryInterval? interval = HistoryInterval.fromString(spec.historyInterval);
       if (interval == null) {
         _log.warning('Could not find ${spec.historyInterval} interval');
         return NotFoundCell(spec: spec);
@@ -65,13 +61,13 @@ Cell createCell(DataSet dataset, DataCellSpec spec) {
         return NotFoundCell(spec: spec);
       }
       if (element is! WithHistory) {
-        _log.warning(
-            'Could not build history cell for non-history type ${element.property}');
+        _log.warning('Could not build history cell for non-history type ${element.property}');
       }
       return HistoryCell(
-          element: element,
-          history: (element as WithHistory).history(interval),
-          formatter: formatter,
-          spec: spec);
+        element: element,
+        history: (element as WithHistory).history(interval),
+        formatter: formatter,
+        spec: spec,
+      );
   }
 }

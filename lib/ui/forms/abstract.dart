@@ -36,29 +36,30 @@ class StatelessFormPage extends StatelessWidget {
   final double maxWidth;
   final double maxHeight;
 
-  const StatelessFormPage(
-      {super.key,
-      required this.title,
-      required this.content,
-      this.actions,
-      this.maxWidth = _defaultWidth,
-      this.maxHeight = _defaultHeight});
+  const StatelessFormPage({
+    super.key,
+    required this.title,
+    required this.content,
+    this.actions,
+    this.maxWidth = _defaultWidth,
+    this.maxHeight = _defaultHeight,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-        appBar: AppBar(title: Text(title), actions: actions),
-        body: Center(
-            child: Container(
-                padding: const EdgeInsets.all(_defaultPad),
-                margin: const EdgeInsets.all(_defaultPad),
-                constraints:
-                    BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surface,
-                ),
-                child: content)));
+      appBar: AppBar(title: Text(title), actions: actions),
+      body: Center(
+        child: Container(
+          padding: const EdgeInsets.all(_defaultPad),
+          margin: const EdgeInsets.all(_defaultPad),
+          constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
+          decoration: BoxDecoration(color: theme.colorScheme.surface),
+          child: content,
+        ),
+      ),
+    );
   }
 }
 
@@ -74,21 +75,22 @@ Widget buildMovableDeletableTile({
 }) {
   final colorScheme = Theme.of(context).colorScheme;
   return Padding(
-      key: key,
-      padding: const EdgeInsets.all(_tilePadding),
-      child: ReorderableDelayedDragStartListener(
-          index: index,
-          child: ListTile(
-            title: Text(title),
-            textColor: colorScheme.primary,
-            iconColor: colorScheme.primary,
-            tileColor: colorScheme.surfaceTint,
-            shape: const RoundedRectangleBorder(borderRadius: roundedRadius),
-            leading: icon,
-            trailing: IconButton(
-                icon: const Icon(Icons.delete_outline), onPressed: onDeleteTap),
-            onTap: onTap,
-          )));
+    key: key,
+    padding: const EdgeInsets.all(_tilePadding),
+    child: ReorderableDelayedDragStartListener(
+      index: index,
+      child: ListTile(
+        title: Text(title),
+        textColor: colorScheme.primary,
+        iconColor: colorScheme.primary,
+        tileColor: colorScheme.surfaceTint,
+        shape: const RoundedRectangleBorder(borderRadius: roundedRadius),
+        leading: icon,
+        trailing: IconButton(icon: const Icon(Icons.delete_outline), onPressed: onDeleteTap),
+        onTap: onTap,
+      ),
+    ),
+  );
 }
 
 /// Builds a list tile without reordering or delete.
@@ -100,41 +102,46 @@ Widget buildStaticTile({
 }) {
   final theme = Theme.of(context);
   return Padding(
-      padding: const EdgeInsets.all(_tilePadding),
-      child: ListTile(
-        title: Text(title),
-        textColor: theme.colorScheme.primary,
-        iconColor: theme.colorScheme.primary,
-        tileColor: theme.canvasColor,
-        shape: const RoundedRectangleBorder(borderRadius: roundedRadius),
-        leading: icon,
-        onTap: onTap,
-      ));
+    padding: const EdgeInsets.all(_tilePadding),
+    child: ListTile(
+      title: Text(title),
+      textColor: theme.colorScheme.primary,
+      iconColor: theme.colorScheme.primary,
+      tileColor: theme.canvasColor,
+      shape: const RoundedRectangleBorder(borderRadius: roundedRadius),
+      leading: icon,
+      onTap: onTap,
+    ),
+  );
 }
 
 /// Builds a button with custom text and behavior.
-Widget buildOtherButton(
-    {required BuildContext context,
-    required VoidCallback onPressed,
-    required String text}) {
+Widget buildOtherButton({
+  required BuildContext context,
+  required VoidCallback onPressed,
+  required String text,
+}) {
   return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-            backgroundColor: Theme.of(context).colorScheme.secondary,
-            foregroundColor: Theme.of(context).colorScheme.onSecondary,
-            padding: const EdgeInsets.all(20)),
-        onPressed: onPressed,
-        child: Text(text),
-      ));
+    width: double.infinity,
+    child: ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Theme.of(context).colorScheme.secondary,
+        foregroundColor: Theme.of(context).colorScheme.onSecondary,
+        padding: const EdgeInsets.all(20),
+      ),
+      onPressed: onPressed,
+      child: Text(text),
+    ),
+  );
 }
 
 /// Builds a button to close the current form.
 Widget buildCloseButton(BuildContext context) {
   return buildOtherButton(
-      context: context,
-      onPressed: () => Navigator.of(context).pop(),
-      text: 'CLOSE');
+    context: context,
+    onPressed: () => Navigator.of(context).pop(),
+    text: 'CLOSE',
+  );
 }
 
 /// Displays a standard snack bar with the provided text.
@@ -142,30 +149,32 @@ void showSnackBar(ScaffoldMessengerState messenger, String text) {
   messenger.showSnackBar(SnackBar(content: Text(text)));
 }
 
-AlertDialog buildConfirmationDialog(
-    {required BuildContext context,
-    required String title,
-    String? content,
-    required VoidCallback onPressed}) {
+AlertDialog buildConfirmationDialog({
+  required BuildContext context,
+  required String title,
+  String? content,
+  required VoidCallback onPressed,
+}) {
   return AlertDialog(
-      title: Text(title),
-      content: (content != null) ? Text(content) : null,
-      actionsPadding: const EdgeInsets.all(20),
-      actions: [
-        ElevatedButton(
-            style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.secondary,
-                foregroundColor: Theme.of(context).colorScheme.onSecondary,
-                padding: const EdgeInsets.all(20)),
-            onPressed: () {
-              onPressed();
-              Navigator.of(context).pop();
-            },
-            child: const Text('OK')),
-        TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel')),
-      ]);
+    title: Text(title),
+    content: (content != null) ? Text(content) : null,
+    actionsPadding: const EdgeInsets.all(20),
+    actions: [
+      ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Theme.of(context).colorScheme.secondary,
+          foregroundColor: Theme.of(context).colorScheme.onSecondary,
+          padding: const EdgeInsets.all(20),
+        ),
+        onPressed: () {
+          onPressed();
+          Navigator.of(context).pop();
+        },
+        child: const Text('OK'),
+      ),
+      TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+    ],
+  );
 }
 
 class HelpButton extends StatelessWidget {
@@ -176,13 +185,13 @@ class HelpButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IconButton(
-        icon: const Icon(Icons.help_outlined),
-        onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) =>
-                    ViewHelpPage(title: 'Help', filename: _asset),
-              ),
-            ));
+      icon: const Icon(Icons.help_outlined),
+      onPressed: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => ViewHelpPage(title: 'Help', filename: _asset),
+        ),
+      ),
+    );
   }
 }
 
@@ -194,29 +203,30 @@ class StatefulFormPage<T extends StatefulWidget> extends StatelessWidget {
   final double maxWidth;
   final double maxHeight;
 
-  const StatefulFormPage(
-      {super.key,
-      required this.title,
-      required this.child,
-      this.actions,
-      this.maxWidth = _defaultWidth,
-      this.maxHeight = _defaultHeight});
+  const StatefulFormPage({
+    super.key,
+    required this.title,
+    required this.child,
+    this.actions,
+    this.maxWidth = _defaultWidth,
+    this.maxHeight = _defaultHeight,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-        appBar: AppBar(title: Text(title), actions: actions),
-        body: Center(
-            child: Container(
-                padding: const EdgeInsets.all(_defaultPad),
-                margin: const EdgeInsets.all(_defaultPad),
-                constraints:
-                    BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surface,
-                ),
-                child: child)));
+      appBar: AppBar(title: Text(title), actions: actions),
+      body: Center(
+        child: Container(
+          padding: const EdgeInsets.all(_defaultPad),
+          margin: const EdgeInsets.all(_defaultPad),
+          constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
+          decoration: BoxDecoration(color: theme.colorScheme.surface),
+          child: child,
+        ),
+      ),
+    );
   }
 }
 
@@ -224,49 +234,54 @@ class StatefulFormPage<T extends StatefulWidget> extends StatelessWidget {
 abstract class StatefulFormState<T extends StatefulWidget> extends State<T> {
   final formKey = GlobalKey<FormState>();
 
-  Widget buildOtherButton(
-      {required VoidCallback onPress, required String text, IconData? icon}) {
+  Widget buildOtherButton({required VoidCallback onPress, required String text, IconData? icon}) {
     final content = (icon == null)
         ? Text(text)
         : Row(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-                Icon(icon),
-                const SizedBox(width: _elementPadding),
-                Text(text)
-              ]);
+              Icon(icon),
+              const SizedBox(width: _elementPadding),
+              Text(text),
+            ],
+          );
     final colorScheme = Theme.of(context).colorScheme;
     return Padding(
-        padding: const EdgeInsets.symmetric(vertical: _elementPadding),
-        child: SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: colorScheme.primaryContainer,
-                  foregroundColor: colorScheme.onPrimary,
-                  padding: const EdgeInsets.all(20)),
-              onPressed: onPress,
-              child: content,
-            )));
+      padding: const EdgeInsets.symmetric(vertical: _elementPadding),
+      child: SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: colorScheme.primaryContainer,
+            foregroundColor: colorScheme.onPrimary,
+            padding: const EdgeInsets.all(20),
+          ),
+          onPressed: onPress,
+          child: content,
+        ),
+      ),
+    );
   }
 
   Widget buildSaveButton({required FormPostSaver postSaver}) {
     return SizedBox(
-        width: double.infinity,
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.secondary,
-              foregroundColor: Theme.of(context).colorScheme.onSecondary,
-              padding: const EdgeInsets.all(20)),
-          onPressed: () {
-            if (formKey.currentState!.validate()) {
-              formKey.currentState!.save();
-              postSaver();
-            }
-          },
-          child: const Text('SAVE'),
-        ));
+      width: double.infinity,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Theme.of(context).colorScheme.secondary,
+          foregroundColor: Theme.of(context).colorScheme.onSecondary,
+          padding: const EdgeInsets.all(20),
+        ),
+        onPressed: () {
+          if (formKey.currentState!.validate()) {
+            formKey.currentState!.save();
+            postSaver();
+          }
+        },
+        child: const Text('SAVE'),
+      ),
+    );
   }
 
   Widget buildTextField({
@@ -283,8 +298,7 @@ abstract class StatefulFormState<T extends StatefulWidget> extends State<T> {
   }) {
     final theme = Theme.of(context);
     final textStyle = theme.textTheme.labelMedium!;
-    final fieldColor =
-        enabled ? theme.colorScheme.primary : theme.disabledColor;
+    final fieldColor = enabled ? theme.colorScheme.primary : theme.disabledColor;
     final headingColor = theme.colorScheme.primaryContainer;
 
     final labelWidget = (label == null)
@@ -292,30 +306,31 @@ abstract class StatefulFormState<T extends StatefulWidget> extends State<T> {
         : Text('$label:', style: textStyle.copyWith(color: headingColor));
 
     return Padding(
-        padding: const EdgeInsets.symmetric(vertical: _elementPadding),
-        child: TextFormField(
-          controller: controller,
-          initialValue: (controller != null) ? null : initialValue,
-          enabled: enabled,
-          expands: expands,
-          maxLines: expands ? null : 1,
-          autovalidateMode: AutovalidateMode.onUserInteraction,
-          textCapitalization: TextCapitalization.sentences,
-          decoration: InputDecoration(
-            icon: labelWidget,
-            border: const OutlineInputBorder(),
-            suffix: (suffix != null) ? Text(suffix) : null,
-            suffixStyle: textStyle.copyWith(color: headingColor),
-            counterText: '',
-            isDense: true,
-          ),
-          textAlign: TextAlign.right,
-          keyboardType: keyboardType,
-          maxLength: maxLength,
-          style: textStyle.copyWith(color: fieldColor),
-          validator: validator,
-          onSaved: onSaved,
-        ));
+      padding: const EdgeInsets.symmetric(vertical: _elementPadding),
+      child: TextFormField(
+        controller: controller,
+        initialValue: (controller != null) ? null : initialValue,
+        enabled: enabled,
+        expands: expands,
+        maxLines: expands ? null : 1,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        textCapitalization: TextCapitalization.sentences,
+        decoration: InputDecoration(
+          icon: labelWidget,
+          border: const OutlineInputBorder(),
+          suffix: (suffix != null) ? Text(suffix) : null,
+          suffixStyle: textStyle.copyWith(color: headingColor),
+          counterText: '',
+          isDense: true,
+        ),
+        textAlign: TextAlign.right,
+        keyboardType: keyboardType,
+        maxLength: maxLength,
+        style: textStyle.copyWith(color: fieldColor),
+        validator: validator,
+        onSaved: onSaved,
+      ),
+    );
   }
 
   Widget buildDropdownBox<V>({
@@ -329,15 +344,16 @@ abstract class StatefulFormState<T extends StatefulWidget> extends State<T> {
     final textStyle = theme.textTheme.labelMedium!;
     final headingColor = theme.colorScheme.primaryContainer;
     final dropdownItems = items.map((item) {
-      final itemStyle = (item.font == null)
-          ? textStyle
-          : textStyle.copyWith(fontFamily: item.font);
+      final itemStyle = (item.font == null) ? textStyle : textStyle.copyWith(fontFamily: item.font);
       return DropdownMenuItem(
-          value: item.value,
-          child: Row(children: [
+        value: item.value,
+        child: Row(
+          children: [
             const Expanded(child: SizedBox()),
-            Text(item.text, style: itemStyle)
-          ]));
+            Text(item.text, style: itemStyle),
+          ],
+        ),
+      );
     }).toList();
 
     return Padding(
@@ -359,34 +375,39 @@ abstract class StatefulFormState<T extends StatefulWidget> extends State<T> {
     );
   }
 
-  Widget buildSwitch(
-      {required String label,
-      required bool initialValue,
-      ValueChanged<bool>? onChanged,
-      FormFieldSetter<bool>? onSaved}) {
+  Widget buildSwitch({
+    required String label,
+    required bool initialValue,
+    ValueChanged<bool>? onChanged,
+    FormFieldSetter<bool>? onSaved,
+  }) {
     final theme = Theme.of(context);
-    final headingStyle = theme.textTheme.labelMedium!
-        .copyWith(color: theme.colorScheme.primaryContainer);
+    final headingStyle = theme.textTheme.labelMedium!.copyWith(
+      color: theme.colorScheme.primaryContainer,
+    );
 
-    return Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-      Text('$label:', style: headingStyle),
-      const Expanded(child: SizedBox()),
-      FormField<bool>(
-        initialValue: initialValue,
-        builder: (FormFieldState<bool> field) {
-          return Switch(
-            value: field.value ?? true,
-            activeThumbColor: theme.colorScheme.tertiary,
-            onChanged: (val) {
-              field.didChange(val);
-              if (onChanged != null) {
-                onChanged(val);
-              }
-            },
-          );
-        },
-        onSaved: onSaved,
-      )
-    ]);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text('$label:', style: headingStyle),
+        const Expanded(child: SizedBox()),
+        FormField<bool>(
+          initialValue: initialValue,
+          builder: (FormFieldState<bool> field) {
+            return Switch(
+              value: field.value ?? true,
+              activeThumbColor: theme.colorScheme.tertiary,
+              onChanged: (val) {
+                field.didChange(val);
+                if (onChanged != null) {
+                  onChanged(val);
+                }
+              },
+            );
+          },
+          onSaved: onSaved,
+        ),
+      ],
+    );
   }
 }

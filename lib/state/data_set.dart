@@ -45,8 +45,7 @@ class DataSet with ChangeNotifier {
   /// This class's logger.
   static final _log = Logger('DataSet');
 
-  DataSet(
-      this._networkSettings, this._derivedDataSettings, this._historyManager) {
+  DataSet(this._networkSettings, this._derivedDataSettings, this._historyManager) {
     // Create all known data for primary sources.
     for (final source in [Source.network, Source.local]) {
       sources[source] = _createPrimaryDataElements(source);
@@ -80,7 +79,10 @@ class DataSet with ChangeNotifier {
     /// mag/true conversion. If no elements use it (e.g. source==local) it just
     /// falls out of scope.
     final variation = ConsistentDataElement<SingleValue<double>>(
-        source, Property.variation, staleness);
+      source,
+      Property.variation,
+      staleness,
+    );
 
     Map<String, DataElement> elementMap = {};
     for (final property in Property.values) {
@@ -92,8 +94,7 @@ class DataSet with ChangeNotifier {
         } else if (property.dimension == Dimension.bearing) {
           element = BearingDataElement(source, variation, property, staleness);
         } else {
-          element =
-              ConsistentDataElement.newForProperty(source, property, staleness);
+          element = ConsistentDataElement.newForProperty(source, property, staleness);
         }
         // Some elements support history and should be told about the manager.
         if (element is WithHistory) {
@@ -113,35 +114,41 @@ class DataSet with ChangeNotifier {
       final source = Source.fromString(spec.inputSource);
       final inputElement = sources[source]?[spec.inputElement];
       final operation = Operation.fromString(spec.operation);
-      final Formatter? formatter =
-          formattersFor(inputElement?.property.dimension)[spec.inputFormat];
+      final Formatter? formatter = formattersFor(
+        inputElement?.property.dimension,
+      )[spec.inputFormat];
 
       // For now don't support deriving values from other derived values - the
       // possibility of dependency cycles makes that a fair bit more complex and
       // with the current set of operations (and the choice to describe all
       // values with a format) there would be very few interesting use cases.
       if (source == Source.derived) {
-        _log.warning(
-            'Could not derive ${spec.name} from another derived value');
+        _log.warning('Could not derive ${spec.name} from another derived value');
       } else if (inputElement == null) {
         _log.warning(
-            'Could not find ${spec.inputSource}:${spec.inputElement} to create ${spec.name}');
+          'Could not find ${spec.inputSource}:${spec.inputElement} to create ${spec.name}',
+        );
       } else if (formatter == null) {
         _log.warning(
-            'Could not find ${spec.inputFormat} format for ${inputElement.property.dimension}');
+          'Could not find ${spec.inputFormat} format for ${inputElement.property.dimension}',
+        );
       } else if (operation == null) {
-        _log.warning(
-            'Could not find operation ${spec.operation} to create ${spec.name}');
+        _log.warning('Could not find operation ${spec.operation} to create ${spec.name}');
       } else if (inputElement is! DataElement<SingleValue<double>, Value>) {
         _log.warning(
-            'Could not create ${spec.name} from non-double ${spec.inputSource}:${spec.inputElement}');
+          'Could not create ${spec.name} from non-double ${spec.inputSource}:${spec.inputElement}',
+        );
       } else if (formatter is! SimpleFormatter) {
-        _log.warning(
-            'Could not create ${spec.name} from non-simple format ${spec.inputFormat}');
+        _log.warning('Could not create ${spec.name} from non-simple format ${spec.inputFormat}');
       } else {
         // Derived elements are always working with doubles and support history.
         final element = DerivedDataElement(
-            spec.name, inputElement, formatter, operation, spec.operand);
+          spec.name,
+          inputElement,
+          formatter,
+          operation,
+          spec.operand,
+        );
         element.registerManager(_historyManager);
         elementMap[spec.name] = element;
       }

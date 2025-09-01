@@ -122,14 +122,16 @@ class AugmentedBearing extends Value {
   final double? variation;
 
   AugmentedBearing(SingleValue<double> bearing, SingleValue<double>? variation)
-      : bearing = bearing.data,
-        variation = variation?.data;
+    : bearing = bearing.data,
+      variation = variation?.data;
 
   /// Convenience method to create an AugmentedBearing with doubles rather
   /// than `SingleValue<double>s`.
   static AugmentedBearing fromNumbers(double bearing, double? variation) {
-    return AugmentedBearing(SingleValue(bearing),
-        variation == null ? null : SingleValue(variation));
+    return AugmentedBearing(
+      SingleValue(bearing),
+      variation == null ? null : SingleValue(variation),
+    );
   }
 
   /// Deserialized the supplied string (created by calling serialize) back to
@@ -161,9 +163,7 @@ class AugmentedBearing extends Value {
   @override
   String serialize() {
     final bearingStr = bearing.toStringAsFixed(serializationDp);
-    final variationStr = variation == null
-        ? 'null'
-        : variation!.toStringAsFixed(serializationDp);
+    final variationStr = variation == null ? 'null' : variation!.toStringAsFixed(serializationDp);
     return '$bearingStr/$variationStr';
   }
 }
@@ -209,9 +209,7 @@ class AugmentedBearingAccumulator extends ValueAccumulator<AugmentedBearing> {
   NumericAccumulator bearing;
   NumericAccumulator variation;
 
-  AugmentedBearingAccumulator()
-      : bearing = NumericAccumulator(),
-        variation = NumericAccumulator();
+  AugmentedBearingAccumulator() : bearing = NumericAccumulator(), variation = NumericAccumulator();
 
   @override
   add(AugmentedBearing value) {
@@ -256,7 +254,8 @@ class NumericAccumulator {
 Property _verifyType(Property property, Type storage) {
   if (property.dimension.type != storage) {
     throw InvalidTypeException(
-        'Cannot bind $storage to $property, expected ${property.dimension.type}');
+      'Cannot bind $storage to $property, expected ${property.dimension.type}',
+    );
   }
   return property;
 }

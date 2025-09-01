@@ -37,45 +37,43 @@ abstract class SpecCell extends Cell {
   @override
   Widget build(BuildContext context) {
     return Expanded(
-        child: GestureDetector(
-            onLongPress: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                    builder: (context) => EditCellPage(spec: spec)),
-              );
-            },
-            child: Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                ),
-                margin: const EdgeInsets.all(6.0),
-                padding: const EdgeInsets.all(10.0),
-                child: content)));
+      child: GestureDetector(
+        onLongPress: () {
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (context) => EditCellPage(spec: spec)));
+        },
+        child: Container(
+          decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface),
+          margin: const EdgeInsets.all(6.0),
+          padding: const EdgeInsets.all(10.0),
+          child: content,
+        ),
+      ),
+    );
   }
 }
 
 // Identifiers for the different subwidgets in a HeadingContentsCell.
-enum _Component {
-  heading,
-  units,
-  content,
-}
+enum _Component { heading, units, content }
 
 abstract class HeadingContentsCell extends SpecCell {
-  HeadingContentsCell(
-      {required String heading,
-      required String units,
-      required content,
-      required super.spec,
-      super.key})
-      : super(
-            content: CustomMultiChildLayout(
-                delegate: _CellContentLayoutDelegate(),
-                children: <Widget>[
-              LayoutId(id: _Component.heading, child: _CellHeading(heading)),
-              LayoutId(id: _Component.units, child: _CellUnits(units)),
-              LayoutId(id: _Component.content, child: content),
-            ]));
+  HeadingContentsCell({
+    required String heading,
+    required String units,
+    required content,
+    required super.spec,
+    super.key,
+  }) : super(
+         content: CustomMultiChildLayout(
+           delegate: _CellContentLayoutDelegate(),
+           children: <Widget>[
+             LayoutId(id: _Component.heading, child: _CellHeading(heading)),
+             LayoutId(id: _Component.units, child: _CellUnits(units)),
+             LayoutId(id: _Component.content, child: content),
+           ],
+         ),
+       );
 }
 
 class _CellContentLayoutDelegate extends MultiChildLayoutDelegate {
@@ -102,21 +100,21 @@ class _CellContentLayoutDelegate extends MultiChildLayoutDelegate {
     } else {
       // The cell is wide. If we used the ideal aspect ratio the header would
       // take up too much height so cap to the max height fraction.
-      headerSize =
-          Size(size.width, min(size.height * _heightFraction, _maxHeight));
+      headerSize = Size(size.width, min(size.height * _heightFraction, _maxHeight));
     }
 
     // Let the units choose its width first since its least likely to overflow.
-    final unitsSize = layoutChild(_Component.units,
-        BoxConstraints.loose(headerSize).tighten(height: headerSize.height));
-    final headingMaxSize =
-        Size(size.width - unitsSize.width, headerSize.height);
+    final unitsSize = layoutChild(
+      _Component.units,
+      BoxConstraints.loose(headerSize).tighten(height: headerSize.height),
+    );
+    final headingMaxSize = Size(size.width - unitsSize.width, headerSize.height);
     positionChild(_Component.units, Offset(headingMaxSize.width, 0));
     // Let the heading take the remainder of the top row.
     layoutChild(
-        _Component.heading,
-        BoxConstraints.loose(headingMaxSize)
-            .tighten(height: headerSize.height));
+      _Component.heading,
+      BoxConstraints.loose(headingMaxSize).tighten(height: headerSize.height),
+    );
     positionChild(_Component.heading, Offset.zero);
 
     // And give the rest of the height to the value.

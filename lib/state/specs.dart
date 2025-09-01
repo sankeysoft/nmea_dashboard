@@ -50,13 +50,17 @@ class DerivedDataSpec {
   /// The value to feed into the operation.
   final double operand;
 
-  DerivedDataSpec(this.name, this.inputSource, this.inputElement,
-      this.inputFormat, this.operation, this.operand,
-      {SpecKey? key})
-      : key = key ?? SpecKey.make();
+  DerivedDataSpec(
+    this.name,
+    this.inputSource,
+    this.inputElement,
+    this.inputFormat,
+    this.operation,
+    this.operand, {
+    SpecKey? key,
+  }) : key = key ?? SpecKey.make();
 
-  factory DerivedDataSpec.fromJson(Map<String, dynamic> json) =>
-      _$DerivedDataSpecFromJson(json);
+  factory DerivedDataSpec.fromJson(Map<String, dynamic> json) => _$DerivedDataSpecFromJson(json);
 
   Map<String, dynamic> toJson() => _$DerivedDataSpecToJson(this);
 }
@@ -79,9 +83,7 @@ class DataPageSpec extends ChangeNotifier {
   /// The data to display in the table
   final List<DataCellSpec> cells;
 
-  DataPageSpec(this.name, this.cells, {SpecKey? key})
-      : key = key ?? SpecKey.make(),
-        _cellMap = {} {
+  DataPageSpec(this.name, this.cells, {SpecKey? key}) : key = key ?? SpecKey.make(), _cellMap = {} {
     for (int i = 0; i < cells.length; i++) {
       _cellMap[cells[i].key] = i;
     }
@@ -103,8 +105,7 @@ class DataPageSpec extends ChangeNotifier {
     }
   }
 
-  factory DataPageSpec.fromJson(Map<String, dynamic> json) =>
-      _$DataPageSpecFromJson(json);
+  factory DataPageSpec.fromJson(Map<String, dynamic> json) => _$DataPageSpecFromJson(json);
 
   Map<String, dynamic> toJson() => _$DataPageSpecToJson(this);
 }
@@ -138,12 +139,17 @@ class DataCellSpec {
   @JsonKey(includeIfNull: false)
   final String? name;
 
-  DataCellSpec(this.source, this.element, this.type, this.format,
-      {this.name, this.historyInterval, SpecKey? key})
-      : key = key ?? SpecKey.make();
+  DataCellSpec(
+    this.source,
+    this.element,
+    this.type,
+    this.format, {
+    this.name,
+    this.historyInterval,
+    SpecKey? key,
+  }) : key = key ?? SpecKey.make();
 
-  factory DataCellSpec.fromJson(Map<String, dynamic> json) =>
-      _$DataCellSpecFromJson(json);
+  factory DataCellSpec.fromJson(Map<String, dynamic> json) => _$DataCellSpecFromJson(json);
 
   Map<String, dynamic> toJson() => _$DataCellSpecToJson(this);
 }

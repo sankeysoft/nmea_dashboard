@@ -16,11 +16,17 @@ Stream<BoundValue> valuesFromLocalDevice() {
   return StreamGroup.merge([
     Stream.periodic(_interval, (_) {
       return BoundValue<SingleValue<DateTime>>(
-          Source.local, Property.localTime, SingleValue(DateTime.now()));
+        Source.local,
+        Property.localTime,
+        SingleValue(DateTime.now()),
+      );
     }),
     Stream.periodic(_interval, (_) {
       return BoundValue<SingleValue<DateTime>>(
-          Source.local, Property.utcTime, SingleValue(DateTime.now().toUtc()));
-    })
+        Source.local,
+        Property.utcTime,
+        SingleValue(DateTime.now().toUtc()),
+      );
+    }),
   ]);
 }

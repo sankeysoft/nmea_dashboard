@@ -21,14 +21,15 @@ typedef CreateDerivedDataFunction = void Function(DerivedDataSpec spec);
 
 /// A form that lets the user edit a single derived element.
 class EditDerivedDataPage extends StatefulFormPage {
-  EditDerivedDataPage(
-      {DerivedDataSpec? spec,
-      required CreateDerivedDataFunction onCreate,
-      super.key})
-      : super(
-            title: 'Edit derived element',
-            actions: [const HelpButton('help_edit_derived_element.md')],
-            child: _EditDerivedDataForm(spec, onCreate));
+  EditDerivedDataPage({
+    DerivedDataSpec? spec,
+    required CreateDerivedDataFunction onCreate,
+    super.key,
+  }) : super(
+         title: 'Edit derived element',
+         actions: [const HelpButton('help_edit_derived_element.md')],
+         child: _EditDerivedDataForm(spec, onCreate),
+       );
 }
 
 class _EditDerivedDataForm extends StatefulWidget {
@@ -36,14 +37,13 @@ class _EditDerivedDataForm extends StatefulWidget {
   final DerivedDataSpec _spec;
 
   _EditDerivedDataForm(DerivedDataSpec? spec, this._onCreate)
-      : _spec = spec ?? _createDefaultSpec();
+    : _spec = spec ?? _createDefaultSpec();
 
   @override
   State<_EditDerivedDataForm> createState() => _EditDerivedDataFormState();
 }
 
-class _EditDerivedDataFormState
-    extends StatefulFormState<_EditDerivedDataForm> {
+class _EditDerivedDataFormState extends StatefulFormState<_EditDerivedDataForm> {
   late DataSet _dataSet;
   late String _name;
   Source? _inputSource;
@@ -72,34 +72,43 @@ class _EditDerivedDataFormState
     return Form(
       key: formKey,
       child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-                child: ListView(children: [
-              _buildNameField(),
-              _buildSourceField(),
-              _buildElementField(),
-              _buildFormatField(),
-              Row(children: [
-                Expanded(child: _buildOperationField()),
-                const SizedBox(width: 20),
-                SizedBox(width: 180, child: _buildOperandField())
-              ])
-            ])),
-            buildSaveButton(postSaver: () {
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: ListView(
+              children: [
+                _buildNameField(),
+                _buildSourceField(),
+                _buildElementField(),
+                _buildFormatField(),
+                Row(
+                  children: [
+                    Expanded(child: _buildOperationField()),
+                    const SizedBox(width: 20),
+                    SizedBox(width: 180, child: _buildOperandField()),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          buildSaveButton(
+            postSaver: () {
               final spec = DerivedDataSpec(
-                  _name,
-                  _inputSource?.name ?? '',
-                  _inputName ?? '',
-                  _inputFormat ?? '',
-                  _operation.name,
-                  _operand,
-                  key: widget._spec.key);
+                _name,
+                _inputSource?.name ?? '',
+                _inputName ?? '',
+                _inputFormat ?? '',
+                _operation.name,
+                _operand,
+                key: widget._spec.key,
+              );
               widget._onCreate(spec);
               Navigator.pop(context);
-            })
-          ]),
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -112,30 +121,29 @@ class _EditDerivedDataFormState
       _inputName = null;
     }
     if (inputElement?.property == null ||
-        !formattersFor(inputElement!.property.dimension)
-            .keys
-            .contains(_inputFormat)) {
+        !formattersFor(inputElement!.property.dimension).keys.contains(_inputFormat)) {
       _inputFormat = null;
     }
   }
 
   Widget _buildNameField() {
     return buildTextField(
-        label: 'Derived name',
-        initialValue: _name,
-        keyboardType: TextInputType.text,
-        maxLength: 20,
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return 'Name must not be empty';
-          }
-          return null;
-        },
-        onSaved: (value) {
-          if (value != null) {
-            _name = value;
-          }
-        });
+      label: 'Derived name',
+      initialValue: _name,
+      keyboardType: TextInputType.text,
+      maxLength: 20,
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Name must not be empty';
+        }
+        return null;
+      },
+      onSaved: (value) {
+        if (value != null) {
+          _name = value;
+        }
+      },
+    );
   }
 
   Widget _buildSourceField() {
@@ -158,8 +166,7 @@ class _EditDerivedDataFormState
   }
 
   Widget _buildElementField() {
-    final Map<String, DataElement> elements =
-        _dataSet.sources[_inputSource] ?? {};
+    final Map<String, DataElement> elements = _dataSet.sources[_inputSource] ?? {};
 
     return buildDropdownBox(
       label: 'Input element',
@@ -184,30 +191,27 @@ class _EditDerivedDataFormState
   }
 
   Widget _buildFormatField() {
-    final dimension =
-        _dataSet.sources[_inputSource]?[_inputName]?.property.dimension;
+    final dimension = _dataSet.sources[_inputSource]?[_inputName]?.property.dimension;
     final Map<String, Formatter> eligibleFormatters = formattersFor(dimension);
 
     return buildDropdownBox(
-        label: 'Input units',
-        items: eligibleFormatters.entries
-            .map((entry) =>
-                DropdownEntry(value: entry.key, text: entry.value.longName))
-            .toList(),
-        initialValue: eligibleFormatters.keys.contains(_inputFormat)
-            ? _inputFormat
-            : null,
-        onChanged: (String? value) {
-          setState(() {
-            _inputFormat = value;
-          });
-        },
-        validator: (value) {
-          if (value == null) {
-            return 'Format must be set';
-          }
-          return null;
+      label: 'Input units',
+      items: eligibleFormatters.entries
+          .map((entry) => DropdownEntry(value: entry.key, text: entry.value.longName))
+          .toList(),
+      initialValue: eligibleFormatters.keys.contains(_inputFormat) ? _inputFormat : null,
+      onChanged: (String? value) {
+        setState(() {
+          _inputFormat = value;
         });
+      },
+      validator: (value) {
+        if (value == null) {
+          return 'Format must be set';
+        }
+        return null;
+      },
+    );
   }
 
   Widget _buildOperationField() {
@@ -229,18 +233,17 @@ class _EditDerivedDataFormState
 
   Widget _buildOperandField() {
     return buildTextField(
-        initialValue: _operand.toString(),
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        maxLength: 8,
-        validator: (value) {
-          return (double.tryParse(value ?? '') == null)
-              ? 'Must be a valid number'
-              : null;
-        },
-        onSaved: (value) {
-          if (value != null) {
-            _operand = double.parse(value);
-          }
-        });
+      initialValue: _operand.toString(),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      maxLength: 8,
+      validator: (value) {
+        return (double.tryParse(value ?? '') == null) ? 'Must be a valid number' : null;
+      },
+      onSaved: (value) {
+        if (value != null) {
+          _operand = double.parse(value);
+        }
+      },
+    );
   }
 }
