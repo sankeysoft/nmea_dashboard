@@ -6,10 +6,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import '../../state/settings.dart';
-import '../../state/specs.dart';
-import 'abstract.dart';
-import 'edit_page.dart';
+import 'package:nmea_dashboard/state/settings.dart';
+import 'package:nmea_dashboard/state/specs.dart';
+import 'package:nmea_dashboard/ui/forms/abstract.dart';
+import 'package:nmea_dashboard/ui/forms/edit_page.dart';
 
 /// A form that lets the user edit the list of pages.
 class EditPagesPage extends StatelessFormPage {

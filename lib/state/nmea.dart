@@ -4,13 +4,11 @@
 
 import 'dart:collection';
 
-import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
+import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/values.dart';
-
-import 'common.dart';
 
 /// A marker exception for message types that are neither supported nor ignored.
 class UnsupportedMessageException implements Exception {}
@@ -190,7 +188,7 @@ class NmeaParser {
 
 /// Validates that the supplied payload matches the expected ASCII checksum, throwing
 /// a FormatException if not.
-void _validateChecksum(payload, checksumString) {
+void _validateChecksum(String payload, String checksumString) {
   final int checksum = int.parse(checksumString, radix: 16);
   int xor = 0;
   for (final codeUnit in payload.codeUnits) {
@@ -217,13 +215,13 @@ List<BoundValue> _createNmeaValues(String type, List<String> fields) {
         _parseSingleValue(fields[9], Property.waypointRange,
             divisor: metersToNauticalMiles),
         _parseSingleValue(fields[5], Property.waypointBearing),
-      ].whereNotNull().toList();
+      ].nonNulls.toList();
     case 'DBT':
       _validateFieldCount(fields, 6);
       _validateFieldValue(fields, index: 3, expected: 'M');
       return [
         _parseSingleValue(fields[2], Property.depthUncalibrated, tier: 2),
-      ].whereNotNull().toList();
+      ].nonNulls.toList();
     case 'DPT':
       _validateMinFieldCount(fields, 2);
       if (fields[0].isEmpty) {
@@ -255,7 +253,7 @@ List<BoundValue> _createNmeaValues(String type, List<String> fields) {
       _validateFieldValue(fields, index: 1, expected: 'M');
       return [
         _parseSingleValue(fields[0], Property.headingMag, tier: 2),
-      ].whereNotNull().toList();
+      ].nonNulls.toList();
     case 'GGA':
       _validateFieldCount(fields, 14);
       // Note we do not support messages where the position is missing.
@@ -303,7 +301,7 @@ List<BoundValue> _createNmeaValues(String type, List<String> fields) {
         ret.add(
             _parseSingleValue(fields[12], Property.trueWindDirection, tier: 2));
       }
-      return ret.whereNotNull().toList();
+      return ret.nonNulls.toList();
     case 'MWD':
       _validateFieldCount(fields, 8);
       var ret = <BoundValue<SingleValue<double>>?>[];
@@ -315,7 +313,7 @@ List<BoundValue> _createNmeaValues(String type, List<String> fields) {
         _validateFieldValue(fields, index: 7, expected: 'M');
         ret.add(_parseSingleValue(fields[6], Property.trueWindSpeed, tier: 2));
       }
-      return ret.whereNotNull().toList();
+      return ret.nonNulls.toList();
     case 'MWV':
       _validateFieldCount(fields, 5);
       _validateValidityIndicator(fields, index: 4);
@@ -346,13 +344,13 @@ List<BoundValue> _createNmeaValues(String type, List<String> fields) {
       _validateFieldCount(fields, 2);
       _validateFieldValue(fields, index: 1, expected: 'C');
       return [_parseSingleValue(fields[0], Property.waterTemperature, tier: 2)]
-          .whereNotNull()
+          .nonNulls
           .toList();
     case 'ROT':
       _validateFieldCount(fields, 2);
       _validateValidityIndicator(fields, index: 1);
       return [_parseSingleValue(fields[0], Property.rateOfTurn, divisor: 60)]
-          .whereNotNull()
+          .nonNulls
           .toList();
     case 'RMB':
       _validateMinFieldCount(fields, 13);
@@ -395,12 +393,12 @@ List<BoundValue> _createNmeaValues(String type, List<String> fields) {
         final variation = _parseVariation(fields[9], fields[10]);
         ret.add(_boundSingleValue(variation, Property.variation, tier: 2));
       }
-      return ret.whereNotNull().toList();
+      return ret.nonNulls.toList();
     case 'RSA':
       _validateFieldCount(fields, 4);
       _validateValidityIndicator(fields, index: 1);
       return [_parseSingleValue(fields[0], Property.rudderAngle)]
-          .whereNotNull()
+          .nonNulls
           .toList();
     case 'VDR':
       _validateFieldCount(fields, 6);
@@ -410,14 +408,14 @@ List<BoundValue> _createNmeaValues(String type, List<String> fields) {
         _parseSingleValue(fields[0], Property.currentSet),
         _parseSingleValue(fields[4], Property.currentDrift,
             divisor: metersPerSecondToKnots)
-      ].whereNotNull().toList();
+      ].nonNulls.toList();
     case 'VHW':
       _validateMinFieldCount(fields, 8);
       _validateFieldValue(fields, index: 7, expected: 'K');
       return [
         // Need to convert from kmph (sigh).
         _parseSingleValue(fields[6], Property.speedThroughWater, divisor: 3.6)
-      ].whereNotNull().toList();
+      ].nonNulls.toList();
     case 'VLW':
       _validateMinFieldCount(fields, 4);
       _validateFieldValue(fields, index: 1, expected: 'N');
@@ -427,7 +425,7 @@ List<BoundValue> _createNmeaValues(String type, List<String> fields) {
             divisor: metersToNauticalMiles),
         _parseSingleValue(fields[2], Property.distanceTrip,
             divisor: metersToNauticalMiles)
-      ].whereNotNull().toList();
+      ].nonNulls.toList();
     case 'VTG':
       _validateMinFieldCount(fields, 8);
       _validateFieldValue(fields, index: 1, expected: 'T');
@@ -436,7 +434,7 @@ List<BoundValue> _createNmeaValues(String type, List<String> fields) {
         _parseSingleValue(fields[0], Property.courseOverGround),
         // Need to convert from kmph (sigh).
         _parseSingleValue(fields[6], Property.speedOverGround, divisor: 3.6)
-      ].whereNotNull().toList();
+      ].nonNulls.toList();
     case 'XDR':
       _validateMinFieldCount(fields, 4);
       final List<BoundValue> values = [];
@@ -527,7 +525,7 @@ void _validateFieldValue(List<String> fields,
 }
 
 /// Validates a validity indicator fields is set to 'A'.
-void _validateValidityIndicator(fields, {required index}) {
+void _validateValidityIndicator(List<String> fields, {required index}) {
   _validateFieldValue(fields,
       index: index, expected: 'A', message: 'Data marked invalid');
 }

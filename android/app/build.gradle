@@ -30,11 +30,7 @@ if (flutterVersionName == null) {
 
 android {
     compileSdkVersion flutter.compileSdkVersion
-    // Set manually because using a newer version of android gradle plugin than
-    // flutter was build with. See https://github.com/flutter/flutter/issues/139427 
-    //ndkVersion flutter.ndkVersion
-    ndkVersion = "26.1.10909125"
-
+    ndkVersion flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8

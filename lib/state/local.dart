@@ -6,8 +6,7 @@ import 'dart:async';
 
 import 'package:async/async.dart';
 import 'package:nmea_dashboard/state/values.dart';
-
-import 'common.dart';
+import 'package:nmea_dashboard/state/common.dart';
 
 const _interval = Duration(seconds: 1);
 

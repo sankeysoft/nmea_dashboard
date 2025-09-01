@@ -5,15 +5,14 @@
 import 'package:flutter/material.dart';
 import 'package:nmea_dashboard/state/data_element.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
+import 'package:nmea_dashboard/ui/cells/abstract.dart';
 import 'package:provider/provider.dart';
-
-import 'abstract.dart';
 
 class CurrentValueCell extends HeadingContentsCell {
   CurrentValueCell(
-      {required element, required formatter, required super.spec, super.key})
+      {required DataElement element, required formatter, required super.spec, super.key})
       : super(
-            heading: spec.name ?? element.shortName ?? ' ',
+            heading: spec.name ?? (element.shortName.isEmpty ? ' ' : element.shortName),
             units: formatter.units ?? ' ',
             content: ChangeNotifierProvider<DataElement>.value(
                 value: element, child: _Value(formatter)));

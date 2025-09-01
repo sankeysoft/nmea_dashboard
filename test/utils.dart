@@ -19,30 +19,30 @@ class ValueMatches extends Matcher {
     } else if (item.runtimeType != _expected.runtimeType) {
       return false;
     } else if (_expected is SingleValue<double>) {
-      final e = _expected as SingleValue<double>;
+      final e = _expected; // Using type implied by type check.
       final a = item as SingleValue<double>;
       return ((a.data - e.data).abs() < _floatTolerance);
     } else if (_expected is SingleValue<DateTime>) {
-      final e = _expected as SingleValue<DateTime>;
+      final e = _expected; // Using type implied by type check.
       final a = item as SingleValue<DateTime>;
       return (a.data == e.data);
     } else if (_expected is DoubleValue<double>) {
-      final e_ = _expected as DoubleValue<double>;
-      final a_ = item as DoubleValue<double>;
-      return ((a_.first - e_.first).abs() < _floatTolerance &&
-          (a_.second - e_.second).abs() < _floatTolerance);
+      final e = _expected; // Using type implied by type check.
+      final a = item as DoubleValue<double>;
+      return ((a.first - e.first).abs() < _floatTolerance &&
+          (a.second - e.second).abs() < _floatTolerance);
     } else if (_expected is AugmentedBearing) {
-      final e_ = _expected as AugmentedBearing;
-      final a_ = item as AugmentedBearing;
-      if ((a_.bearing - e_.bearing).abs() > _floatTolerance) {
+      final e = _expected; // Using type implied by type check.
+      final a = item as AugmentedBearing;
+      if ((a.bearing - e.bearing).abs() > _floatTolerance) {
         return false;
       }
-      if (a_.variation == null && e_.variation == null) {
+      if (a.variation == null && e.variation == null) {
         return true;
       }
-      return (a_.variation != null &&
-          e_.variation != null &&
-          (a_.variation! - e_.variation!).abs() < _floatTolerance);
+      return (a.variation != null &&
+          e.variation != null &&
+          (a.variation! - e.variation!).abs() < _floatTolerance);
     } else {
       throw UnimplementedError(
           'No matcher for value type: ${_expected.runtimeType}');

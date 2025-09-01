@@ -7,9 +7,8 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/state/log_set.dart';
+import 'package:nmea_dashboard/ui/forms/abstract.dart';
 import 'package:provider/provider.dart';
-
-import 'abstract.dart';
 
 const double _cellPadding = 4.0;
 

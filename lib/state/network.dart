@@ -8,11 +8,10 @@ import 'dart:io';
 import 'package:async/async.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
+import 'package:nmea_dashboard/state/nmea.dart';
 import 'package:nmea_dashboard/state/settings.dart';
 import 'package:nmea_dashboard/state/values.dart';
 import 'package:udp/udp.dart';
-
-import 'nmea.dart';
 
 const _networkErrorRetry = Duration(seconds: 15);
 
@@ -99,7 +98,7 @@ Stream<Uint8List> _periodicEmptyPackets() {
 /// enable cancelling.
 Stream<BoundValue?> _valuesFromPackets(
     Stream<Uint8List> packetStream, NmeaParser parser) async* {
-  var remaining = '';
+  String remaining = '';
   await for (final packet
       in StreamGroup.merge([packetStream, _periodicEmptyPackets()])) {
     parser.logAndClearIfNeeded();
@@ -136,7 +135,7 @@ Stream<BoundValue?> _valuesFromPackets(
 /// Returns the best location to split remaing data based on the first CR LF,
 /// or message start indicator, or -1 if there is none. This is needed because
 /// annoyingly some networks don't CRLF terminate all messages correctly.
-int _findSplit(remainingData) {
+int _findSplit(String remainingData) {
   if (remainingData.length < 2) {
     return -1;
   }

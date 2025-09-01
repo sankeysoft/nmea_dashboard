@@ -74,15 +74,15 @@ class _PrefValue<T> {
     }
   }
 
-  static T _read<T>(prefs, key, T defaultVal) {
+  static T _read<T>(SharedPreferences prefs, String key, T defaultVal) {
     if (T == double) {
-      return prefs.getDouble(key) ?? defaultVal;
+      return (prefs.getDouble(key) ?? defaultVal) as T;
     } else if (T == int) {
-      return prefs.getInt(key) ?? defaultVal;
+      return (prefs.getInt(key) ?? defaultVal) as T;
     } else if (T == bool) {
-      return prefs.getBool(key) ?? defaultVal;
+      return (prefs.getBool(key) ?? defaultVal) as T;
     } else if (T == String) {
-      return prefs.getString(key) ?? defaultVal;
+      return (prefs.getString(key) ?? defaultVal) as T;
     } else {
       throw InvalidTypeException('Invalid type for PrefValue $T');
     }
@@ -324,7 +324,7 @@ class DerivedDataSettings with ChangeNotifier {
   /// Replaces the current set of pages with pages from a json encoded string,
   /// making no changes if the string is not valid or if dryRun is true.
   /// Returns true on success.
-  bool useClipboard(text, {bool dryRun = false}) {
+  bool useClipboard(String text, {bool dryRun = false}) {
     bool success = _fromJson(json: text, source: 'clipboard', dryRun: dryRun);
     if (!dryRun && success) {
       _save();
@@ -425,7 +425,7 @@ class PageSettings with ChangeNotifier {
   /// Replaces the current set of pages with pages from a json encoded string,
   /// making no changes if the string is not valid or if dryRun is true.
   /// Returns true on success.
-  bool useClipboard(text, {bool dryRun = false}) {
+  bool useClipboard(String text, {bool dryRun = false}) {
     bool success = _fromJson(json: text, source: 'clipboard', dryRun: dryRun);
     if (!dryRun && success) {
       _save();

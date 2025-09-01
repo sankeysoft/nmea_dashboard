@@ -88,7 +88,7 @@ class IntegerFormatter extends Formatter<SingleValue<int>> {
 class PositionFormatter extends Formatter<DoubleValue<double>> {
   final bool includeSeconds;
 
-  PositionFormatter(longName, this.includeSeconds) : super(longName, ' ');
+  PositionFormatter(String longName, this.includeSeconds) : super(longName, ' ');
 
   @override
   String format(DoubleValue<double>? input) {
@@ -98,7 +98,7 @@ class PositionFormatter extends Formatter<DoubleValue<double>> {
             '${_formatComponent(input.second, 'E', 'W')}';
   }
 
-  String _formatComponent(value, positiveDir, negativeDir) {
+  String _formatComponent(double value, String positiveDir, String negativeDir) {
     final dir = (value >= 0) ? positiveDir : negativeDir;
     final deg = value.abs().floor();
     final min = (value.abs() - deg) * 60.0;

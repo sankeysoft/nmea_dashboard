@@ -6,14 +6,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 import 'package:provider/provider.dart';
-import 'state/data_set.dart';
-import 'state/history.dart';
-import 'state/log_set.dart';
-import 'state/settings.dart';
-import 'state/specs.dart';
-import 'ui/forms/view_help.dart';
-import 'ui/theme.dart';
-import 'ui/pages/data_table.dart';
+import 'package:nmea_dashboard/state/data_set.dart';
+import 'package:nmea_dashboard/state/history.dart';
+import 'package:nmea_dashboard/state/log_set.dart';
+import 'package:nmea_dashboard/state/settings.dart';
+import 'package:nmea_dashboard/state/specs.dart';
+import 'package:nmea_dashboard/ui/forms/view_help.dart';
+import 'package:nmea_dashboard/ui/theme.dart';
+import 'package:nmea_dashboard/ui/pages/data_table.dart';
 
 /// The minimum time for which we display the loading screen.
 const Duration loadingScreenTime = Duration(seconds: 1);

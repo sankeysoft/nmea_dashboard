@@ -7,7 +7,7 @@ import 'package:nmea_dashboard/state/values.dart';
 
 import 'utils.dart';
 
-main() {
+void main() {
   // TODO: A test that all property value types can be deserialized would be
   // nice but can think of a good way to do it since the deserialize is a
   // generic which must be specified at compile time, maybe statically define

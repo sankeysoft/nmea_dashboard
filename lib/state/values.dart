@@ -2,7 +2,7 @@
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
-import 'common.dart';
+import 'package:nmea_dashboard/state/common.dart';
 
 /// A bound value is a single instance of the data for some property in some
 /// source.
@@ -126,7 +126,7 @@ class AugmentedBearing extends Value {
         variation = variation?.data;
 
   /// Convenience method to create an AugmentedBearing with doubles rather
-  /// than SingleValue<double>s.
+  /// than `SingleValue<double>s`.
   static AugmentedBearing fromNumbers(double bearing, double? variation) {
     return AugmentedBearing(SingleValue(bearing),
         variation == null ? null : SingleValue(variation));
@@ -171,7 +171,7 @@ class AugmentedBearing extends Value {
 /// A class to accumulate values of some type into an average.
 abstract class ValueAccumulator<V extends Value> {
   /// Adds a new value into this accumulator.
-  add(V value);
+  void add(V value);
 
   /// Returns the average of the values added into this accumulator and clears
   /// state to begin additional accumulation.
@@ -194,7 +194,7 @@ class SingleValueAccumulator extends ValueAccumulator<SingleValue<double>> {
   SingleValueAccumulator() : num = NumericAccumulator();
 
   @override
-  add(SingleValue<double> value) {
+  void add(SingleValue<double> value) {
     num.add(value.data);
   }
 
@@ -237,7 +237,7 @@ class NumericAccumulator {
   NumericAccumulator() : count = 0;
 
   // Adds a new value into this accumulator.
-  add(double value) {
+  void add(double value) {
     count += 1;
     total = (total == null) ? value : total! + value;
   }

@@ -8,8 +8,8 @@ import 'package:nmea_dashboard/state/data_element.dart';
 import 'package:nmea_dashboard/state/data_set.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:nmea_dashboard/state/specs.dart';
+import 'package:nmea_dashboard/ui/forms/abstract.dart';
 import 'package:provider/provider.dart';
-import 'abstract.dart';
 
 /// Create an initial spec for a freshly created element.
 DerivedDataSpec _createDefaultSpec() {

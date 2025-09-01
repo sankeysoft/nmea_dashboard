@@ -3,8 +3,7 @@
 // of the MIT license. See the LICENCE.md file for details.
 
 import 'package:flutter/material.dart';
-
-import '../state/settings.dart';
+import 'package:nmea_dashboard/state/settings.dart';
 
 /// Creates a theme based on the supplied UI settings.
 ThemeData createThemeData(UiSettings settings) {

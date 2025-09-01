@@ -5,9 +5,8 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-
-import '../../state/specs.dart';
-import '../forms/edit_cell.dart';
+import 'package:nmea_dashboard/state/specs.dart';
+import 'package:nmea_dashboard/ui/forms/edit_cell.dart';
 
 // A single cell used to populate one entry in some data grid.
 abstract class Cell extends StatelessWidget {
@@ -64,8 +63,8 @@ enum _Component {
 
 abstract class HeadingContentsCell extends SpecCell {
   HeadingContentsCell(
-      {required heading,
-      required units,
+      {required String heading,
+      required String units,
       required content,
       required super.spec,
       super.key})

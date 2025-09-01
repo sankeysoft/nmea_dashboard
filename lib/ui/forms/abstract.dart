@@ -350,7 +350,7 @@ abstract class StatefulFormState<T extends StatefulWidget> extends State<T> {
           isDense: true,
         ),
         iconEnabledColor: theme.colorScheme.tertiary,
-        value: initialValue,
+        initialValue: initialValue,
         autovalidateMode: AutovalidateMode.onUserInteraction,
         onChanged: onChanged,
         validator: validator,
@@ -376,7 +376,7 @@ abstract class StatefulFormState<T extends StatefulWidget> extends State<T> {
         builder: (FormFieldState<bool> field) {
           return Switch(
             value: field.value ?? true,
-            activeColor: theme.colorScheme.tertiary,
+            activeThumbColor: theme.colorScheme.tertiary,
             onChanged: (val) {
               field.didChange(val);
               if (onChanged != null) {

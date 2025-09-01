@@ -8,11 +8,10 @@ import 'package:nmea_dashboard/state/data_element.dart';
 import 'package:nmea_dashboard/state/data_set.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:nmea_dashboard/state/specs.dart';
+import 'package:nmea_dashboard/ui/cells/abstract.dart';
 import 'package:nmea_dashboard/ui/cells/current_value_cell.dart';
 import 'package:nmea_dashboard/ui/cells/history_cell.dart';
 import 'package:nmea_dashboard/ui/cells/text_cell.dart';
-
-import 'abstract.dart';
 
 /// This module's logger.
 final _log = Logger('CellCreation');

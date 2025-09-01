@@ -4,11 +4,11 @@
 
 import 'package:flutter/material.dart';
 
-import 'abstract.dart';
+import 'package:nmea_dashboard/ui/cells/abstract.dart';
 
 /// A cell to display a fixed text string.
 class TextCell extends SpecCell {
-  TextCell({required text, required super.spec, super.key})
+  TextCell({required String text, required super.spec, super.key})
       : super(content: _TextContent(text));
 }
 

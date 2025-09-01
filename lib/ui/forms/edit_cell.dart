@@ -3,15 +3,14 @@
 // of the MIT license. See the LICENCE.md file for details.
 
 import 'package:flutter/material.dart';
+import 'package:nmea_dashboard/state/data_element.dart';
+import 'package:nmea_dashboard/state/data_set.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
+import 'package:nmea_dashboard/state/settings.dart';
+import 'package:nmea_dashboard/state/common.dart';
+import 'package:nmea_dashboard/state/specs.dart';
+import 'package:nmea_dashboard/ui/forms/abstract.dart';
 import 'package:provider/provider.dart';
-
-import '../../state/data_element.dart';
-import '../../state/data_set.dart';
-import '../../state/settings.dart';
-import '../../state/common.dart';
-import '../../state/specs.dart';
-import 'abstract.dart';
 
 /// A form that lets the user edit a data cell.
 class EditCellPage extends StatefulFormPage {
