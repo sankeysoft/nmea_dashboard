@@ -28,7 +28,7 @@ the following:
 * **Network**: Configure the connection to your NMEA hardware.
 * **Pages**: Add, delete, edit, or reorder data pages.
 * **Derived Data**: Define and edit new elements derived from network data.
-* **UI Style**: Configure fonts.
+* **UI Style**: Configure fonts and dark/light theme.
 * **Debug Log**: Display a log of information useful for debugging.
 * **Help & License**: Display this help text.
 

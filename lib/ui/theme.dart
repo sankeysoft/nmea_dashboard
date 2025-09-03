@@ -7,7 +7,7 @@ import 'package:nmea_dashboard/state/settings.dart';
 
 /// Creates a theme based on the supplied UI settings.
 ThemeData createThemeData(UiSettings settings) {
-  final palette = _Palette(settings.nightMode);
+  final palette = _Palette(settings.darkTheme, settings.nightMode);
 
   return ThemeData(
     primarySwatch: Colors.grey,
@@ -16,11 +16,11 @@ ThemeData createThemeData(UiSettings settings) {
       // Primary and secondary are used for buttons and switches
       primary: palette.primary,
       primaryContainer: palette.midPrimary,
-      onPrimary: palette.darkestBackground,
+      onPrimary: palette.background,
       secondary: palette.secondary,
-      onSecondary: palette.darkestBackground,
+      onSecondary: palette.background,
       tertiary: palette.tertiary,
-      onTertiary: palette.darkestBackground,
+      onTertiary: palette.background,
       error: Colors.red,
       onError: Colors.white,
       // Surface is used for the data cells, app bar, and drawer.
@@ -28,11 +28,11 @@ ThemeData createThemeData(UiSettings settings) {
       onSurface: palette.primary,
       // Surface tint is used for tiles, the drawer header, and missing data
       // in graphs.
-      surfaceTint: palette.lightestBackground,
+      surfaceTint: palette.weakestBackground,
     ),
-    scaffoldBackgroundColor: palette.darkestBackground,
+    scaffoldBackgroundColor: palette.background,
     canvasColor: palette.midBackground,
-    disabledColor: palette.dimmestPrimary,
+    disabledColor: palette.weakestPrimary,
     textTheme: Typography.whiteMountainView.copyWith(
       // Used by dialogs.
       titleLarge: TextStyle(fontSize: 18, color: palette.primary),
@@ -59,35 +59,45 @@ ThemeData createThemeData(UiSettings settings) {
 
 /// App-specific colors we actually want to control.
 class _Palette {
-  late final Color lightestBackground;
+  late final Color background;
   late final Color midBackground;
-  late final Color darkestBackground;
+  late final Color weakestBackground;
   late final Color primary;
   late final Color midPrimary;
-  late final Color dimmestPrimary;
+  late final Color weakestPrimary;
   late final Color secondary;
   late final Color tertiary;
 
-  _Palette(bool nightMode) {
+  _Palette(bool darkTheme, bool nightMode) {
     if (nightMode) {
       primary = const Color(0xffff0000);
       midPrimary = const Color(0xffbb0000);
-      dimmestPrimary = const Color(0xff770000);
+      weakestPrimary = const Color(0xff770000);
       secondary = const Color(0xffcc0000);
       tertiary = const Color(0xffbb0000);
-      lightestBackground = const Color(0xff222222);
+      background = Colors.black;
       midBackground = const Color(0xff111111);
-      darkestBackground = Colors.black;
+      weakestBackground = const Color(0xff222222);
       return;
-    } else {
+    } else if (darkTheme) {
       primary = Colors.white;
       midPrimary = Colors.grey.shade400;
-      dimmestPrimary = Colors.grey.shade700;
+      weakestPrimary = Colors.grey.shade700;
       secondary = Colors.green.shade300;
       tertiary = Colors.blue.shade300;
-      lightestBackground = Colors.grey.shade800;
+      background = Colors.black;
       midBackground = Colors.grey.shade900;
-      darkestBackground = Colors.black;
+      weakestBackground = Colors.grey.shade800;
+      return;
+    } else {
+      primary = Colors.black;
+      midPrimary = Colors.grey.shade800;
+      weakestPrimary = Colors.grey.shade600;
+      secondary = Colors.green.shade600;
+      tertiary = Colors.blue.shade600;
+      background = Colors.white;
+      midBackground = Colors.grey.shade100;
+      weakestBackground = Colors.grey.shade300;
       return;
     }
   }

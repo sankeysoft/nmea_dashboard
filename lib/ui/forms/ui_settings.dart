@@ -32,11 +32,13 @@ class _UiSettingsForm extends StatefulWidget {
 class _UiSettingsFormState extends StatefulFormState<_UiSettingsForm> {
   late String _valueFont;
   late String _headingFont;
+  late bool _darkTheme;
 
   @override
   void initState() {
     _valueFont = widget._settings.valueFont;
     _headingFont = widget._settings.headingFont;
+    _darkTheme = widget._settings.darkTheme;
     super.initState();
   }
 
@@ -48,10 +50,15 @@ class _UiSettingsFormState extends StatefulFormState<_UiSettingsForm> {
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(child: ListView(children: [_buildValueField(), _buildHeadingField()])),
+          Expanded(
+            child: ListView(
+              children: [_buildValueField(), _buildHeadingField(), _buildDarkThemeField()],
+            ),
+          ),
           buildSaveButton(
             postSaver: () {
               widget._settings.setFonts(valueFont: _valueFont, headingFont: _headingFont);
+              widget._settings.setDarkTheme(_darkTheme);
               Navigator.pop(context);
             },
           ),
@@ -87,6 +94,18 @@ class _UiSettingsFormState extends StatefulFormState<_UiSettingsForm> {
           if (value != null) {
             _headingFont = value;
           }
+        });
+      },
+    );
+  }
+
+  Widget _buildDarkThemeField() {
+    return buildSwitch(
+      label: 'Dark theme',
+      initialValue: _darkTheme,
+      onChanged: (value) {
+        setState(() {
+          _darkTheme = value;
         });
       },
     );

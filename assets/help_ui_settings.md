@@ -8,5 +8,9 @@ This form lets you change the basic properties of the user interface.
 * **Heading font**: The font to use for displaying the cell names and units.
   Select from one of the standard fonts included with the app.
 
+* **Dark theme**: When enabled (the default), day mode is light text on a dark
+  background. When disabled, day mode is dark text on a light background. Night
+  mode is always red text on a dark background.
+
 * **Save**: Save the changes and close the form. Alternatively tap the back
   arrow (at the top left) to close the form without saving changes.

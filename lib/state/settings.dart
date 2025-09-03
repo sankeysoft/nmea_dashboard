@@ -229,6 +229,7 @@ enum NetworkMode {
 class UiSettings with ChangeNotifier {
   final _PrefValue<bool> _firstRun;
   final _PrefValue<bool> _nightMode;
+  final _PrefValue<bool> _darkTheme;
   final _PrefValue<String> _valueFont;
   final _PrefValue<String> _headingFont;
 
@@ -248,11 +249,13 @@ class UiSettings with ChangeNotifier {
   UiSettings(SharedPreferences prefs)
     : _firstRun = _PrefValue(prefs, 'ui_first_run', true),
       _nightMode = _PrefValue(prefs, 'ui_night_mode', false),
+      _darkTheme = _PrefValue(prefs, 'ui_dark_theme', true),
       _valueFont = _PrefValue(prefs, 'ui_value_font', 'Lexend'),
       _headingFont = _PrefValue(prefs, 'ui_heading_font', 'Manrope');
 
   bool get firstRun => _firstRun.value;
   bool get nightMode => _nightMode.value;
+  bool get darkTheme => _darkTheme.value;
   String get valueFont => _valueFont.value;
   String get headingFont => _headingFont.value;
 
@@ -265,8 +268,13 @@ class UiSettings with ChangeNotifier {
     setNightMode(!_nightMode.value);
   }
 
-  void setNightMode(bool night) {
-    _nightMode.set(night);
+  void setNightMode(bool isNight) {
+    _nightMode.set(isNight);
+    notifyListeners();
+  }
+
+  void setDarkTheme(bool isDark) {
+    _darkTheme.set(isDark);
     notifyListeners();
   }
 
