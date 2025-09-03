@@ -163,6 +163,14 @@ void main() {
     expect(format(101326, 'inchHg'), equals('29.92'));
   });
 
+  test('rotational speed should be formatted appropriately', () {
+    String format(double number, String name) {
+      return formattersFor(Property.engine1Rpm.dimension)[name]!.format(SingleValue(number));
+    }
+
+    expect(format(1263.4, 'rpm'), equals('1263'));
+  });
+
   test('speed should be formatted appropriately', () {
     String format(double number, String name) {
       return formattersFor(Property.speedOverGround.dimension)[name]!.format(SingleValue(number));
