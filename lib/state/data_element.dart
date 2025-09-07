@@ -9,7 +9,7 @@ import 'package:logging/logging.dart';
 
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
-import 'package:nmea_dashboard/state/history.dart';
+import 'package:nmea_dashboard/state/data_element_history.dart';
 import 'package:nmea_dashboard/state/values.dart';
 
 /// The shortest time between triggering updates on an element.
@@ -104,7 +104,7 @@ abstract class DataElement<V extends Value, U extends Value> with ChangeNotifier
     }
     _tier = newValue.tier;
 
-    // Set a new timer to invalidate this element is no new data is received,
+    // Set a new timer to invalidate this element if no new data is received,
     // replacing any previous timer.
     stalenessTimer?.cancel();
     if (staleness != null) {

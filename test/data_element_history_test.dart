@@ -3,7 +3,7 @@
 // of the MIT license. See the LICENCE.md file for details.
 
 import 'package:nmea_dashboard/state/common.dart';
-import 'package:nmea_dashboard/state/history.dart';
+import 'package:nmea_dashboard/state/data_element_history.dart';
 import 'package:nmea_dashboard/state/values.dart';
 import 'package:test/test.dart';
 

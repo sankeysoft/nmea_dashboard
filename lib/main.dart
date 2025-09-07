@@ -7,7 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 import 'package:provider/provider.dart';
 import 'package:nmea_dashboard/state/data_set.dart';
-import 'package:nmea_dashboard/state/history.dart';
+import 'package:nmea_dashboard/state/data_element_history.dart';
 import 'package:nmea_dashboard/state/log_set.dart';
 import 'package:nmea_dashboard/state/settings.dart';
 import 'package:nmea_dashboard/state/specs.dart';
