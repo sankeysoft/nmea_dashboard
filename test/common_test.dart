@@ -49,4 +49,13 @@ void main() {
     expect(HistoryInterval.twelveHours.formatTime(dt), '14:52');
     expect(HistoryInterval.fortyEightHours.formatTime(dt), 'Jun 15');
   });
+
+  test('StatsInterval should format cell names', () {
+    final element = ConsistentDataElement(
+      Source.network,
+      Property.speedOverGround,
+      Staleness(const Duration(minutes: 1)),
+    );
+    expect(StatsInterval.oneMin.shortCellName(element), 'SOG (1min)');
+  });
 }

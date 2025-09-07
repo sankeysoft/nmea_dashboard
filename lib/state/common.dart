@@ -202,6 +202,8 @@ enum CellType {
 }
 
 /// A time interval over which historical data may be tracked.
+/// Declarations are clunky and repeated because we need the constructor to be
+/// constant hence can't use non-const functions.
 enum HistoryInterval {
   fifteenMin('15 minutes', '15min', Duration(seconds: 10), 90, Duration(minutes: 5), 'HH:mm'),
   twoHours('2 hours', '2hr', Duration(minutes: 1), 120, Duration(hours: 1), 'HH:mm'),
@@ -245,9 +247,37 @@ enum HistoryInterval {
     return '${element.shortName} ($short)';
   }
 
-  /// Returns the short name for a cell showing this interval for a property.
+  /// Returns the string used to format times in a cell showing this interval.
   String formatTime(DateTime time) {
     // Unfortunately dateformat is not const constructor so can't make earlier.
     return DateFormat(_format).format(time);
+  }
+}
+
+/// A time interval over which statistics data may be calculated.
+enum StatsInterval {
+  fifteenSec('15 seconds', '15sec', Duration(seconds: 15)),
+  oneMin('1 minute', '1min', Duration(minutes: 1)),
+  fiveMin('5 minutes', '5min', Duration(minutes: 5));
+
+  /// The string to display.
+  final String display;
+
+  /// A short string to display.
+  final String short;
+
+  /// The length of the interval.
+  final Duration duration;
+
+  const StatsInterval(this.display, this.short, this.duration);
+
+  /// Returns a stats interval from its unqualified name.
+  static StatsInterval? fromString(String? name) {
+    return StatsInterval.values.asNameMap()[name];
+  }
+
+  /// Returns the short name for a cell showing this interval for a property.
+  String shortCellName(DataElement element) {
+    return '${element.shortName} ($short)';
   }
 }
