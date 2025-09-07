@@ -246,7 +246,7 @@ class AugmentedBearingAccumulator extends ValueAccumulator<AugmentedBearing> {
       variationPresent.add(true);
       variation.add(value.variation!);
     } else {
-      variationPresent.add(true);
+      variationPresent.add(false);
     }
   }
 
