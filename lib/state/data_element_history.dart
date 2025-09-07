@@ -259,7 +259,8 @@ class History<V extends Value> with ChangeNotifier {
   /// the next.
   void endSegment(DateTime now) {
     // Read the current accumlator and start a new one.
-    final average = _accumulator.getAndClear();
+    final average = _accumulator.get();
+    _accumulator.clear();
 
     // Potentially we are being called way later than the end of the segment we
     // were accumulating, figure out how many we should slide the array down.

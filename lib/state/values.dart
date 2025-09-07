@@ -2,6 +2,8 @@
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
+import 'dart:collection';
+
 import 'package:nmea_dashboard/state/common.dart';
 
 /// A bound value is a single instance of the data for some property in some
@@ -170,12 +172,17 @@ class AugmentedBearing extends Value {
 
 /// A class to accumulate values of some type into an average.
 abstract class ValueAccumulator<V extends Value> {
+  /// Returns the average of the values added into this accumulator.
+  V? get();
+
   /// Adds a new value into this accumulator.
   void add(V value);
 
-  /// Returns the average of the values added into this accumulator and clears
-  /// state to begin additional accumulation.
-  V? getAndClear();
+  /// Removes the first value added to this accumulator.
+  void removeFirst();
+
+  /// Clears state to begin additional accumulation.
+  void clear();
 
   /// Returns a value accumulator suitable for accumulating the supplied type.
   static ValueAccumulator<dynamic> forType(Type type) {
@@ -199,53 +206,100 @@ class SingleValueAccumulator extends ValueAccumulator<SingleValue<double>> {
   }
 
   @override
-  SingleValue<double>? getAndClear() {
-    final d = num.getAndClear();
+  void removeFirst() {
+    num.removeFirst();
+  }
+
+  @override
+  SingleValue<double>? get() {
+    final d = num.get();
     return d == null ? null : SingleValue(d);
+  }
+
+  @override
+  void clear() {
+    num.clear();
   }
 }
 
 class AugmentedBearingAccumulator extends ValueAccumulator<AugmentedBearing> {
-  NumericAccumulator bearing;
-  NumericAccumulator variation;
+  final NumericAccumulator bearing;
+  final NumericAccumulator variation;
+  final Queue<bool> variationPresent;
 
-  AugmentedBearingAccumulator() : bearing = NumericAccumulator(), variation = NumericAccumulator();
+  AugmentedBearingAccumulator()
+    : bearing = NumericAccumulator(),
+      variation = NumericAccumulator(),
+      variationPresent = Queue();
+
+  @override
+  AugmentedBearing? get() {
+    final b = bearing.get();
+    final v = variation.get();
+    return b == null ? null : AugmentedBearing.fromNumbers(b, v);
+  }
 
   @override
   add(AugmentedBearing value) {
     bearing.add(value.bearing);
     if (value.variation != null) {
+      variationPresent.add(true);
       variation.add(value.variation!);
+    } else {
+      variationPresent.add(true);
     }
   }
 
   @override
-  AugmentedBearing? getAndClear() {
-    final b = bearing.getAndClear();
-    final v = variation.getAndClear();
-    return b == null ? null : AugmentedBearing.fromNumbers(b, v);
+  void removeFirst() {
+    bearing.removeFirst();
+    if (variationPresent.removeFirst()) {
+      variation.removeFirst();
+    }
+  }
+
+  @override
+  void clear() {
+    bearing.clear();
+    variation.clear();
+    variationPresent.clear();
   }
 }
 
 /// A class to accumulate values of some type into an average.
 class NumericAccumulator {
+  final Queue<double> values;
   int count;
   double? total;
 
-  NumericAccumulator() : count = 0;
+  NumericAccumulator() : values = Queue(), count = 0;
 
-  // Adds a new value into this accumulator.
+  /// Adds a new value into this accumulator.
   void add(double value) {
+    values.add(value);
     count += 1;
     total = (total == null) ? value : total! + value;
   }
 
+  /// Removes the first value added into this accumulator, if present.
+  void removeFirst() {
+    if (count > 0) {
+      final value = values.removeFirst();
+      count -= 1;
+      total = (count == 0) ? null : total! - value;
+    }
+  }
+
   /// Returns the average of the values added into this accumulator.
-  double? getAndClear() {
-    final average = (total == null) ? null : total! / count;
+  double? get() {
+    return (total == null) ? null : total! / count;
+  }
+
+  /// Clears all values;
+  void clear() {
+    values.clear();
     count = 0;
     total = null;
-    return average;
   }
 }
 
