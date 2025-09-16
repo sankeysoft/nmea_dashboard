@@ -12,5 +12,9 @@ This form lets you change the basic properties of the user interface.
   background. When disabled, day mode is dark text on a light background. Night
   mode is always red text on a dark background.
 
+* **Keep screen on**: When enabled, the app will prevent the screen from
+  turning off automatically. This will use more battery unless your device is
+  plugged in.
+
 * **Save**: Save the changes and close the form. Alternatively tap the back
   arrow (at the top left) to close the form without saving changes.
