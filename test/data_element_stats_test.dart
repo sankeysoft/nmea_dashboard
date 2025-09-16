@@ -39,6 +39,7 @@ void main() {
   test('Stats should be initialized without data by default', () {
     final stats = Stats<SingleValue<double>>(_testInterval, _testDataId);
     expect(stats.mean, isNull);
+    expect(stats.last, isNull);
   });
 
   test('Stats should accumulate data if expiry is not called', () {
@@ -49,12 +50,15 @@ void main() {
     stats.addValue(SingleValue(10.0));
     expect(eventCount, 1);
     expect(stats.mean, ValueMatches(SingleValue(10.0)));
+    expect(stats.last, ValueMatches(SingleValue(10.0)));
     stats.addValue(SingleValue(20.0));
     expect(eventCount, 2);
     expect(stats.mean, ValueMatches(SingleValue(15.0)));
+    expect(stats.last, ValueMatches(SingleValue(20.0)));
     stats.addValue(SingleValue(30.0));
     expect(eventCount, 3);
     expect(stats.mean, ValueMatches(SingleValue(20.0)));
+    expect(stats.last, ValueMatches(SingleValue(30.0)));
   });
 
   test('Stats should remove data when expired', () {
@@ -80,12 +84,14 @@ void main() {
       expect(eventCount, 4);
       async.elapse(tick);
       expect(stats.mean, ValueMatches(SingleValue(30.0)));
+      expect(stats.last, ValueMatches(SingleValue(30.0)));
       expect(eventCount, 5);
       async.elapse(tick);
-      expect(stats.mean, null);
+      expect(stats.mean, isNull);
+      expect(stats.last, isNull);
       expect(eventCount, 6);
       async.elapse(tick);
-      expect(stats.mean, null);
+      expect(stats.mean, isNull);
       expect(eventCount, 6);
     });
   });
@@ -108,7 +114,7 @@ void main() {
       // Jump a block without letting timers fire then let them fire.
       async.elapseBlocking(_testInterval.duration);
       async.elapse(tick);
-      expect(stats.mean, null);
+      expect(stats.mean, isNull);
       expect(eventCount, 4);
     });
   });
@@ -131,10 +137,10 @@ void main() {
       expect(stats.mean, ValueMatches(SingleValue(10.0)));
       expect(eventCount, 1);
       async.elapse(tick);
-      expect(stats.mean, null);
+      expect(stats.mean, isNull);
       expect(eventCount, 2);
       async.elapse(tick);
-      expect(stats.mean, null);
+      expect(stats.mean, isNull);
       expect(eventCount, 2);
       stats.addValue(SingleValue(20.0));
       async.elapse(tick);
@@ -151,7 +157,7 @@ void main() {
       expect(stats.mean, ValueMatches(SingleValue(30.0)));
       expect(eventCount, 5);
       async.elapse(tick);
-      expect(stats.mean, null);
+      expect(stats.mean, isNull);
       expect(eventCount, 6);
     });
   });

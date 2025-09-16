@@ -85,7 +85,7 @@ class Stats<V extends Value> with ChangeNotifier {
     // Only add an expiry timer if we don't already have one running.
     _timer ??= Timer(interval.duration, () => _handleTimer());
     // Update the average and notify listeners.
-    _mean = _accumulator.get();
+    _mean = _accumulator.mean();
     notifyListeners();
   }
 
@@ -109,11 +109,14 @@ class Stats<V extends Value> with ChangeNotifier {
     }
     // Update our tracked average and notify listeners is anything changed.
     if (removedEntries) {
-      _mean = _accumulator.get();
+      _mean = _accumulator.mean();
       notifyListeners();
     }
   }
 
   /// The average value over the window, if it exists
   V? get mean => _mean;
+
+  /// The most recent value in the window, if it exists
+  V? get last => _accumulator.last();
 }
