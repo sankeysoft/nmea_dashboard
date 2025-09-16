@@ -189,6 +189,7 @@ enum Operation {
 /// The various sources types of data cell that can be defined.
 enum CellType {
   current('Current Value'),
+  average('Average Value'),
   history('History Graph');
 
   final String longName;

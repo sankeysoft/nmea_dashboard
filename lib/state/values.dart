@@ -173,7 +173,10 @@ class AugmentedBearing extends Value {
 /// A class to accumulate values of some type into an average.
 abstract class ValueAccumulator<V extends Value> {
   /// Returns the average of the values added into this accumulator.
-  V? get();
+  V? mean();
+
+  /// Returns the most recent value added into this accumulator.
+  V? last();
 
   /// Adds a new value into this accumulator.
   void add(V value);
@@ -211,8 +214,14 @@ class SingleValueAccumulator extends ValueAccumulator<SingleValue<double>> {
   }
 
   @override
-  SingleValue<double>? get() {
-    final d = num.get();
+  SingleValue<double>? mean() {
+    final d = num.mean();
+    return d == null ? null : SingleValue(d);
+  }
+
+  @override
+  SingleValue<double>? last() {
+    final d = num.last();
     return d == null ? null : SingleValue(d);
   }
 
@@ -233,9 +242,16 @@ class AugmentedBearingAccumulator extends ValueAccumulator<AugmentedBearing> {
       variationPresent = Queue();
 
   @override
-  AugmentedBearing? get() {
-    final b = bearing.get();
-    final v = variation.get();
+  AugmentedBearing? mean() {
+    final b = bearing.mean();
+    final v = variation.mean();
+    return b == null ? null : AugmentedBearing.fromNumbers(b, v);
+  }
+
+  @override
+  AugmentedBearing? last() {
+    final b = bearing.last();
+    final v = variation.last();
     return b == null ? null : AugmentedBearing.fromNumbers(b, v);
   }
 
@@ -291,8 +307,13 @@ class NumericAccumulator {
   }
 
   /// Returns the average of the values added into this accumulator.
-  double? get() {
+  double? mean() {
     return (total == null) ? null : total! / count;
+  }
+
+  /// Returns the most recent value added into this accumulator.
+  double? last() {
+    return values.isEmpty ? null : values.last;
   }
 
   /// Clears all values;

@@ -8,6 +8,7 @@ import 'package:flutter/widgets.dart';
 import 'package:logging/logging.dart';
 
 import 'package:nmea_dashboard/state/common.dart';
+import 'package:nmea_dashboard/state/data_element_stats.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:nmea_dashboard/state/data_element_history.dart';
 import 'package:nmea_dashboard/state/values.dart';
@@ -165,6 +166,7 @@ mixin WithHistory<V extends Value, U extends Value> on DataElement<V, U> {
     HistoryInterval.values.map((i) => MapEntry(i, OptionalHistory<V>(i, id))),
   );
 
+  /// Records a new value into all active histories.
   void addHistoryValue(final V newValue) {
     for (final history in _histories.values) {
       history.addValue(newValue);
@@ -184,14 +186,33 @@ mixin WithHistory<V extends Value, U extends Value> on DataElement<V, U> {
   }
 }
 
+mixin WithStats<V extends Value, U extends Value> on DataElement<V, U> {
+  late final Map<StatsInterval, OptionalStats<V>> _stats = Map.fromEntries(
+    StatsInterval.values.map((i) => MapEntry(i, OptionalStats<V>(i, id))),
+  );
+
+  /// Records a new value into all active stats.
+  void addStatsValue(final V newValue) {
+    for (final stats in _stats.values) {
+      stats.addValue(newValue);
+    }
+  }
+
+  /// Returns the stats for the supplied interval.
+  OptionalStats stats(StatsInterval interval) {
+    return _stats[interval]!;
+  }
+}
+
 class SingleValueDoubleConsistentDataElement extends ConsistentDataElement<SingleValue<double>>
-    with WithHistory {
+    with WithHistory, WithStats {
   SingleValueDoubleConsistentDataElement(super.source, super.property, super.staleness);
 
   @override
   bool updateValue(final BoundValue<SingleValue<double>> newValue) {
     final accepted = super.updateValue(newValue);
     if (accepted) {
+      addStatsValue(newValue.value);
       addHistoryValue(newValue.value);
     }
     return accepted;
@@ -200,7 +221,7 @@ class SingleValueDoubleConsistentDataElement extends ConsistentDataElement<Singl
 
 /// A special case element for displaying bearings using a reference variation
 class BearingDataElement extends DataElement<AugmentedBearing, SingleValue<double>>
-    with WithHistory {
+    with WithHistory, WithStats {
   // Only output a log warning for discarding mag heading due to missing
   // variation once each time the condition occurs.
   static bool loggedMissingVariation = false;
@@ -239,6 +260,7 @@ class BearingDataElement extends DataElement<AugmentedBearing, SingleValue<doubl
       accepted = super.updateValue(newValue);
     }
     if (accepted && _value != null) {
+      addStatsValue(_value!);
       addHistoryValue(_value!);
     }
     return accepted;
@@ -256,7 +278,7 @@ class BearingDataElement extends DataElement<AugmentedBearing, SingleValue<doubl
 
 /// A DataElement whose value is derived from some other value.
 class DerivedDataElement extends DataElement<SingleValue<double>, SingleValue<double>>
-    with WithHistory {
+    with WithHistory, WithStats {
   final String _name;
   final DataElement<SingleValue<double>, Value> _sourceElement;
   final ConvertingFormatter _formatter;
@@ -300,6 +322,7 @@ class DerivedDataElement extends DataElement<SingleValue<double>, SingleValue<do
   bool updateValue(final BoundValue<SingleValue<double>> newValue) {
     final accepted = super.updateValue(newValue);
     if (accepted && _value != null) {
+      addStatsValue(_value!);
       addHistoryValue(_value!);
     }
     return accepted;

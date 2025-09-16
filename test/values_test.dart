@@ -9,7 +9,7 @@ import 'utils.dart';
 
 void main() {
   // TODO: A test that all property value types can be deserialized would be
-  // nice but can think of a good way to do it since the deserialize is a
+  // nice but can't think of a good way to do it since the deserialize is a
   // generic which must be specified at compile time, maybe statically define
   // types and then verify they cover everything in the property?
 
@@ -60,75 +60,75 @@ void main() {
 
   test('NumericAccumulator should give correct results.', () {
     final acc = NumericAccumulator();
-    expect(acc.get(), null);
+    expect(acc.mean(), null);
     acc.add(2.0);
-    expect(acc.get(), 2.0);
-    expect(acc.get(), 2.0);
+    expect(acc.mean(), 2.0);
+    expect(acc.mean(), 2.0);
     acc.clear();
-    expect(acc.get(), null);
+    expect(acc.mean(), null);
     acc.add(10.0);
     acc.add(11.0);
     acc.add(12.0);
-    expect(acc.get(), 11.0);
+    expect(acc.mean(), 11.0);
     acc.removeFirst();
-    expect(acc.get(), 11.5);
+    expect(acc.mean(), 11.5);
     acc.removeFirst();
-    expect(acc.get(), 12.0);
+    expect(acc.mean(), 12.0);
     acc.removeFirst();
-    expect(acc.get(), null);
+    expect(acc.mean(), null);
     acc.removeFirst();
-    expect(acc.get(), null);
+    expect(acc.mean(), null);
   });
 
   test('SingleValueAccumulator should give correct results.', () {
     final acc = ValueAccumulator.forType(SingleValue<double>);
-    expect(acc.get(), null);
+    expect(acc.mean(), null);
     acc.add(SingleValue(2.0));
-    expect(acc.get(), ValueMatches(SingleValue(2.0)));
-    expect(acc.get(), ValueMatches(SingleValue(2.0)));
+    expect(acc.mean(), ValueMatches(SingleValue(2.0)));
+    expect(acc.mean(), ValueMatches(SingleValue(2.0)));
     acc.clear();
-    expect(acc.get(), null);
+    expect(acc.mean(), null);
     acc.add(SingleValue(10.0));
     acc.add(SingleValue(11.0));
     acc.add(SingleValue(12.0));
-    expect(acc.get(), ValueMatches(SingleValue(11.0)));
+    expect(acc.mean(), ValueMatches(SingleValue(11.0)));
     acc.removeFirst();
-    expect(acc.get(), ValueMatches(SingleValue(11.5)));
+    expect(acc.mean(), ValueMatches(SingleValue(11.5)));
     acc.removeFirst();
-    expect(acc.get(), ValueMatches(SingleValue(12.0)));
+    expect(acc.mean(), ValueMatches(SingleValue(12.0)));
     acc.removeFirst();
-    expect(acc.get(), null);
+    expect(acc.mean(), null);
     acc.removeFirst();
-    expect(acc.get(), null);
+    expect(acc.mean(), null);
   });
 
   test('AugmentedBearingAccumulator should give correct results.', () {
     final acc = ValueAccumulator.forType(AugmentedBearing);
-    expect(acc.get(), null);
+    expect(acc.mean(), null);
     acc.add(AugmentedBearing.fromNumbers(200.0, 5.0));
-    expect(acc.get(), ValueMatches(AugmentedBearing.fromNumbers(200.0, 5.0)));
-    expect(acc.get(), ValueMatches(AugmentedBearing.fromNumbers(200.0, 5.0)));
+    expect(acc.mean(), ValueMatches(AugmentedBearing.fromNumbers(200.0, 5.0)));
+    expect(acc.mean(), ValueMatches(AugmentedBearing.fromNumbers(200.0, 5.0)));
     acc.clear();
     acc.add(AugmentedBearing.fromNumbers(100.0, null));
     acc.add(AugmentedBearing.fromNumbers(150.0, null));
-    expect(acc.get(), ValueMatches(AugmentedBearing.fromNumbers(125.0, null)));
+    expect(acc.mean(), ValueMatches(AugmentedBearing.fromNumbers(125.0, null)));
     acc.removeFirst();
-    expect(acc.get(), ValueMatches(AugmentedBearing.fromNumbers(150.0, null)));
+    expect(acc.mean(), ValueMatches(AugmentedBearing.fromNumbers(150.0, null)));
     acc.removeFirst();
-    expect(acc.get(), null);
+    expect(acc.mean(), null);
     acc.clear();
     acc.add(AugmentedBearing.fromNumbers(200.0, 5.0));
     acc.add(AugmentedBearing.fromNumbers(210.0, null));
     acc.add(AugmentedBearing.fromNumbers(220.0, 10.0));
     acc.add(AugmentedBearing.fromNumbers(230.0, null));
-    expect(acc.get(), ValueMatches(AugmentedBearing.fromNumbers(215.0, 7.5)));
+    expect(acc.mean(), ValueMatches(AugmentedBearing.fromNumbers(215.0, 7.5)));
     acc.removeFirst();
-    expect(acc.get(), ValueMatches(AugmentedBearing.fromNumbers(220.0, 10.0)));
+    expect(acc.mean(), ValueMatches(AugmentedBearing.fromNumbers(220.0, 10.0)));
     acc.removeFirst();
-    expect(acc.get(), ValueMatches(AugmentedBearing.fromNumbers(225.0, 10.0)));
+    expect(acc.mean(), ValueMatches(AugmentedBearing.fromNumbers(225.0, 10.0)));
     acc.removeFirst();
-    expect(acc.get(), ValueMatches(AugmentedBearing.fromNumbers(230.0, null)));
+    expect(acc.mean(), ValueMatches(AugmentedBearing.fromNumbers(230.0, null)));
     acc.removeFirst();
-    expect(acc.get(), null);
+    expect(acc.mean(), null);
   });
 }

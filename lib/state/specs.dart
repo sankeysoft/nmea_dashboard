@@ -128,6 +128,10 @@ class DataCellSpec {
   @JsonKey(defaultValue: 'current')
   final String type;
 
+  /// The stats interval, only populated for average cell types.
+  @JsonKey(includeIfNull: false)
+  final String? statsInterval;
+
   /// The history interval, only populated for history cell types.
   @JsonKey(includeIfNull: false)
   final String? historyInterval;
@@ -145,6 +149,7 @@ class DataCellSpec {
     this.type,
     this.format, {
     this.name,
+    this.statsInterval,
     this.historyInterval,
     SpecKey? key,
   }) : key = key ?? SpecKey.make();

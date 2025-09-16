@@ -33,18 +33,20 @@ class _EditCellForm extends StatefulWidget {
 
 class _CellTypeAndAssociatedFields {
   final CellType? type;
+  final StatsInterval? statsInterval;
   final HistoryInterval? historyInterval;
 
-  _CellTypeAndAssociatedFields(this.type, this.historyInterval);
+  _CellTypeAndAssociatedFields(this.type, this.statsInterval, this.historyInterval);
 
   @override
   bool operator ==(Object other) =>
       other is _CellTypeAndAssociatedFields &&
       other.type == type &&
+      other.statsInterval == statsInterval &&
       other.historyInterval == historyInterval;
 
   @override
-  int get hashCode => Object.hash(type, historyInterval);
+  int get hashCode => Object.hash(type, statsInterval, historyInterval);
 }
 
 class _EditCellFormState extends StatefulFormState<_EditCellForm> {
@@ -55,6 +57,7 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
   String? _element;
   String? _format;
   CellType? _type;
+  StatsInterval? _statsInterval;
   HistoryInterval? _historyInterval;
   bool _isNameOverridden = false;
   final _nameController = TextEditingController();
@@ -62,13 +65,13 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
   @override
   void initState() {
     _source = Source.fromString(widget.spec.source);
-    // Derived elements don't have complile-time definitions, so don't sanitize
-    // element yet.
+    // Derived elements don't have complile-time definitions, so don't sanitize element yet.
     _element = widget.spec.element;
-    // We can't validate the format until we've get a dataSet to supply the
-    // dimension for any derived data elements.
+    // We can't validate the format until we've get a dataSet to supply the dimension for any
+    // derived data elements.
     _format = widget.spec.format;
     _type = CellType.fromString(widget.spec.type);
+    _statsInterval = StatsInterval.fromString(widget.spec.statsInterval);
     _historyInterval = HistoryInterval.fromString(widget.spec.historyInterval);
     _isNameOverridden = (widget.spec.name != null);
     if (widget.spec.name != null) {
@@ -88,6 +91,9 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
       _element = null;
     }
 
+    if (_type == CellType.average && dataElement is! WithStats) {
+      _type = null;
+    }
     if (_type == CellType.history && dataElement is! WithHistory) {
       _type = null;
     }
@@ -139,6 +145,7 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
                 _type?.name ?? '',
                 _format ?? '',
                 name: _isNameOverridden ? _nameController.text : null,
+                statsInterval: _statsInterval?.name,
                 historyInterval: _historyInterval?.name,
                 key: widget.spec.key,
               );
@@ -196,21 +203,31 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
   Widget _buildTypeField() {
     final List<DropdownEntry<_CellTypeAndAssociatedFields>> entries = [
       DropdownEntry(
-        value: _CellTypeAndAssociatedFields(CellType.current, null),
+        value: _CellTypeAndAssociatedFields(CellType.current, null, null),
         text: CellType.current.longName,
       ),
     ];
+    if (_dataSet.sources[_source]?[_element] is WithStats) {
+      entries.addAll(
+        StatsInterval.values.map(
+          (s) => DropdownEntry(
+            value: _CellTypeAndAssociatedFields(CellType.average, s, null),
+            text: 'Average - ${s.display}',
+          ),
+        ),
+      );
+    }
     if (_dataSet.sources[_source]?[_element] is WithHistory) {
       entries.addAll(
         HistoryInterval.values.map(
           (h) => DropdownEntry(
-            value: _CellTypeAndAssociatedFields(CellType.history, h),
+            value: _CellTypeAndAssociatedFields(CellType.history, null, h),
             text: 'History - ${h.display}',
           ),
         ),
       );
     }
-    final intended = _CellTypeAndAssociatedFields(_type, _historyInterval);
+    final intended = _CellTypeAndAssociatedFields(_type, _statsInterval, _historyInterval);
 
     return buildDropdownBox(
       label: 'Display',
@@ -219,6 +236,7 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
       onChanged: (_CellTypeAndAssociatedFields? value) {
         setState(() {
           _type = value?.type;
+          _statsInterval = value?.statsInterval;
           _historyInterval = value?.historyInterval;
         });
       },
