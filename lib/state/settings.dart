@@ -12,6 +12,7 @@ import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/specs.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 /// This allows the other class to access private members in
 /// the JsonSerializable generated file.
@@ -232,6 +233,7 @@ class UiSettings with ChangeNotifier {
   final _PrefValue<bool> _darkTheme;
   final _PrefValue<String> _valueFont;
   final _PrefValue<String> _headingFont;
+  final _PrefValue<bool> _keepScreenAwake;
 
   // This hardcoded list matches the assets we added to the pubspec.
   static const List<String> availableFonts = [
@@ -251,13 +253,15 @@ class UiSettings with ChangeNotifier {
       _nightMode = _PrefValue(prefs, 'ui_night_mode', false),
       _darkTheme = _PrefValue(prefs, 'ui_dark_theme', true),
       _valueFont = _PrefValue(prefs, 'ui_value_font', 'Lexend'),
-      _headingFont = _PrefValue(prefs, 'ui_heading_font', 'Manrope');
+      _headingFont = _PrefValue(prefs, 'ui_heading_font', 'Manrope'),
+      _keepScreenAwake = _PrefValue(prefs, 'ui_keep_screen_awake', false);
 
   bool get firstRun => _firstRun.value;
   bool get nightMode => _nightMode.value;
   bool get darkTheme => _darkTheme.value;
   String get valueFont => _valueFont.value;
   String get headingFont => _headingFont.value;
+  bool get keepScreenAwake => _keepScreenAwake.value;
 
   void clearFirstRun() {
     _firstRun.set(false);
@@ -285,6 +289,12 @@ class UiSettings with ChangeNotifier {
     if (headingFont != null) {
       _headingFont.set(headingFont);
     }
+    notifyListeners();
+  }
+
+  void setKeepScreenAwake(bool keepAwake) {
+    _keepScreenAwake.set(keepAwake);
+    WakelockPlus.toggle(enable: keepAwake);
     notifyListeners();
   }
 }

@@ -16,6 +16,7 @@ import 'package:nmea_dashboard/ui/forms/network_settings.dart';
 import 'package:nmea_dashboard/ui/forms/view_help.dart';
 import 'package:nmea_dashboard/ui/forms/view_log.dart';
 import 'package:provider/provider.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 /// A page that fills the available space with a table of
 /// displayable data created from the supplied specs.
@@ -26,6 +27,13 @@ class DataTablePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final dataSet = Provider.of<DataSet>(context);
     final pageSpec = Provider.of<DataPageSpec>(context);
+    final settings = Provider.of<UiSettings>(context);
+
+    if (settings.keepScreenAwake) {
+      // Force screen awake every draw in case the OS has released the lock. Disable happens
+      // only once on a change to the setting.
+      WakelockPlus.enable();
+    }
 
     return Scaffold(
       appBar: AppBar(title: Text(pageSpec.name), actions: [_EditPageButton()]),

@@ -34,7 +34,7 @@ class InvalidTypeException implements Exception {
 const Set<Source> _networkOnly = {Source.network};
 
 /// The various types of data that can be displayed, including the
-/// sources we expect to find it on.
+/// sources we expect to find each on.
 enum Property {
   airTemperature('Air temperature', 'Air', Dimension.temperature),
   apparentWindAngle('Apparent wind angle', 'AWA', Dimension.angle),

@@ -33,12 +33,14 @@ class _UiSettingsFormState extends StatefulFormState<_UiSettingsForm> {
   late String _valueFont;
   late String _headingFont;
   late bool _darkTheme;
+  late bool _keepScreenAwake;
 
   @override
   void initState() {
     _valueFont = widget._settings.valueFont;
     _headingFont = widget._settings.headingFont;
     _darkTheme = widget._settings.darkTheme;
+    _keepScreenAwake = widget._settings.keepScreenAwake;
     super.initState();
   }
 
@@ -52,13 +54,19 @@ class _UiSettingsFormState extends StatefulFormState<_UiSettingsForm> {
         children: [
           Expanded(
             child: ListView(
-              children: [_buildValueField(), _buildHeadingField(), _buildDarkThemeField()],
+              children: [
+                _buildValueField(),
+                _buildHeadingField(),
+                _buildDarkThemeField(),
+                _buildKeepScreenAwakeField(),
+              ],
             ),
           ),
           buildSaveButton(
             postSaver: () {
               widget._settings.setFonts(valueFont: _valueFont, headingFont: _headingFont);
               widget._settings.setDarkTheme(_darkTheme);
+              widget._settings.setKeepScreenAwake(_keepScreenAwake);
               Navigator.pop(context);
             },
           ),
@@ -106,6 +114,18 @@ class _UiSettingsFormState extends StatefulFormState<_UiSettingsForm> {
       onChanged: (value) {
         setState(() {
           _darkTheme = value;
+        });
+      },
+    );
+  }
+
+  Widget _buildKeepScreenAwakeField() {
+    return buildSwitch(
+      label: 'Keep screen on',
+      initialValue: _keepScreenAwake,
+      onChanged: (value) {
+        setState(() {
+          _keepScreenAwake = value;
         });
       },
     );
