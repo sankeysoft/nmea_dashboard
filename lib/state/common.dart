@@ -36,48 +36,53 @@ const Set<Source> _networkOnly = {Source.network};
 /// The various types of data that can be displayed, including the
 /// sources we expect to find each on.
 enum Property {
-  airTemperature('Air temperature', 'Air', Dimension.temperature),
-  apparentWindAngle('Apparent wind angle', 'AWA', Dimension.angle),
-  apparentWindSpeed('Apparent wind speed', 'AWS', Dimension.speed),
-  battery1Voltage('Battery 1 Voltage', 'Batt 1', Dimension.voltage),
-  battery2Voltage('Battery 2 Voltage', 'Batt 2', Dimension.voltage),
+  airTemperature('Air temperature', 'Air', Dimension.temperature, group: Group.environment),
+  apparentWindAngle('Apparent wind angle', 'AWA', Dimension.angle, group: Group.environment),
+  apparentWindSpeed('Apparent wind speed', 'AWS', Dimension.speed, group: Group.environment),
+  battery1Voltage('Battery 1 Voltage', 'Batt 1', Dimension.voltage, group: Group.systems),
+  battery2Voltage('Battery 2 Voltage', 'Batt 2', Dimension.voltage, group: Group.systems),
   courseOverGround('Course over ground', 'COG', Dimension.bearing),
-  currentSet('Set', 'Set', Dimension.bearing),
-  currentDrift('Drift', 'Drift', Dimension.speed),
+  currentSet('Set', 'Set', Dimension.bearing, group: Group.environment),
+  currentDrift('Drift', 'Drift', Dimension.speed, group: Group.environment),
   depthWithOffset('Depth', 'Depth', Dimension.depth),
   depthUncalibrated('Depth at sensor', 'XDR Depth', Dimension.depth),
-  dewPoint('Dew point', 'Dew Pt', Dimension.temperature),
-  distanceTotal('Total distance', 'Log', Dimension.distance),
-  distanceTrip('Trip distance', 'Trip', Dimension.distance),
-  engine1Rpm('Engine 1 Speed', 'Eng Speed', Dimension.rotationalSpeed),
-  engine1OilPressure('Engine 1 Oil Pressure', 'Eng Pres', Dimension.pressure),
-  engine1Temperature('Engine 1 Coolant Temp', 'Eng Temp', Dimension.temperature),
-  fuelLevel('Fuel Level', 'Fuel', Dimension.percentage),
-  gpsPosition('GPS position', 'GPS', Dimension.position),
-  gpsHdop('GPS HDOP', 'HDOP', Dimension.depth),
+  dewPoint('Dew point', 'Dew Pt', Dimension.temperature, group: Group.environment),
+  distanceTotal('Total distance', 'Log', Dimension.distance, group: Group.navigation),
+  distanceTrip('Trip distance', 'Trip', Dimension.distance, group: Group.navigation),
+  engine1Rpm('Engine 1 Speed', 'Eng Speed', Dimension.rotationalSpeed, group: Group.systems),
+  engine1OilPressure('Engine 1 Oil Pressure', 'Eng Pres', Dimension.pressure, group: Group.systems),
+  engine1Temperature(
+    'Engine 1 Coolant Temp',
+    'Eng Temp',
+    Dimension.temperature,
+    group: Group.systems,
+  ),
+  fuelLevel('Fuel Level', 'Fuel', Dimension.percentage, group: Group.systems),
+  gpsPosition('GPS position', 'GPS', Dimension.position, group: Group.navigation),
+  gpsHdop('GPS HDOP', 'HDOP', Dimension.depth, group: Group.navigation),
   heading('Heading', 'Heading', Dimension.bearing),
   // Sometimes a network message can only generate headings in magnetic so use
   // this property. All data elements work with a true heading internally hence
   // no sources provide this mag heading property.
   headingMag('Mag Heading', 'Mag Hdg', Dimension.bearing, sources: {}),
   pitch('Pitch angle', 'Pitch', Dimension.angle),
-  pressure('Air pressure', 'Pressure', Dimension.pressure),
+  pressure('Air pressure', 'Pressure', Dimension.pressure, group: Group.environment),
   rateOfTurn('Rate of turn', 'ROT', Dimension.angularRate),
-  relativeHumidity('Relative Humidity', 'RH', Dimension.percentage),
+  relativeHumidity('Relative Humidity', 'RH', Dimension.percentage, group: Group.environment),
   roll('Roll angle', 'Roll', Dimension.angle),
   rudderAngle('Rudder angle', 'Rudder', Dimension.angle),
   speedOverGround('Speed over ground', 'SOG', Dimension.speed),
   speedThroughWater('Speed through water', 'STW', Dimension.speed),
-  trueWindAngle('True wind angle', 'TWA', Dimension.angle),
-  trueWindDirection('True wind direction', 'TWD', Dimension.bearing),
-  trueWindSpeed('True wind speed', 'TWS', Dimension.speed),
+  trueWindAngle('True wind angle', 'TWA', Dimension.angle, group: Group.environment),
+  trueWindDirection('True wind direction', 'TWD', Dimension.bearing, group: Group.environment),
+  trueWindSpeed('True wind speed', 'TWS', Dimension.speed, group: Group.environment),
   utcTime('UTC datetime', 'UTC', Dimension.time, sources: {Source.local, Source.network}),
   localTime('Local datetime', 'Local', Dimension.time, sources: {Source.local}),
-  variation('Magnetic variation', 'MagVar', Dimension.angle),
-  waterTemperature('Water temperature', 'Water', Dimension.temperature),
-  waypointBearing('Bearing to waypoint', 'Wpt Brg', Dimension.bearing),
-  waypointRange('Range to waypoint', 'Wpt Rng', Dimension.distance),
-  crossTrackError('Cross track error', 'XTE', Dimension.crossTrackError);
+  variation('Magnetic variation', 'MagVar', Dimension.angle, group: Group.navigation),
+  waterTemperature('Water temperature', 'Water', Dimension.temperature, group: Group.environment),
+  waypointBearing('Bearing to waypoint', 'Wpt Brg', Dimension.bearing, group: Group.navigation),
+  waypointRange('Range to waypoint', 'Wpt Rng', Dimension.distance, group: Group.navigation),
+  crossTrackError('Cross track error', 'XTE', Dimension.crossTrackError, group: Group.navigation);
 
   /// A long name suitable for use during selection, e.g. "Speed over ground".
   final String longName;
@@ -88,13 +93,34 @@ enum Property {
   /// The dimension measured by this property.
   final Dimension dimension;
 
+  /// The UI group for this property.
+  final Group group;
+
   /// The sources that supply this property.
   final Set<Source> sources;
 
-  const Property(this.longName, this.shortName, this.dimension, {this.sources = _networkOnly});
+  const Property(
+    this.longName,
+    this.shortName,
+    this.dimension, {
+    this.sources = _networkOnly,
+    this.group = Group.general,
+  });
 
   /// The uniqualified name of this literal in its enum, e.g. "speedOverGround".
   String get name => toString().split('.').last;
+}
+
+/// High level groupings of properties to collect together in the UI.
+enum Group {
+  general('General'),
+  navigation('Navigation'),
+  environment('Environment'),
+  systems('Systems');
+
+  final String longName;
+
+  const Group(this.longName);
 }
 
 /// The various sources that can provide data.
@@ -109,7 +135,7 @@ enum Source {
 
   const Source(this.longName, {this.selectable = true});
 
-  /// Returns a derivation operation from its unqualified name.
+  /// Returns a source from its unqualified name.
   static Source? fromString(String? name) {
     return Source.values.asNameMap()[name];
   }

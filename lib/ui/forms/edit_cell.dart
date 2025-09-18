@@ -49,11 +49,45 @@ class _CellTypeAndAssociatedFields {
   int get hashCode => Object.hash(type, statsInterval, historyInterval);
 }
 
+bool sourceUsesGrouping(Source? source) {
+  return source == Source.network;
+}
+
+/// A data element source and optionally a group for sources that use grouping.
+class _SourceAndGroup {
+  final Source source;
+  final Group? group;
+
+  _SourceAndGroup(this.source, this.group);
+
+  @override
+  bool operator ==(Object other) =>
+      other is _SourceAndGroup && source == other.source && group == other.group;
+
+  @override
+  int get hashCode => Object.hash(source, group);
+
+  String get text => source.longName + ((group == null) ? "" : " - ${group!.longName}");
+
+  static Set<_SourceAndGroup> set() {
+    final Set<_SourceAndGroup> ret = {};
+    for (final source in Source.values.where((source) => source.selectable)) {
+      if (sourceUsesGrouping(source)) {
+        ret.addAll(Group.values.map((group) => _SourceAndGroup(source, group)));
+      } else {
+        ret.add(_SourceAndGroup(source, null));
+      }
+    }
+    return ret;
+  }
+}
+
 class _EditCellFormState extends StatefulFormState<_EditCellForm> {
   late DataSet _dataSet;
   late PageSettings _pageSettings;
 
   Source? _source;
+  Group? _group;
   String? _element;
   String? _format;
   CellType? _type;
@@ -65,6 +99,8 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
   @override
   void initState() {
     _source = Source.fromString(widget.spec.source);
+    // Init group to null now, will set if revelant in build when we have a dataSet.
+    _group = null;
     // Derived elements don't have complile-time definitions, so don't sanitize element yet.
     _element = widget.spec.element;
     // We can't validate the format until we've get a dataSet to supply the dimension for any
@@ -89,6 +125,8 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
     final dataElement = _dataSet.sources[_source]?[_element];
     if (dataElement == null) {
       _element = null;
+    } else if (sourceUsesGrouping(_source) && dataElement.property.group != _group) {
+      _element = null;
     }
 
     if (_type == CellType.average && dataElement is! WithStats) {
@@ -111,6 +149,12 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
   Widget build(BuildContext context) {
     _dataSet = Provider.of<DataSet>(context);
     _pageSettings = Provider.of<PageSettings>(context);
+
+    // Set the group from the element now we have a dataSet to do the lookup.
+    final elementProperty = _dataSet.sources[_source]?[_element]?.property;
+    if (sourceUsesGrouping(_source) && elementProperty != null) {
+      _group = elementProperty.group;
+    }
 
     _wipeInvalidFields();
 
@@ -135,10 +179,9 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
           ),
           buildSaveButton(
             postSaver: () {
-              // By this stage all the fields will have saved back to our state
-              // and we can be confident all the fields are populated. Just
-              // create a new spec from these (reusing the previous key) and ask
-              // the settings to use it.
+              // By this stage all the fields will have saved back to our state and we can be
+              // confident all the fields are populated. Just create a new spec from these
+              // (reusing the previous key) and ask the settings to use it.
               final cellSpec = DataCellSpec(
                 _source?.name ?? '',
                 _element ?? '',
@@ -159,16 +202,20 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
   }
 
   Widget _buildSourceField() {
-    final selectableSources = Source.values.where((source) => source.selectable).toSet();
+    Set<_SourceAndGroup> sourceGroups = _SourceAndGroup.set();
+
     return buildDropdownBox(
       label: 'Source',
-      items: selectableSources.map((source) {
-        return DropdownEntry(value: source, text: source.longName);
+      items: sourceGroups.map((sourceGroup) {
+        return DropdownEntry(value: sourceGroup, text: sourceGroup.text);
       }).toList(),
-      initialValue: selectableSources.lookup(_source),
-      onChanged: (Source? value) {
+      initialValue: (_source == null)
+          ? null
+          : sourceGroups.lookup(_SourceAndGroup(_source!, _group)),
+      onChanged: (_SourceAndGroup? value) {
         setState(() {
-          _source = value;
+          _source = value?.source;
+          _group = value?.group;
           _wipeInvalidFields();
         });
       },
@@ -177,12 +224,18 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
 
   Widget _buildElementField() {
     final dataSet = Provider.of<DataSet>(context);
-    final Map<String, DataElement> elements = dataSet.sources[_source] ?? {};
+    final Map<String, DataElement> elements = {};
+    final source = dataSet.sources[_source];
+    if (source != null && sourceUsesGrouping(_source)) {
+      elements.addEntries(source.entries.where((e) => e.value.property.group == _group));
+    } else if (source != null) {
+      elements.addAll(source);
+    }
 
     return buildDropdownBox(
       label: 'Element',
-      items: elements.keys
-          .map((e) => DropdownEntry(value: e, text: elements[e]!.longName))
+      items: elements.entries
+          .map((e) => DropdownEntry(value: e.key, text: e.value.longName))
           .toList(),
       initialValue: _element,
       onChanged: (String? value) {
@@ -193,7 +246,7 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
       },
       validator: (value) {
         if (value == null) {
-          return 'Property must be set';
+          return 'Element must be set';
         }
         return null;
       },
@@ -287,8 +340,7 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
 
   Widget _buildNameField() {
     final enabled = _isNameOverridden;
-    // If we're not overriding the name update the text to reflect the
-    // current elementName.
+    // If we're not overriding the name, update the text to reflect the current elementName.
     final element = _dataSet.sources[_source]?[_element];
 
     if (!_isNameOverridden) {
