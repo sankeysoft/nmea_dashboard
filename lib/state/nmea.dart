@@ -580,7 +580,22 @@ double _parseVariation(String valueString, String direction) {
 
 /// Parses a single transducer measurement, ignoring unknown properties.
 List<BoundValue> _parseXdrMeasurement(List<String> fields, int startIndex) {
-  switch ('${fields[startIndex]}-${fields[startIndex + 3].toLowerCase()}') {
+  final transducer = fields[startIndex];
+  String name = fields[startIndex + 3].toLowerCase();
+  String? number;
+  if (name.length > 2 && name[name.length - 2] == "#") {
+    number = name[name.length - 1];
+    name = name.substring(0, name.length - 2);
+  }
+
+  Property propByNumber(List<Property> options) {
+    for (final (index, value) in options.indexed) {
+      if (number == index.toString()) return value;
+    }
+    throw FormatException('Unknown sensor number: $number');
+  }
+
+  switch ('$transducer-$name') {
     case 'A-pitch':
       _validateFieldValue(fields, index: startIndex + 2, expected: 'D');
       final value = double.parse(fields[startIndex + 1]);
@@ -601,15 +616,22 @@ List<BoundValue> _parseXdrMeasurement(List<String> fields, int startIndex) {
       _validateFieldValue(fields, index: startIndex + 2, expected: 'C');
       final value = double.parse(fields[startIndex + 1]);
       return [_boundSingleValue(value, Property.waterTemperature, tier: 2)];
-    case 'C-engine#0':
+    case 'C-engine':
       _validateFieldValue(fields, index: startIndex + 2, expected: 'C');
       final value = double.parse(fields[startIndex + 1]);
-      return [_boundSingleValue(value, Property.engine1Temperature)];
-    case 'E-fuel#0':
-    case 'V-fuel#0':
+      final prop = propByNumber([Property.engine1Temperature, Property.engine2Temperature]);
+      return [_boundSingleValue(value, prop)];
+    case 'E-fuel':
+    case 'V-fuel':
       _validateFieldValue(fields, index: startIndex + 2, expected: 'P');
       final value = double.parse(fields[startIndex + 1]);
       return [_boundSingleValue(value, Property.fuelLevel)];
+    case 'E-freshwater':
+    case 'V-freshwater':
+      _validateFieldValue(fields, index: startIndex + 2, expected: 'P');
+      final value = double.parse(fields[startIndex + 1]);
+      final prop = propByNumber([Property.water1Level, Property.water2Level]);
+      return [_boundSingleValue(value, prop)];
     case 'H-air':
       _validateFieldValue(fields, index: startIndex + 2, expected: 'P');
       final value = double.parse(fields[startIndex + 1]);
@@ -626,22 +648,26 @@ List<BoundValue> _parseXdrMeasurement(List<String> fields, int startIndex) {
         throw FormatException('Invalid pressure datatype: $dataType');
       }
       return [_boundSingleValue(value, Property.pressure, tier: 2)];
-    case 'P-engineoil#0':
+    case 'P-engineoil':
       _validateFieldValue(fields, index: startIndex + 2, expected: 'P');
       final value = double.parse(fields[startIndex + 1]);
-      return [_boundSingleValue(value, Property.engine1OilPressure)];
-    case 'T-engine#0':
+      final prop = propByNumber([Property.engine1OilPressure, Property.engine2OilPressure]);
+      return [_boundSingleValue(value, prop)];
+    case 'T-engine':
       _validateFieldValue(fields, index: startIndex + 2, expected: 'R');
       final value = double.parse(fields[startIndex + 1]);
-      return [_boundSingleValue(value, Property.engine1Rpm)];
-    case 'U-battery#0':
+      final prop = propByNumber([Property.engine1Rpm, Property.engine2Rpm]);
+      return [_boundSingleValue(value, prop)];
+    case 'U-alternator':
       _validateFieldValue(fields, index: startIndex + 2, expected: 'V');
       final value = double.parse(fields[startIndex + 1]);
-      return [_boundSingleValue(value, Property.battery1Voltage)];
-    case 'U-battery#1':
+      final prop = propByNumber([Property.alternator1Voltage, Property.alternator2Voltage]);
+      return [_boundSingleValue(value, prop)];
+    case 'U-battery':
       _validateFieldValue(fields, index: startIndex + 2, expected: 'V');
       final value = double.parse(fields[startIndex + 1]);
-      return [_boundSingleValue(value, Property.battery2Voltage)];
+      final prop = propByNumber([Property.battery1Voltage, Property.battery2Voltage]);
+      return [_boundSingleValue(value, prop)];
     default:
       return [];
   }

@@ -32,6 +32,8 @@ class InvalidTypeException implements Exception {
 }
 
 const Set<Source> _networkOnly = {Source.network};
+// Hack to stop some properties annoyingly wrapping.
+const Group _sys = Group.systems;
 
 /// The various types of data that can be displayed, including the
 /// sources we expect to find each on.
@@ -41,6 +43,8 @@ enum Property {
   apparentWindSpeed('Apparent wind speed', 'AWS', Dimension.speed, group: Group.environment),
   battery1Voltage('Battery 1 Voltage', 'Batt 1', Dimension.voltage, group: Group.systems),
   battery2Voltage('Battery 2 Voltage', 'Batt 2', Dimension.voltage, group: Group.systems),
+  alternator1Voltage('Alternator 1 Voltage', 'Alt 1', Dimension.voltage, group: Group.systems),
+  alternator2Voltage('Alternator 2 Voltage', 'Alt 2', Dimension.voltage, group: Group.systems),
   courseOverGround('Course over ground', 'COG', Dimension.bearing),
   currentSet('Set', 'Set', Dimension.bearing, group: Group.environment),
   currentDrift('Drift', 'Drift', Dimension.speed, group: Group.environment),
@@ -50,14 +54,14 @@ enum Property {
   distanceTotal('Total distance', 'Log', Dimension.distance, group: Group.navigation),
   distanceTrip('Trip distance', 'Trip', Dimension.distance, group: Group.navigation),
   engine1Rpm('Engine 1 Speed', 'Eng Speed', Dimension.rotationalSpeed, group: Group.systems),
+  engine2Rpm('Engine 1 Speed', 'Eng Speed', Dimension.rotationalSpeed, group: Group.systems),
   engine1OilPressure('Engine 1 Oil Pressure', 'Eng Pres', Dimension.pressure, group: Group.systems),
-  engine1Temperature(
-    'Engine 1 Coolant Temp',
-    'Eng Temp',
-    Dimension.temperature,
-    group: Group.systems,
-  ),
+  engine2OilPressure('Engine 2 Oil Pressure', 'Eng Pres', Dimension.pressure, group: Group.systems),
+  engine1Temperature('Engine 1 Coolant Temp', 'Eng Temp', Dimension.temperature, group: _sys),
+  engine2Temperature('Engine 2 Coolant Temp', 'Eng Temp', Dimension.temperature, group: _sys),
   fuelLevel('Fuel Level', 'Fuel', Dimension.percentage, group: Group.systems),
+  water1Level('Fresh Water 1 Level', 'Water 1', Dimension.percentage, group: Group.systems),
+  water2Level('Fresh Water 2 Level', 'Water 2', Dimension.percentage, group: Group.systems),
   gpsPosition('GPS position', 'GPS', Dimension.position, group: Group.navigation),
   gpsHdop('GPS HDOP', 'HDOP', Dimension.depth, group: Group.navigation),
   heading('Heading', 'Heading', Dimension.bearing),

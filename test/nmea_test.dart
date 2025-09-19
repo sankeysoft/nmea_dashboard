@@ -379,7 +379,7 @@ void main() {
     );
   });
 
-  test('should parse XDR with engine temp and pressure', () {
+  test('should parse XDR with engine 1 data', () {
     expect(
       NmeaParser(true).parseString(
         r'$IIXDR,P,100300.00,P,ENGINEOIL#0,C,85.0,C,ENGINE#0,U,26.44,V,ALTERNATOR#0*09',
@@ -387,6 +387,20 @@ void main() {
       BoundValueListMatches([
         _boundSingleValue(100300.0, Property.engine1OilPressure),
         _boundSingleValue(85.0, Property.engine1Temperature),
+        _boundSingleValue(26.44, Property.alternator1Voltage),
+      ]),
+    );
+  });
+
+  test('should parse XDR with engine 2 data', () {
+    expect(
+      NmeaParser(true).parseString(
+        r'$IIXDR,P,123000.00,P,ENGINEOIL#1,C,95.0,C,ENGINE#1,U,25.00,V,ALTERNATOR#1*08',
+      ),
+      BoundValueListMatches([
+        _boundSingleValue(123000.0, Property.engine2OilPressure),
+        _boundSingleValue(95.0, Property.engine2Temperature),
+        _boundSingleValue(25.0, Property.alternator2Voltage),
       ]),
     );
   });
@@ -412,6 +426,13 @@ void main() {
     expect(
       NmeaParser(true).parseString(r'$IIXDR,E,50.00,P,FUEL#0*79'),
       BoundValueListMatches([_boundSingleValue(50.0, Property.fuelLevel)]),
+    );
+  });
+
+  test('should parse XDR with water level', () {
+    expect(
+      NmeaParser(true).parseString(r'$IIXDR,E,75.00,P,FRESHWATER#0*7B'),
+      BoundValueListMatches([_boundSingleValue(75.0, Property.water1Level)]),
     );
   });
 
