@@ -13,17 +13,15 @@ import 'package:nmea_dashboard/state/specs.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
-import 'package:json_annotation/json_annotation.dart';
 
 /// This allows the other class to access private members in
 /// the JsonSerializable generated file.
-///part 'settings.g.dart';
+//part 'settings.g.dart';
 
 final _log = Logger('Settings');
 
 /// Exposes all the basic settings for the application, and handles the
 /// persistence of these settings.
-///@JsonSerializable()
 class Settings with ChangeNotifier {
   final NetworkSettings network;
   final DerivedDataSettings derived;
