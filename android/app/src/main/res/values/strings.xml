@@ -2,4 +2,9 @@
 <resources>
     <string name="app_label">NMEA Dashboard</string>
     <string name="app_description">A viewer for real time marine network data.</string>
+    <string name="twa_corrected_label">True Wind Angle (Corrected)</string>
+    <string name="port_suffix" translatable="false">P</string>
+    <string name="starboard_suffix" translatable="false">S</string>
+
+
 </resources>
