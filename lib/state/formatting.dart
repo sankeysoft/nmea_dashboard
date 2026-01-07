@@ -181,7 +181,16 @@ class CustomConvertingFormatter extends ConvertingFormatter<SingleValue<double>>
 
 /// A map of all the possible formatters for all dimensions.
 final Map<Dimension, Map<String, Formatter>> _formatters = {
-  Dimension.angle: {'degrees': SimpleFormatter('Degrees', '°', '--', 1.0, 0)},
+  Dimension.angle: {
+    'degrees': SimpleFormatter('Degrees', '°', '--', 1.0, 0),
+    // AJOUT POUR LE VENT (TWA/AWA)
+    'relative': CustomNumericFormatter<SingleValue<double>>(
+      'relative (P/S)',
+      null,
+      conversion: (value) => value?.data,
+      formatting: (value) => (value == null) ? '--' : _relativeBearingString(value.data),
+    ),
+  },
   Dimension.angularRate: {'degreesPerSec': SimpleFormatter('deg/sec', '°/s', '--.-', 1.0, 1)},
   Dimension.bearing: {
     'true': CustomNumericFormatter<AugmentedBearing>(
@@ -283,6 +292,19 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
 String _bearingString(double number, String suffix) {
   int rounded = number.round() % 360;
   return rounded.toString().padLeft(3, '0') + suffix;
+}
+String _relativeBearingString(double number) {
+  // Normalisation 0-360
+  double angle = number % 360.0;
+  if (angle == 0 || angle == 180) {
+    return '${angle.round()}°';
+  } else if (angle < 180) {
+    // Tribord (Starboard) - Utilise la clé 'S' via ressources ou constante stable
+    return '${angle.round()}° S';
+  } else {
+    // Babord (Port)
+    return '${(360 - angle).round()}° P';
+  }
 }
 
 String _xteString(double number, String units) {
