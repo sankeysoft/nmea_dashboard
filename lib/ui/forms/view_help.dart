@@ -4,7 +4,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart'; // Successeur de flutter_markdown
 import 'package:nmea_dashboard/ui/forms/abstract.dart';
 
 /// A form that lets the user view and copy the log in real time.
