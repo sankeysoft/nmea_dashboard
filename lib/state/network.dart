@@ -8,7 +8,7 @@ import 'dart:io';
 import 'package:async/async.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
-import 'package:nmea_dashboard/state/nmea.dart';
+import 'package:nmea_dashboard/parsing/common.dart';
 import 'package:nmea_dashboard/state/settings.dart';
 import 'package:nmea_dashboard/state/values.dart';
 import 'package:udp/udp.dart';
