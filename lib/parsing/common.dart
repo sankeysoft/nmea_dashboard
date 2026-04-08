@@ -33,9 +33,6 @@ part 'xdr.dart';
 part 'xte.dart';
 part 'zda.dart';
 
-/// A marker exception for message types that are neither supported nor ignored.
-class UnsupportedMessageException implements Exception {}
-
 /// The list of message types that are silently ignored.
 const _ignoredMessages = {
   // Ignore most things related to waypoints and routes except active waypoint.
