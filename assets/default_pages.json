@@ -42,6 +42,7 @@
 		{"source": "network", "element": "waterTemperature", "format": "farenheit"},
 		{"source": "network", "element": "roll", "format": "degrees"},
 		{"source": "network", "element": "pitch", "format": "degrees"},
+		{"source": "network", "element": "yaw", "format": "degrees"},
 		{"source": "network", "element": "rudderAngle", "format": "degrees"},
 		{"source": "network", "element": "waypointRange", "format": "nm"},
 		{"source": "network", "element": "waypointBearing", "format": "true"},

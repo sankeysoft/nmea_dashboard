@@ -1,0 +1,127 @@
+[1mdiff --git a/assets/default_pages.json b/assets/default_pages.json[m
+[1mindex bf08f81..7d877df 100644[m
+[1m--- a/assets/default_pages.json[m
+[1m+++ b/assets/default_pages.json[m
+[36m@@ -42,6 +42,7 @@[m
+ 		{"source": "network", "element": "waterTemperature", "format": "farenheit"},[m
+ 		{"source": "network", "element": "roll", "format": "degrees"},[m
+ 		{"source": "network", "element": "pitch", "format": "degrees"},[m
+[32m+[m		[32m{"source": "network", "element": "yaw", "format": "degrees"},[m
+ 		{"source": "network", "element": "rudderAngle", "format": "degrees"},[m
+ 		{"source": "network", "element": "waypointRange", "format": "nm"},[m
+ 		{"source": "network", "element": "waypointBearing", "format": "true"},[m
+[1mdiff --git a/assets/help_overview.md b/assets/help_overview.md[m
+[1mindex 7c1b4d7..f6cc715 100644[m
+[1m--- a/assets/help_overview.md[m
+[1m+++ b/assets/help_overview.md[m
+[36m@@ -28,7 +28,7 @@[m [mthe following:[m
+ * **Network**: Configure the connection to your NMEA hardware.[m
+ * **Pages**: Add, delete, edit, or reorder data pages.[m
+ * **Derived Data**: Define and edit new elements derived from network data.[m
+[31m-* **UI Style**: Configure fonts and dark/light theme.[m
+[32m+[m[32m* **User Interface**: Configure fonts, theme, and screen timeout.[m
+ * **Debug Log**: Display a log of information useful for debugging.[m
+ * **Help & License**: Display this help text.[m
+ [m
+[36m@@ -43,14 +43,14 @@[m [mavailable on your boat's network. Check the debug log for more details.[m
+ [m
+ I initially wrote this app for my own use but I plan on fixing bugs and am happy[m
+ to consider feature requests for expanding its scope. Please file these (or[m
+[31m-upvote the existing feature requests) at *github.com/sankeysoft/nmea_dashboard*.[m
+[32m+[m[32mupvote the existing feature requests) at *github.com/sankeysoft/nmea_dashboard*[m
+ [m
+ # License[m
+ [m
+ This software is open source and licenced under the MIT License, the terms of[m
+ which are provided below.[m
+ [m
+[31m-Copyright (c) 2022-2023 Jody Sankey[m
+[32m+[m[32mCopyright (c) 2022-2026 Jody Sankey[m
+ [m
+ Permission is hereby granted, free of charge, to any person obtaining a copy of[m
+ this software and associated documentation files (the "Software"), to deal in[m
+[1mdiff --git a/lib/state/common.dart b/lib/state/common.dart[m
+[1mindex 3a7f28d..2966bae 100644[m
+[1m--- a/lib/state/common.dart[m
+[1m+++ b/lib/state/common.dart[m
+[36m@@ -46,6 +46,7 @@[m [menum Property {[m
+   alternator1Voltage('Alternator 1 Voltage', 'Alt 1', Dimension.voltage, group: Group.systems),[m
+   alternator2Voltage('Alternator 2 Voltage', 'Alt 2', Dimension.voltage, group: Group.systems),[m
+   courseOverGround('Course over ground', 'COG', Dimension.bearing),[m
+[32m+[m[32m  crossTrackError('Cross track error', 'XTE', Dimension.crossTrackError, group: Group.navigation),[m
+   currentSet('Set', 'Set', Dimension.bearing, group: Group.environment),[m
+   currentDrift('Drift', 'Drift', Dimension.speed, group: Group.environment),[m
+   depthWithOffset('Depth', 'Depth', Dimension.depth),[m
+[36m@@ -60,8 +61,6 @@[m [menum Property {[m
+   engine1Temperature('Engine 1 Coolant Temp', 'Eng Temp', Dimension.temperature, group: _sys),[m
+   engine2Temperature('Engine 2 Coolant Temp', 'Eng Temp', Dimension.temperature, group: _sys),[m
+   fuelLevel('Fuel Level', 'Fuel', Dimension.percentage, group: Group.systems),[m
+[31m-  water1Level('Fresh Water 1 Level', 'Water 1', Dimension.percentage, group: Group.systems),[m
+[31m-  water2Level('Fresh Water 2 Level', 'Water 2', Dimension.percentage, group: Group.systems),[m
+   gpsPosition('GPS position', 'GPS', Dimension.position, group: Group.navigation),[m
+   gpsHdop('GPS HDOP', 'HDOP', Dimension.depth, group: Group.navigation),[m
+   heading('Heading', 'Heading', Dimension.bearing),[m
+[36m@@ -69,6 +68,7 @@[m [menum Property {[m
+   // this property. All data elements work with a true heading internally hence[m
+   // no sources provide this mag heading property.[m
+   headingMag('Mag Heading', 'Mag Hdg', Dimension.bearing, sources: {}),[m
+[32m+[m[32m  localTime('Local datetime', 'Local', Dimension.time, sources: {Source.local}),[m
+   pitch('Pitch angle', 'Pitch', Dimension.angle),[m
+   pressure('Air pressure', 'Pressure', Dimension.pressure, group: Group.environment),[m
+   rateOfTurn('Rate of turn', 'ROT', Dimension.angularRate),[m
+[36m@@ -81,12 +81,13 @@[m [menum Property {[m
+   trueWindDirection('True wind direction', 'TWD', Dimension.bearing, group: Group.environment),[m
+   trueWindSpeed('True wind speed', 'TWS', Dimension.speed, group: Group.environment),[m
+   utcTime('UTC datetime', 'UTC', Dimension.time, sources: {Source.local, Source.network}),[m
+[31m-  localTime('Local datetime', 'Local', Dimension.time, sources: {Source.local}),[m
+   variation('Magnetic variation', 'MagVar', Dimension.angle, group: Group.navigation),[m
+[32m+[m[32m  water1Level('Fresh Water 1 Level', 'Water 1', Dimension.percentage, group: Group.systems),[m
+   waterTemperature('Water temperature', 'Water', Dimension.temperature, group: Group.environment),[m
+[32m+[m[32m  water2Level('Fresh Water 2 Level', 'Water 2', Dimension.percentage, group: Group.systems),[m
+   waypointBearing('Bearing to waypoint', 'Wpt Brg', Dimension.bearing, group: Group.navigation),[m
+   waypointRange('Range to waypoint', 'Wpt Rng', Dimension.distance, group: Group.navigation),[m
+[31m-  crossTrackError('Cross track error', 'XTE', Dimension.crossTrackError, group: Group.navigation);[m
+[32m+[m[32m  yaw('Yaw angle', 'Yaw', Dimension.angle);[m
+ [m
+   /// A long name suitable for use during selection, e.g. "Speed over ground".[m
+   final String longName;[m
+[1mdiff --git a/lib/state/nmea.dart b/lib/state/nmea.dart[m
+[1mindex a4b128e..4c1146d 100644[m
+[1m--- a/lib/state/nmea.dart[m
+[1m+++ b/lib/state/nmea.dart[m
+[36m@@ -604,6 +604,10 @@[m [mList<BoundValue> _parseXdrMeasurement(List<String> fields, int startIndex) {[m
+       _validateFieldValue(fields, index: startIndex + 2, expected: 'D');[m
+       final value = double.parse(fields[startIndex + 1]);[m
+       return [_boundSingleValue(value, Property.roll)];[m
+[32m+[m[32m    case 'A-yaw':[m
+[32m+[m[32m      _validateFieldValue(fields, index: startIndex + 2, expected: 'D');[m
+[32m+[m[32m      final value = double.parse(fields[startIndex + 1]);[m
+[32m+[m[32m      return [_boundSingleValue(value, Property.yaw)];[m
+     case 'C-air':[m
+     case 'C-tempair':[m
+     case 'C-airtemp':[m
+[1mdiff --git a/lib/ui/pages/data_table.dart b/lib/ui/pages/data_table.dart[m
+[1mindex 69e0e46..ca8f8f4 100644[m
+[1m--- a/lib/ui/pages/data_table.dart[m
+[1m+++ b/lib/ui/pages/data_table.dart[m
+[36m@@ -145,7 +145,7 @@[m [mclass _DrawerContent extends StatelessWidget {[m
+         ),[m
+         ListTile([m
+           leading: Icon(Icons.text_format_outlined, color: enabledColor),[m
+[31m-          title: Text('UI Style', style: enabledStyle),[m
+[32m+[m[32m          title: Text('User Interface', style: enabledStyle),[m
+           onTap: () {[m
+             Navigator.pop(context);[m
+             Navigator.of([m
+[1mdiff --git a/test/nmea_test.dart b/test/nmea_test.dart[m
+[1mindex ae9c9f9..d508ecb 100644[m
+[1m--- a/test/nmea_test.dart[m
+[1m+++ b/test/nmea_test.dart[m
+[36m@@ -332,6 +332,7 @@[m [mvoid main() {[m
+     expect([m
+       NmeaParser(true).parseString(r'$YDXDR,A,-44.75,D,Yaw,A,1.00,D,Pitch,A,0.25,D,Roll*65'),[m
+       BoundValueListMatches([[m
+[32m+[m[32m        _boundSingleValue(-44.75, Property.yaw),[m
+         _boundSingleValue(1.0, Property.pitch),[m
+         _boundSingleValue(0.25, Property.roll),[m
+       ]),[m

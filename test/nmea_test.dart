@@ -332,6 +332,7 @@ void main() {
     expect(
       NmeaParser(true).parseString(r'$YDXDR,A,-44.75,D,Yaw,A,1.00,D,Pitch,A,0.25,D,Roll*65'),
       BoundValueListMatches([
+        _boundSingleValue(-44.75, Property.yaw),
         _boundSingleValue(1.0, Property.pitch),
         _boundSingleValue(0.25, Property.roll),
       ]),

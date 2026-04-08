@@ -604,6 +604,10 @@ List<BoundValue> _parseXdrMeasurement(List<String> fields, int startIndex) {
       _validateFieldValue(fields, index: startIndex + 2, expected: 'D');
       final value = double.parse(fields[startIndex + 1]);
       return [_boundSingleValue(value, Property.roll)];
+    case 'A-yaw':
+      _validateFieldValue(fields, index: startIndex + 2, expected: 'D');
+      final value = double.parse(fields[startIndex + 1]);
+      return [_boundSingleValue(value, Property.yaw)];
     case 'C-air':
     case 'C-tempair':
     case 'C-airtemp':

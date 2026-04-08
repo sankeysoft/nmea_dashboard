@@ -46,6 +46,7 @@ enum Property {
   alternator1Voltage('Alternator 1 Voltage', 'Alt 1', Dimension.voltage, group: Group.systems),
   alternator2Voltage('Alternator 2 Voltage', 'Alt 2', Dimension.voltage, group: Group.systems),
   courseOverGround('Course over ground', 'COG', Dimension.bearing),
+  crossTrackError('Cross track error', 'XTE', Dimension.crossTrackError, group: Group.navigation),
   currentSet('Set', 'Set', Dimension.bearing, group: Group.environment),
   currentDrift('Drift', 'Drift', Dimension.speed, group: Group.environment),
   depthWithOffset('Depth', 'Depth', Dimension.depth),
@@ -60,8 +61,6 @@ enum Property {
   engine1Temperature('Engine 1 Coolant Temp', 'Eng Temp', Dimension.temperature, group: _sys),
   engine2Temperature('Engine 2 Coolant Temp', 'Eng Temp', Dimension.temperature, group: _sys),
   fuelLevel('Fuel Level', 'Fuel', Dimension.percentage, group: Group.systems),
-  water1Level('Fresh Water 1 Level', 'Water 1', Dimension.percentage, group: Group.systems),
-  water2Level('Fresh Water 2 Level', 'Water 2', Dimension.percentage, group: Group.systems),
   gpsPosition('GPS position', 'GPS', Dimension.position, group: Group.navigation),
   gpsHdop('GPS HDOP', 'HDOP', Dimension.depth, group: Group.navigation),
   heading('Heading', 'Heading', Dimension.bearing),
@@ -69,6 +68,7 @@ enum Property {
   // this property. All data elements work with a true heading internally hence
   // no sources provide this mag heading property.
   headingMag('Mag Heading', 'Mag Hdg', Dimension.bearing, sources: {}),
+  localTime('Local datetime', 'Local', Dimension.time, sources: {Source.local}),
   pitch('Pitch angle', 'Pitch', Dimension.angle),
   pressure('Air pressure', 'Pressure', Dimension.pressure, group: Group.environment),
   rateOfTurn('Rate of turn', 'ROT', Dimension.angularRate),
@@ -81,12 +81,13 @@ enum Property {
   trueWindDirection('True wind direction', 'TWD', Dimension.bearing, group: Group.environment),
   trueWindSpeed('True wind speed', 'TWS', Dimension.speed, group: Group.environment),
   utcTime('UTC datetime', 'UTC', Dimension.time, sources: {Source.local, Source.network}),
-  localTime('Local datetime', 'Local', Dimension.time, sources: {Source.local}),
   variation('Magnetic variation', 'MagVar', Dimension.angle, group: Group.navigation),
+  water1Level('Fresh Water 1 Level', 'Water 1', Dimension.percentage, group: Group.systems),
   waterTemperature('Water temperature', 'Water', Dimension.temperature, group: Group.environment),
+  water2Level('Fresh Water 2 Level', 'Water 2', Dimension.percentage, group: Group.systems),
   waypointBearing('Bearing to waypoint', 'Wpt Brg', Dimension.bearing, group: Group.navigation),
   waypointRange('Range to waypoint', 'Wpt Rng', Dimension.distance, group: Group.navigation),
-  crossTrackError('Cross track error', 'XTE', Dimension.crossTrackError, group: Group.navigation);
+  yaw('Yaw angle', 'Yaw', Dimension.angle);
 
   /// A long name suitable for use during selection, e.g. "Speed over ground".
   final String longName;
