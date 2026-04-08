@@ -28,7 +28,7 @@ the following:
 * **Network**: Configure the connection to your NMEA hardware.
 * **Pages**: Add, delete, edit, or reorder data pages.
 * **Derived Data**: Define and edit new elements derived from network data.
-* **UI Style**: Configure fonts and dark/light theme.
+* **User Interface**: Configure fonts, theme, and screen timeout.
 * **Debug Log**: Display a log of information useful for debugging.
 * **Help & License**: Display this help text.
 
@@ -43,14 +43,14 @@ available on your boat's network. Check the debug log for more details.
 
 I initially wrote this app for my own use but I plan on fixing bugs and am happy
 to consider feature requests for expanding its scope. Please file these (or
-upvote the existing feature requests) at *github.com/sankeysoft/nmea_dashboard*.
+upvote the existing feature requests) at *github.com/sankeysoft/nmea_dashboard*
 
 # License
 
 This software is open source and licenced under the MIT License, the terms of
 which are provided below.
 
-Copyright (c) 2022-2023 Jody Sankey
+Copyright (c) 2022-2026 Jody Sankey
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in

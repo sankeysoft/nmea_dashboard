@@ -145,7 +145,7 @@ class _DrawerContent extends StatelessWidget {
         ),
         ListTile(
           leading: Icon(Icons.text_format_outlined, color: enabledColor),
-          title: Text('UI Style', style: enabledStyle),
+          title: Text('User Interface', style: enabledStyle),
           onTap: () {
             Navigator.pop(context);
             Navigator.of(
