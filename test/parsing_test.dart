@@ -42,12 +42,20 @@ void main() {
   });
 
   test('should skip ignored message', () {
+    final parser = NmeaParser(true);
     expect(
-      NmeaParser(
-        true,
-      ).parseString(r'$YDGSV,5,1,18,65,75,281,19,10,69,352,25,88,65,332,27,87,61,137,15*7C'),
+      parser.parseString(r'$YDGSV,5,1,18,65,75,281,19,10,69,352,25,88,65,332,27,87,61,137,15*7C'),
       BoundValueListMatches([]),
     );
+    expect(parser.ignoredCounts.total, 1);
+  });
+
+  test('should report (fictional) unsupported message one time', () {
+    final parser = NmeaParser(true);
+    expect(() => parser.parseString(r'$YDXXX,4,1,17,N*08'), throwsFormatException);
+    expect(parser.unsupportedCounts.total, 1);
+    expect(parser.parseString(r'$YDXXX,4,1,17,N*08'), BoundValueListMatches([]));
+    expect(parser.unsupportedCounts.total, 2);
   });
 
   test('should increment message counts', () {
@@ -203,6 +211,16 @@ void main() {
     );
   });
 
+  test('should parse MWD with direction and only one speed format', () {
+    expect(
+      NmeaParser(true).parseString(r'$IIMWD,322.8,T,333.9,M,4.5,M*24'),
+      BoundValueListMatches([
+        _boundSingleValue(322.8, Property.trueWindDirection),
+        _boundSingleValue(4.5, Property.trueWindSpeed, tier: 2),
+      ]),
+    );
+  });
+
   test('should parse MWV with apparent in m/s', () {
     expect(
       NmeaParser(true).parseString(r'$YDMWV,354.9,R,0.9,M,A*21'),
@@ -306,6 +324,13 @@ void main() {
     expect(parser.emptyCounts.total, 1);
     expect(parser.parseString(r'$VWVHW,,T,,M,,N,,K*54'), BoundValueListMatches([]));
     expect(parser.emptyCounts.total, 2);
+  });
+
+  test('should parse VHW with missing kmph', () {
+    expect(
+      NmeaParser(true).parseString(r'$IIVHW,,,301,M,4.2,N,,*50'),
+      BoundValueListMatches([_boundSingleValue(2.1607, Property.speedThroughWater)]),
+    );
   });
 
   test('should parse VLW', () {

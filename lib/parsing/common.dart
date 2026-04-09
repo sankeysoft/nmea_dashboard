@@ -294,6 +294,16 @@ void _validateFieldCount(List<String> fields, int expectedCount) {
   }
 }
 
+/// Validates fields contains one ot expected number of entries.
+void _validateFieldCounts(List<String> fields, List<int> allowedCounts) {
+  for (var count in allowedCounts) {
+    if (fields.length == count) {
+      return;
+    }
+  }
+  throw FormatException('Expected field count in $allowedCounts fields, found ${fields.length}');
+}
+
 /// Validates fields contains at least the expected number of entries.
 void _validateMinFieldCount(List<String> fields, int minimumCount) {
   if (fields.length < minimumCount) {
