@@ -71,7 +71,7 @@ class SimpleFormatter extends ConvertingFormatter<SingleValue<double>> {
   }
 }
 
-/// A formatted to format integers.
+/// A formatter to format integers.
 class IntegerFormatter extends Formatter<SingleValue<int>> {
   final String invalid;
 
@@ -122,7 +122,7 @@ class CustomFormatter<V> extends Formatter<V> {
   }
 }
 
-/// A formatter based on custom conversion, unconvertion, and format functions
+/// A formatter based on custom conversion and format functions
 class CustomNumericFormatter<V> extends NumericFormatter<V> {
   final double? Function(V?) conversion;
   final String Function(V?) formatting;
@@ -181,8 +181,22 @@ class CustomConvertingFormatter extends ConvertingFormatter<SingleValue<double>>
 
 /// A map of all the possible formatters for all dimensions.
 final Map<Dimension, Map<String, Formatter>> _formatters = {
-  Dimension.angle: {'degrees': SimpleFormatter('Degrees', '°', '--', 1.0, 0)},
+  Dimension.angle: {'degrees': SimpleFormatter('degrees', '°', '--', 1.0, 0)},
   Dimension.angularRate: {'degreesPerSec': SimpleFormatter('deg/sec', '°/s', '--.-', 1.0, 1)},
+  Dimension.lateralAngle: {
+    'degrees': CustomNumericFormatter<SingleValue<double>>(
+      'degrees',
+      '°',
+      conversion: (value) => (value == null) ? null : _normalizeLateralAngle(value.data),
+      formatting: (value) => (value == null) ? '---' : _lateralAngleString(value.data, false),
+    ),
+    'degreesPS': CustomNumericFormatter<SingleValue<double>>(
+      'degrees P/S',
+      '°',
+      conversion: (value) => (value == null) ? null : _normalizeLateralAngle(value.data),
+      formatting: (value) => (value == null) ? '---' : _lateralAngleString(value.data, true),
+    ),
+  },
   Dimension.bearing: {
     'true': CustomNumericFormatter<AugmentedBearing>(
       'true',
@@ -292,4 +306,24 @@ String _xteString(double number, String units) {
   }
   final guidance = (number < 0) ? 'Steer Left' : 'Steer Right';
   return '${number.round().abs()} $units\n$guidance';
+}
+
+double _normalizeLateralAngle(double number) {
+  final mod = (number % 360);
+  return (mod > 180) ? mod - 360 : mod;
+}
+
+String _lateralAngleString(double number, bool includePortStarboard) {
+  int base = _normalizeLateralAngle(number).round();
+  if (includePortStarboard) {
+    if (base == 0) {
+      return '0';
+    } else if (base < 0) {
+      return '${base.abs()}P';
+    } else {
+      return '${base}S';
+    }
+  } else {
+    return (base >= 0 ? '+' : '') + base.toString();
+  }
 }

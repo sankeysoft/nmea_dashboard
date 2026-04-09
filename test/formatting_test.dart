@@ -41,6 +41,37 @@ void main() {
     expect(format(-234.321, 'degrees'), equals('-234'));
   });
 
+  test('lateral angles should be formatted appropriately', () {
+    String format(double number, String name) {
+      return formattersFor(Property.rudderAngle.dimension)[name]!.format(SingleValue(number));
+    }
+
+    expect(format(0.0, 'degrees'), equals('+0'));
+    expect(format(5.7, 'degrees'), equals('+6'));
+    expect(format(-12.4, 'degrees'), equals('-12'));
+    expect(format(181.0, 'degrees'), equals('-179'));
+    expect(format(0.0, 'degreesPS'), equals('0'));
+    expect(format(5.7, 'degreesPS'), equals('6S'));
+    expect(format(-12.4, 'degreesPS'), equals('12P'));
+    expect(format(181.0, 'degreesPS'), equals('179P'));
+  });
+
+  test('lateral angle numeric conversion should be correct', () {
+    double? toNumber(double number, String name) {
+      final fmt = formattersFor(Property.rudderAngle.dimension)[name]!;
+      return (fmt as NumericFormatter).toNumber(SingleValue(number));
+    }
+
+    expect(toNumber(0.0, 'degrees'), closeTo(0.0, 0.0001));
+    expect(toNumber(5.7, 'degrees'), closeTo(5.7, 0.0001));
+    expect(toNumber(-12.4, 'degrees'), closeTo(-12.4, 0.0001));
+    expect(toNumber(181.0, 'degrees'), closeTo(-179.0, 0.0001));
+    expect(toNumber(0.0, 'degreesPS'), closeTo(0.0, 0.0001));
+    expect(toNumber(5.7, 'degreesPS'), closeTo(5.7, 0.0001));
+    expect(toNumber(-12.4, 'degreesPS'), closeTo(-12.4, 0.0001));
+    expect(toNumber(181.0, 'degreesPS'), closeTo(-179.0, 0.0001));
+  });
+
   test('angular rates should be formatted appropriately', () {
     String format(double number, String name) {
       return formattersFor(Property.rateOfTurn.dimension)[name]!.format(SingleValue(number));
