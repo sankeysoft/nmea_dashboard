@@ -353,9 +353,22 @@ void main() {
     );
   });
 
-  test('should parse XDR with roll pitch yaw', () {
+  test('should parse XDR with roll pitch yaw in degrees', () {
     expect(
       NmeaParser(true).parseString(r'$YDXDR,A,-44.75,D,Yaw,A,1.00,D,Pitch,A,0.25,D,Roll*65'),
+      BoundValueListMatches([
+        _boundSingleValue(-44.75, Property.yaw),
+        _boundSingleValue(1.0, Property.pitch),
+        _boundSingleValue(0.25, Property.roll),
+      ]),
+    );
+  });
+
+  test('should parse XDR with roll pitch yaw in radians', () {
+    expect(
+      NmeaParser(
+        true,
+      ).parseString(r'$YDXDR,A,-0.781035,R,Yaw,A,0.017453,R,Pitch,A,0.004363,R,Roll*49'),
       BoundValueListMatches([
         _boundSingleValue(-44.75, Property.yaw),
         _boundSingleValue(1.0, Property.pitch),
@@ -378,6 +391,13 @@ void main() {
         _boundSingleValue(23.6, Property.airTemperature, tier: 2),
         _boundSingleValue(57.9, Property.relativeHumidity, tier: 2),
       ]),
+    );
+  });
+
+  test('should parse XDR with temperature in Kelvin', () {
+    expect(
+      NmeaParser(true).parseString(r'$GPXDR,C,294.750,K,airtemp*04'),
+      BoundValueListMatches([_boundSingleValue(21.6, Property.airTemperature, tier: 2)]),
     );
   });
 

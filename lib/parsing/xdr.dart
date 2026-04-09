@@ -4,6 +4,35 @@
 
 part of 'common.dart';
 
+// The supported units for a transducer, with conversion back to standard units for its type.
+enum Units {
+  degrees('D', null, null),
+  radians('R', null, 180 / math.pi),
+  celcius('C', null, null),
+  kelvin('K', -273.15, null),
+  percentage('P', null, null),
+  pascals('P', null, null),
+  bar('B', null, barToPascals),
+  rpm('R', null, null),
+  voltage('V', null, null);
+
+  final String abbreviation;
+  final double? _offset;
+  final double? _scale;
+
+  const Units(this.abbreviation, this._offset, this._scale);
+
+  double convert(double value) {
+    if (_offset != null) {
+      value += _offset;
+    }
+    if (_scale != null) {
+      value *= _scale;
+    }
+    return value;
+  }
+}
+
 class XdrParser extends SentenceParser {
   @override
   List<BoundValue<Value>> parse(List<String> fields) {
@@ -17,12 +46,23 @@ class XdrParser extends SentenceParser {
 
   /// Parses a single transducer measurement, ignoring unknown properties.
   static List<BoundValue> _parseMeasurement(List<String> fields, int startIndex) {
-    final transducer = fields[startIndex];
+    final type = fields[startIndex];
+    final value = double.parse(fields[startIndex + 1]);
+    String units = fields[startIndex + 2];
     String name = fields[startIndex + 3].toLowerCase();
     String? number;
     if (name.length > 2 && name[name.length - 2] == "#") {
       number = name[name.length - 1];
       name = name.substring(0, name.length - 2);
+    }
+
+    double convertValue(List<Units> allowedUnits) {
+      for (final allowedUnit in allowedUnits) {
+        if (units == allowedUnit.abbreviation) {
+          return allowedUnit.convert(value);
+        }
+      }
+      throw FormatException('Invalid units $units for $name, expected one of $allowedUnits');
     }
 
     Property propByNumber(List<Property> options) {
@@ -32,81 +72,61 @@ class XdrParser extends SentenceParser {
       throw FormatException('Unknown sensor number: $number');
     }
 
-    switch ('$transducer-$name') {
+    switch ('$type-$name') {
       case 'A-pitch':
-        _validateFieldValue(fields, index: startIndex + 2, expected: 'D');
-        final value = double.parse(fields[startIndex + 1]);
+        final value = convertValue([Units.degrees, Units.radians]);
         return [_boundSingleValue(value, Property.pitch)];
       case 'A-roll':
-        _validateFieldValue(fields, index: startIndex + 2, expected: 'D');
-        final value = double.parse(fields[startIndex + 1]);
+        final value = convertValue([Units.degrees, Units.radians]);
         return [_boundSingleValue(value, Property.roll)];
       case 'A-yaw':
-        _validateFieldValue(fields, index: startIndex + 2, expected: 'D');
-        final value = double.parse(fields[startIndex + 1]);
+        final value = convertValue([Units.degrees, Units.radians]);
         return [_boundSingleValue(value, Property.yaw)];
       case 'C-air':
       case 'C-tempair':
       case 'C-airtemp':
-        _validateFieldValue(fields, index: startIndex + 2, expected: 'C');
-        final value = double.parse(fields[startIndex + 1]);
+        final value = convertValue([Units.celcius, Units.kelvin]);
         return [_boundSingleValue(value, Property.airTemperature, tier: 2)];
       case 'C-water':
       case 'C-tempwater':
       case 'C-watertemp':
-        _validateFieldValue(fields, index: startIndex + 2, expected: 'C');
-        final value = double.parse(fields[startIndex + 1]);
+        final value = convertValue([Units.celcius, Units.kelvin]);
         return [_boundSingleValue(value, Property.waterTemperature, tier: 2)];
       case 'C-engine':
         _validateFieldValue(fields, index: startIndex + 2, expected: 'C');
-        final value = double.parse(fields[startIndex + 1]);
+        final value = convertValue([Units.celcius, Units.kelvin]);
         final prop = propByNumber([Property.engine1Temperature, Property.engine2Temperature]);
         return [_boundSingleValue(value, prop)];
       case 'E-fuel':
       case 'V-fuel':
-        _validateFieldValue(fields, index: startIndex + 2, expected: 'P');
-        final value = double.parse(fields[startIndex + 1]);
+        final value = convertValue([Units.percentage]);
         return [_boundSingleValue(value, Property.fuelLevel)];
       case 'E-freshwater':
       case 'V-freshwater':
-        _validateFieldValue(fields, index: startIndex + 2, expected: 'P');
-        final value = double.parse(fields[startIndex + 1]);
+        final value = convertValue([Units.percentage]);
         final prop = propByNumber([Property.water1Level, Property.water2Level]);
         return [_boundSingleValue(value, prop)];
       case 'H-air':
-        _validateFieldValue(fields, index: startIndex + 2, expected: 'P');
-        final value = double.parse(fields[startIndex + 1]);
+        final value = convertValue([Units.percentage]);
         return [_boundSingleValue(value, Property.relativeHumidity, tier: 2)];
       case 'P-baro':
       case 'P-barometer':
-        final dataType = fields[startIndex + 2];
-        var value = double.parse(fields[startIndex + 1]);
-        if (dataType == 'P') {
-          // Already in pascals
-        } else if (dataType == 'B') {
-          value *= barToPascals;
-        } else {
-          throw FormatException('Invalid pressure datatype: $dataType');
-        }
+        final value = convertValue([Units.pascals, Units.bar]);
         return [_boundSingleValue(value, Property.pressure, tier: 2)];
       case 'P-engineoil':
-        _validateFieldValue(fields, index: startIndex + 2, expected: 'P');
-        final value = double.parse(fields[startIndex + 1]);
+        final value = convertValue([Units.pascals, Units.bar]);
         final prop = propByNumber([Property.engine1OilPressure, Property.engine2OilPressure]);
         return [_boundSingleValue(value, prop)];
       case 'T-engine':
-        _validateFieldValue(fields, index: startIndex + 2, expected: 'R');
-        final value = double.parse(fields[startIndex + 1]);
+        final value = convertValue([Units.rpm]);
         final prop = propByNumber([Property.engine1Rpm, Property.engine2Rpm]);
         return [_boundSingleValue(value, prop)];
       case 'U-alternator':
-        _validateFieldValue(fields, index: startIndex + 2, expected: 'V');
-        final value = double.parse(fields[startIndex + 1]);
+        final value = convertValue([Units.voltage]);
         final prop = propByNumber([Property.alternator1Voltage, Property.alternator2Voltage]);
         return [_boundSingleValue(value, prop)];
       case 'U-battery':
-        _validateFieldValue(fields, index: startIndex + 2, expected: 'V');
-        final value = double.parse(fields[startIndex + 1]);
+        final value = convertValue([Units.voltage]);
         final prop = propByNumber([Property.battery1Voltage, Property.battery2Voltage]);
         return [_boundSingleValue(value, prop)];
       default:
