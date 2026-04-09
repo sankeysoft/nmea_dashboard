@@ -86,7 +86,7 @@ class _EditDerivedDataFormState extends StatefulFormState<_EditDerivedDataForm> 
                   children: [
                     Expanded(child: _buildOperationField()),
                     const SizedBox(width: 20),
-                    SizedBox(width: 180, child: _buildOperandField()),
+                    SizedBox(width: 170, child: _buildOperandField()),
                   ],
                 ),
               ],

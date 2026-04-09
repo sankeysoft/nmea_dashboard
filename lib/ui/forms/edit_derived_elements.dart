@@ -43,7 +43,9 @@ class _PasteButton extends StatelessWidget {
     final sm = ScaffoldMessenger.of(context);
     return IconButton(
       icon: const Icon(Icons.content_paste_outlined),
-      onPressed: () => Clipboard.getData(Clipboard.kTextPlain).then((clipboardData) {
+      onPressed: () async {
+        final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
+        if (!context.mounted) return;
         final text = clipboardData?.text;
         if (text == null) {
           showSnackBar(sm, 'Clipboard does not contain text');
@@ -65,7 +67,7 @@ class _PasteButton extends StatelessWidget {
             ),
           );
         }
-      }),
+      },
     );
   }
 }

@@ -331,6 +331,10 @@ void main() {
       NmeaParser(true).parseString(r'$IIVHW,,,301,M,4.2,N,,*50'),
       BoundValueListMatches([_boundSingleValue(2.1607, Property.speedThroughWater)]),
     );
+    expect(
+      NmeaParser(true).parseString(r'$IIVHW,,,,,00.0,N,,*19'),
+      BoundValueListMatches([_boundSingleValue(0.0, Property.speedThroughWater)]),
+    );
   });
 
   test('should parse VLW', () {

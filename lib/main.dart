@@ -88,15 +88,17 @@ class _LoadingPage extends StatelessWidget {
         theme: ThemeData.dark(),
         home: Scaffold(
           body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text("NMEA Dashboard", style: TextStyle(fontSize: 40)),
-                const SizedBox(height: 30),
-                Image.asset("assets/rounded_icon.png"),
-                const SizedBox(height: 60),
-                const SizedBox(width: 250, child: LinearProgressIndicator()),
-              ],
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text("NMEA Dashboard", style: TextStyle(fontSize: 40)),
+                  const SizedBox(height: 30),
+                  Image.asset("assets/rounded_icon.png"),
+                  const SizedBox(height: 60),
+                  const SizedBox(width: 250, child: LinearProgressIndicator()),
+                ],
+              ),
             ),
           ),
         ),
