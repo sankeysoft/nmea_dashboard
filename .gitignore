@@ -45,3 +45,9 @@ key.properties
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Coverage calculations
+/coverage
+
+# Claude config
+/.claude
