@@ -1,4 +1,4 @@
-// Copyright Jody M Sankey 2023
+// Copyright Jody M Sankey 2023-2026
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
@@ -164,6 +164,12 @@ void main() {
     expect(format(12345.67, 'nm'), equals('6.67'));
   });
 
+  test('integer formatter should format', () {
+    final fmt = IntegerFormatter('test', null, '-');
+    expect(fmt.format(null), equals('-'));
+    expect(fmt.format(SingleValue<int>(42)), equals('42'));
+  });
+
   // Don't have any integer properties yet but should test them here.
 
   test('position should be formatted appropriately', () {
@@ -221,6 +227,22 @@ void main() {
     expect(format(5.4321, 'farenheit'), equals('41.8'));
     expect(format(-5.91, 'celcius'), equals('-5.9'));
     expect(format(-5.91, 'farenheit'), equals('21.4'));
+  });
+
+  test('temperature farenheit toNumber should convert correctly', () {
+    final fmt =
+        formattersFor(Property.waterTemperature.dimension)['farenheit']! as NumericFormatter;
+    expect(fmt.toNumber(null), null);
+    expect(fmt.toNumber(SingleValue(0.0)), closeTo(32.0, 0.001));
+    expect(fmt.toNumber(SingleValue(100.0)), closeTo(212.0, 0.001));
+  });
+
+  test('temperature farenheit fromNumber should reverse conversion', () {
+    final fmt =
+        formattersFor(Property.waterTemperature.dimension)['farenheit']! as ConvertingFormatter;
+    expect(fmt.fromNumber(null), null);
+    expect(fmt.fromNumber(32.0), ValueMatches(SingleValue(0.0)));
+    expect(fmt.fromNumber(212.0), ValueMatches(SingleValue(100.0)));
   });
 
   test('time should be formatted appropriately', () {

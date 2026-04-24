@@ -11,6 +11,7 @@ NMEA Dashboard is a Flutter app that displays real-time marine vessel data (GPS,
 ```bash
 flutter analyze          # Lint/static analysis
 flutter test             # Run all tests
+flutter test --coverage  # Run tests and generate coverage in coverage/lcov.info
 flutter run              # Run in debug mode
 ```
 

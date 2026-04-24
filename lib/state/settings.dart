@@ -109,7 +109,7 @@ class _PrefMappedValue<P, N> {
   }
 }
 
-/// Validates the the supplied input is non null and contains a json list,
+/// Validates the supplied input is non null and contains a json list,
 /// logging detailed messages containing `target` and returning null if
 /// any problems are found.
 List<T>? _validateJsonList<T>(
@@ -314,7 +314,7 @@ class DerivedDataSettings with ChangeNotifier {
     _fromJson(json: prefString ?? '', source: 'shared preferences');
   }
 
-  /// An interator over the data specs in order.
+  /// An iterator over the data specs in order.
   Iterable<DerivedDataSpec> get derivedDataSpecs => _derivedDataSpecs.values;
 
   /// Replaces the current set of derived data with the supplied specifications.

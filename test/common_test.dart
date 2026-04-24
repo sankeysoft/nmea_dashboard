@@ -1,4 +1,4 @@
-// Copyright Jody M Sankey 2023
+// Copyright Jody M Sankey 2023-2026
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
@@ -8,8 +8,41 @@ import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:test/test.dart';
 
 void main() {
-  // A lot of the early material in this module would only result in change
-  // detector tests so skip testing it.
+  test('InvalidTypeException should include message in toString', () {
+    expect(InvalidTypeException('test cause').toString(), 'InvalidTypeException: test cause');
+  });
+
+  test('Source.fromString should return matching value or null', () {
+    expect(Source.fromString('network'), Source.network);
+    expect(Source.fromString('invalid'), null);
+    expect(Source.fromString(null), null);
+  });
+
+  test('Dimension.fromString should return matching value or null', () {
+    expect(Dimension.fromString('speed'), Dimension.speed);
+    expect(Dimension.fromString('invalid'), null);
+  });
+
+  test('Operation.fromString should return matching value or null', () {
+    expect(Operation.fromString('add'), Operation.add);
+    expect(Operation.fromString('invalid'), null);
+  });
+
+  test('CellType.fromString should return matching value or null', () {
+    expect(CellType.fromString('current'), CellType.current);
+    expect(CellType.fromString('invalid'), null);
+  });
+
+  test('HistoryInterval.fromString should return matching value or null', () {
+    expect(HistoryInterval.fromString('twoHours'), HistoryInterval.twoHours);
+    expect(HistoryInterval.fromString('invalid'), null);
+  });
+
+  test('StatsInterval.fromString should return matching value or null', () {
+    expect(StatsInterval.fromString('oneMin'), StatsInterval.oneMin);
+    expect(StatsInterval.fromString('invalid'), null);
+  });
+
   test('derivation friendly dimensions should have numeric formatters.', () {
     for (final dim in Dimension.values) {
       if (dim.derivationFriendly) {

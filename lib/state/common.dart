@@ -112,7 +112,7 @@ enum Property {
     this.group = Group.general,
   });
 
-  /// The uniqualified name of this literal in its enum, e.g. "speedOverGround".
+  /// The unqualified name of this literal in its enum, e.g. "speedOverGround".
   String get name => toString().split('.').last;
 }
 

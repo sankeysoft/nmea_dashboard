@@ -24,7 +24,7 @@ class Staleness {
 
 /// A single element of marine data based on a history of some data. The value
 /// may change over time based on supplied inputs and may at times be invalid.
-/// In the asbstract case the type of input data (U) may not match the type of
+/// In the abstract case the type of input data (U) may not match the type of
 /// stored data (V).
 abstract class DataElement<V extends Value, U extends Value> with ChangeNotifier {
   /// This class's logger.

@@ -37,7 +37,7 @@ Map<String, Formatter> formattersFor(Dimension? dimension) {
 abstract class ConvertingFormatter<V> extends NumericFormatter<V> {
   ConvertingFormatter(super.longName, super.units, {super.heightFraction});
 
-  /// Returns a convertion of the supplied input in the units displayed
+  /// Returns a conversion of the supplied input in the units displayed
   /// by this formatter back to the native units for the dimension.
   V? fromNumber(double? input);
 }
@@ -50,14 +50,14 @@ class SimpleFormatter extends ConvertingFormatter<SingleValue<double>> {
 
   SimpleFormatter(super.longName, super.units, this.invalid, this.scale, this.dp);
 
-  /// Returns a convertion of the supplied input to the units displayed
+  /// Returns a conversion of the supplied input to the units displayed
   /// by this formatter.
   @override
   double? toNumber(SingleValue<double>? input) {
     return (input == null) ? null : input.data * scale;
   }
 
-  /// Returns a convertion of the supplied input in the units displayed
+  /// Returns a conversion of the supplied input in the units displayed
   /// by this formatter back to the native units for the dimension.
   @override
   SingleValue<double>? fromNumber(double? input) {
@@ -146,7 +146,7 @@ class CustomNumericFormatter<V> extends NumericFormatter<V> {
   }
 }
 
-/// A formatter based on custom conversion, unconvertion, and format functions
+/// A formatter based on custom conversion, unconversion, and format functions
 class CustomConvertingFormatter extends ConvertingFormatter<SingleValue<double>> {
   final String invalid;
   final double Function(double) conversion;

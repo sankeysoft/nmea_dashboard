@@ -1,4 +1,4 @@
-// Copyright Jody M Sankey 2023
+// Copyright Jody M Sankey 2023-2026
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
@@ -251,6 +251,8 @@ class AugmentedBearingAccumulator extends ValueAccumulator<AugmentedBearing> {
   @override
   AugmentedBearing? last() {
     final b = bearing.last();
+    // Note we deliberately use the last available variation, even if it isn't from the
+    // most recent bearing.
     final v = variation.last();
     return b == null ? null : AugmentedBearing.fromNumbers(b, v);
   }

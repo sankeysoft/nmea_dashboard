@@ -39,7 +39,7 @@ class DataSet with ChangeNotifier {
   /// how long to wait without updates before going invalid.
   final _networkStaleness = Staleness(_defaultStalenessDuration);
 
-  /// A publicly assessible collections of data elements from the network.
+  /// A publicly accessible collections of data elements from the network.
   final Map<Source, Map<String, DataElement>> sources = {};
 
   /// This class's logger.

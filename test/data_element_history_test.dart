@@ -1,4 +1,4 @@
-// Copyright Jody M Sankey 2023
+// Copyright Jody M Sankey 2023-2026
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
@@ -55,6 +55,13 @@ class FakeHistoryManager<V extends Value> extends HistoryManager {
 }
 
 void main() {
+  test('HistoryManager.key includes dataId and interval name', () {
+    expect(
+      HistoryManager.key('my_data', HistoryInterval.fifteenMin),
+      'history_v1_my_data_fifteenMin',
+    );
+  });
+
   test('truncate date time should truncate unmatched datetimes', () {
     expect(
       truncateUtcToDuration(DateTime.utc(2023, 5, 23, 3, 25, 51), const Duration(minutes: 2)),

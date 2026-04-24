@@ -100,7 +100,7 @@ Stream<Uint8List> _periodicEmptyPackets() {
   return Stream.periodic(const Duration(seconds: 3), (_) => _emptyPacket);
 }
 
-/// Returns an stream of valid values read from the supplied packet stream,
+/// Returns a stream of valid values read from the supplied packet stream,
 /// logging any errors, guaranteed to return (potentially null) values at
 /// least every _timeout seconds even if no network traffic is present to
 /// enable cancelling.

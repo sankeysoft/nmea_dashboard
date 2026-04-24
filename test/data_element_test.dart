@@ -1,4 +1,4 @@
-// Copyright Jody M Sankey 2023
+// Copyright Jody M Sankey 2023-2026
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
@@ -166,17 +166,53 @@ void main() {
     int eventCount = 0;
     derived.addListener(() => eventCount++);
 
-    // We should echo updated on the source and pass through notification.
+    // We should echo updates on the source and pass through notifications.
     expect(derived.value, null);
+    expect(derived.shortName, _testName);
+    expect(derived.longName, _testName);
     source.updateValue(BoundValue(_testSource, Property.depthUncalibrated, SingleValue(5)));
     expect(derived.value, ValueMatches(SingleValue((5 * metersToFeet + 100) / metersToFeet)));
     expect(eventCount, 1);
 
-    // And go stale when our souce does.
+    // And go stale when our source does.
     await Future.delayed(_staleness.duration * 2);
     expect(source.value, null);
     expect(derived.value, null);
     expect(eventCount, 2);
+  });
+
+  test('data element long and short names come from property', () {
+    final element = ConsistentDataElement<SingleValue<double>>(
+      Source.local,
+      Property.dewPoint,
+      _staleness,
+    );
+    expect(element.shortName, Property.dewPoint.shortName);
+    expect(element.longName, Property.dewPoint.longName);
+  });
+
+  test('data element should throw when updated with wrong property', () {
+    final element = ConsistentDataElement<SingleValue<double>>(
+      _testSource,
+      _testProperty,
+      _staleness,
+    );
+    expect(
+      () => element.updateValue(BoundValue(_testSource, Property.airTemperature, SingleValue(1.0))),
+      throwsA(isA<InvalidTypeException>()),
+    );
+  });
+
+  test('newForProperty element should update value and add to history and stats', () {
+    final element =
+        ConsistentDataElement.newForProperty(_testSource, _testProperty, _staleness)
+            as SingleValueDoubleConsistentDataElement;
+    expect(element.updateValue(BoundValue(_testSource, _testProperty, SingleValue(5.0))), true);
+    expect(element.value, ValueMatches(SingleValue(5.0)));
+    expect(element.history(HistoryInterval.fifteenMin), isNotNull);
+    expect(element.history(HistoryInterval.twoHours), isNotNull);
+    expect(element.stats(StatsInterval.fifteenSec), isNotNull);
+    expect(element.stats(StatsInterval.oneMin), isNotNull);
   });
 
   test('WithHistory elements should accumulate.', () {

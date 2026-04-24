@@ -39,12 +39,12 @@ class NmeaDashboardApp extends StatelessWidget {
 
   const NmeaDashboardApp(this._logSet, {super.key});
 
-  // The root of the application needs to asynchronously load setttings
-  // before deciding the theme and delegating the to a themed application.
+  // The root of the application needs to asynchronously load settings
+  // before deciding the theme and delegating to a themed application.
   @override
   Widget build(BuildContext context) {
     /// Display the loading screen for at least the minimum time, potentially
-    /// it could be diplayed longer if loading the setting takes a while.
+    /// it could be displayed longer if loading the setting takes a while.
     return FutureBuilder(
       future: Future.wait([
         Settings.create(),

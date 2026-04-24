@@ -1,4 +1,4 @@
-// Copyright Jody M Sankey 2023
+// Copyright Jody M Sankey 2023-2026
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
@@ -39,6 +39,16 @@ void main() {
     expect(logSet.entries.length, 1);
     logSet.clear();
     expect(logSet.entries.length, 0);
+  });
+
+  test('should evict oldest entries when full', () {
+    final logSet = LogSet();
+    for (int i = 0; i < 251; i++) {
+      logSet.add(LogRecord(Level.INFO, 'Message $i', 'logger'));
+    }
+    expect(logSet.entries.length, 250);
+    expect(logSet.entries.first.message, 'Message 1');
+    expect(logSet.entries.last.message, 'Message 250');
   });
 
   test('should notify listeners', () {

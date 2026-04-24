@@ -166,7 +166,7 @@ class NmeaParser {
 
   /// Attempts to parse the supplied string as a NMEA0183 message, returning
   /// one or more bound values if parsing the message contents was successful or
-  /// zero values if parsing was unsucessful but the failure mode should not be
+  /// zero values if parsing was unsuccessful but the failure mode should not be
   /// logged (e.g. a benign problem that has already been logged). Throws an
   /// exception if parsing errors were encountered and the first time a new
   /// unsupported message or a message with no data is received.
@@ -273,12 +273,12 @@ BoundValue<SingleValue<double>>? _parseSingleValue(
   return _boundSingleValue(number, property, tier: tier);
 }
 
-// Created a BoundValue<SingleValue<double>> from the supplied input.
+// Creates a BoundValue<SingleValue<double>> from the supplied input.
 BoundValue<SingleValue<T>> _boundSingleValue<T>(T number, Property property, {int tier = 1}) {
   return BoundValue(Source.network, property, SingleValue(number), tier: tier);
 }
 
-// Created a BoundValue<DoubleValue<double>> from the supplied input.
+// Creates a BoundValue<DoubleValue<double>> from the supplied input.
 BoundValue<DoubleValue<double>> _boundDoubleValue(
   double first,
   double second,
@@ -295,7 +295,7 @@ void _validateFieldCount(List<String> fields, int expectedCount) {
   }
 }
 
-/// Validates fields contains one ot expected number of entries.
+/// Validates fields contains one of expected number of entries.
 void _validateFieldCounts(List<String> fields, List<int> allowedCounts) {
   for (var count in allowedCounts) {
     if (fields.length == count) {
@@ -379,7 +379,7 @@ double _parseCrossTrackError(String valueString, String direction) {
   }
 }
 
-/// Parses a variation magniture and sign, returning a positive value for West.
+/// Parses a variation magnitude and sign, returning a positive value for West.
 double _parseVariation(String valueString, String direction) {
   if (valueString.isEmpty) {
     throw const FormatException('Varation not populated');

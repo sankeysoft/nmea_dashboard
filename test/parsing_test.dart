@@ -1,4 +1,4 @@
-// Copyright Jody M Sankey 2023
+// Copyright Jody M Sankey 2023-2026
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
@@ -58,6 +58,14 @@ void main() {
     expect(parser.unsupportedCounts.total, 2);
   });
 
+  test('should reject message without dollar prefix', () {
+    expect(() => NmeaParser(true).parseString('HELLO'), throwsFormatException);
+  });
+
+  test('should not log if check interval has not elapsed', () {
+    NmeaParser(true).logAndClearIfNeeded();
+  });
+
   test('should increment message counts', () {
     final parser = NmeaParser(true);
     expect(parser.ignoredCounts.total, 0);
@@ -70,6 +78,26 @@ void main() {
     parser.logAndClearCounts();
     expect(parser.ignoredCounts.total, 0);
     expect(parser.successCounts.total, 0);
+  });
+
+  test('should log no-messages notice when all counts are zero', () {
+    NmeaParser(true).logAndClearCounts();
+  });
+
+  test('should log and clear empty message counts', () {
+    final parser = NmeaParser(true);
+    expect(() => parser.parseString(r'$IIDPT,,0.0*6E'), throwsFormatException);
+    expect(parser.emptyCounts.total, 1);
+    parser.logAndClearCounts();
+    expect(parser.emptyCounts.total, 0);
+  });
+
+  test('should log and clear unsupported message counts', () {
+    final parser = NmeaParser(true);
+    expect(() => parser.parseString(r'$YDXXX,4,1,17,N*08'), throwsFormatException);
+    expect(parser.unsupportedCounts.total, 1);
+    parser.logAndClearCounts();
+    expect(parser.unsupportedCounts.total, 0);
   });
 
   test('should parse BWR', () {
@@ -88,6 +116,13 @@ void main() {
     expect(
       NmeaParser(true).parseString(r'$SDDBT,58.10,f,17.71,M,,F*24'),
       BoundValueListMatches([_boundSingleValue(17.71, Property.depthUncalibrated, tier: 2)]),
+    );
+  });
+
+  test('should reject DPT with too few fields', () {
+    expect(
+      () => NmeaParser(false).parseString(r'$YDDPT,18.56'),
+      throwsFormatException,
     );
   });
 
@@ -126,6 +161,20 @@ void main() {
     );
   });
 
+  test('should reject HDG with wrong field count', () {
+    expect(
+      () => NmeaParser(false).parseString(r'$YDHDG,7.3,X,Y'),
+      throwsFormatException,
+    );
+  });
+
+  test('should reject HDG with invalid variation direction', () {
+    expect(
+      () => NmeaParser(false).parseString(r'$YDHDG,7.3,,,13.1,X'),
+      throwsFormatException,
+    );
+  });
+
   test('should parse HDM', () {
     expect(
       NmeaParser(true).parseString(r'$IIHDM,143.3,M*27'),
@@ -160,6 +209,29 @@ void main() {
       BoundValueListMatches([
         _boundDoubleValue(37.81387, -122.51072, Property.gpsPosition, tier: 2),
       ]),
+    );
+  });
+
+  test('should parse GLL with south latitude', () {
+    expect(
+      NmeaParser(false).parseString(r'$YDGLL,3748.8322,S,12230.6429,W,171453.24,A,A'),
+      BoundValueListMatches([
+        _boundDoubleValue(-37.81387, -122.51072, Property.gpsPosition, tier: 2),
+      ]),
+    );
+  });
+
+  test('should reject GLL with invalid latitude direction', () {
+    expect(
+      () => NmeaParser(false).parseString(r'$YDGLL,3748.8322,X,12230.6429,W,171453.24,A,A'),
+      throwsFormatException,
+    );
+  });
+
+  test('should reject GLL with invalid longitude direction', () {
+    expect(
+      () => NmeaParser(false).parseString(r'$YDGLL,3748.8322,N,12230.6429,X,171453.24,A,A'),
+      throwsFormatException,
     );
   });
 
@@ -208,6 +280,20 @@ void main() {
     expect(
       NmeaParser(true).parseString(r'$YDMWD,,T,,M,12.1,N,6.2,M*6F'),
       BoundValueListMatches([_boundSingleValue(6.2, Property.trueWindSpeed, tier: 2)]),
+    );
+  });
+
+  test('should reject MWD with invalid field count', () {
+    expect(
+      () => NmeaParser(false).parseString(r'$YDMWD,154.7,T,141.8'),
+      throwsFormatException,
+    );
+  });
+
+  test('should reject MWD with wrong field value', () {
+    expect(
+      () => NmeaParser(false).parseString(r'$YDMWD,154.7,X,141.8,M,12.1,N,6.2,M'),
+      throwsFormatException,
     );
   });
 
@@ -293,6 +379,13 @@ void main() {
         _boundSingleValue(357.0, Property.courseOverGround, tier: 2),
         _boundSingleValue(3.0, Property.variation, tier: 2),
       ]),
+    );
+  });
+
+  test('should parse ROT', () {
+    expect(
+      NmeaParser(true).parseString(r'$YDROT,-176.7,A*11'),
+      BoundValueListMatches([_boundSingleValue(-2.945, Property.rateOfTurn)]),
     );
   });
 
@@ -490,6 +583,13 @@ void main() {
     expect(
       NmeaParser(true).parseString(r'$YDXTE,A,A,1.000,R,N,A*26'),
       BoundValueListMatches([_boundSingleValue(1851.9993, Property.crossTrackError)]),
+    );
+  });
+
+  test('should reject XTE with invalid direction', () {
+    expect(
+      () => NmeaParser(false).parseString(r'$YDXTE,A,A,1.000,X,N,A'),
+      throwsFormatException,
     );
   });
 
