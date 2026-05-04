@@ -39,6 +39,28 @@ Map<String, dynamic> _$DataPageSpecToJson(DataPageSpec instance) =>
       'cells': instance.cells.map((e) => e.toJson()).toList(),
     };
 
+AlarmSpec _$AlarmSpecFromJson(Map<String, dynamic> json) => AlarmSpec(
+  json['name'] as String,
+  json['source'] as String,
+  json['element'] as String,
+  json['format'] as String,
+  json['comparison'] as String,
+  (json['threshold'] as num).toDouble(),
+  audible: json['audible'] as bool? ?? false,
+  enabled: json['enabled'] as bool? ?? true,
+);
+
+Map<String, dynamic> _$AlarmSpecToJson(AlarmSpec instance) => <String, dynamic>{
+  'name': instance.name,
+  'source': instance.source,
+  'element': instance.element,
+  'format': instance.format,
+  'comparison': instance.comparison,
+  'threshold': instance.threshold,
+  'audible': instance.audible,
+  'enabled': instance.enabled,
+};
+
 DataCellSpec _$DataCellSpecFromJson(Map<String, dynamic> json) => DataCellSpec(
   json['source'] as String,
   json['element'] as String,

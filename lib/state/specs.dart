@@ -110,6 +110,57 @@ class DataPageSpec extends ChangeNotifier {
   Map<String, dynamic> toJson() => _$DataPageSpecToJson(this);
 }
 
+/// A serializable specification that may be used to recreate a global
+/// threshold alarm on a data element.
+@JsonSerializable()
+class AlarmSpec {
+  /// A unique identifier within the current power cycle.
+  @JsonKey(includeToJson: false, includeFromJson: false)
+  final SpecKey key;
+
+  /// The display name for the alarm.
+  final String name;
+
+  /// The name of the source providing the data being watched.
+  final String source;
+
+  /// The name of the element within the source.
+  final String element;
+
+  /// The format whose units the threshold is expressed in.
+  final String format;
+
+  /// The comparison to apply: 'above' or 'below'.
+  final String comparison;
+
+  /// The threshold value, in the units defined by [format].
+  final double threshold;
+
+  /// Whether to play an audible tone when the alarm triggers.
+  @JsonKey(defaultValue: false)
+  final bool audible;
+
+  /// Whether this alarm is currently enabled for evaluation.
+  @JsonKey(defaultValue: true)
+  final bool enabled;
+
+  AlarmSpec(
+    this.name,
+    this.source,
+    this.element,
+    this.format,
+    this.comparison,
+    this.threshold, {
+    this.audible = false,
+    this.enabled = true,
+    SpecKey? key,
+  }) : key = key ?? SpecKey.make();
+
+  factory AlarmSpec.fromJson(Map<String, dynamic> json) => _$AlarmSpecFromJson(json);
+
+  Map<String, dynamic> toJson() => _$AlarmSpecToJson(this);
+}
+
 /// A serializable specification that may be used to recreate a displayable
 /// data element.
 @JsonSerializable()

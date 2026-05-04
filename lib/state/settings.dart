@@ -8,6 +8,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
+import 'package:nmea_dashboard/state/alarms.dart';
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/specs.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -25,6 +26,7 @@ final _log = Logger('Settings');
 class Settings with ChangeNotifier {
   final NetworkSettings network;
   final DerivedDataSettings derived;
+  final AlarmSettings alarms;
   final UiSettings ui;
   final PageSettings pages;
   final PackageInfo packageInfo;
@@ -32,6 +34,7 @@ class Settings with ChangeNotifier {
   Settings(SharedPreferences prefs, String defaultPages, this.packageInfo)
     : network = NetworkSettings(prefs),
       derived = DerivedDataSettings(prefs),
+      alarms = AlarmSettings(prefs),
       ui = UiSettings(prefs),
       pages = PageSettings(prefs, defaultPages);
 
@@ -389,6 +392,96 @@ class DerivedDataSettings with ChangeNotifier {
   }
 
   /// Saves the configuration of all derived data into shared prefs.
+  void _save() {
+    _prefs.setString(_prefKey, toJson());
+  }
+}
+
+/// Settings for the threshold alarm definitions, notifies when any of these
+/// change.
+class AlarmSettings with ChangeNotifier implements AlarmRegistry {
+  static const String _prefKey = 'alarms_v1';
+  final SharedPreferences _prefs;
+  final Map<SpecKey, AlarmSpec> _alarmSpecs = {};
+
+  /// Creates settings from the supplied prefs, starting empty if the shared
+  /// prefs are missing or invalid.
+  AlarmSettings(this._prefs) {
+    final prefString = _prefs.getString(_prefKey);
+    _fromJson(json: prefString ?? '', source: 'shared preferences');
+  }
+
+  /// An iterator over the alarm specs in order.
+  @override
+  Iterable<AlarmSpec> get alarmSpecs => _alarmSpecs.values;
+
+  /// Replaces the current set of alarms with the supplied specifications.
+  void replaceAlarms(Iterable<AlarmSpec> alarmSpecs) {
+    _alarmSpecs.clear();
+    for (final spec in alarmSpecs) {
+      _alarmSpecs[spec.key] = spec;
+    }
+    _save();
+    notifyListeners();
+  }
+
+  /// Adds or replaces the supplied specification in the current set of alarms.
+  void setAlarm(AlarmSpec spec) {
+    _alarmSpecs[spec.key] = spec;
+    _save();
+    notifyListeners();
+  }
+
+  /// Deletes the supplied specification from the current set of alarms.
+  void removeAlarm(AlarmSpec spec) {
+    _alarmSpecs.remove(spec.key);
+    _save();
+    notifyListeners();
+  }
+
+  /// Replaces the current set of alarms with alarms from a json encoded string,
+  /// making no changes if the string is not valid or if dryRun is true.
+  /// Returns true on success.
+  bool useClipboard(String text, {bool dryRun = false}) {
+    bool success = _fromJson(json: text, source: 'clipboard', dryRun: dryRun);
+    if (!dryRun && success) {
+      _save();
+      notifyListeners();
+    }
+    return success;
+  }
+
+  /// Returns a json string containing the configuration of all alarms.
+  String toJson() {
+    final jsonIterator = _alarmSpecs.values.toList();
+    return json.encode(jsonIterator);
+  }
+
+  /// Overwrites all alarms with specs from a json encoded string, making no
+  /// changes if the string is not valid or if dryRun is true. Returns true on
+  /// success.
+  bool _fromJson({required String json, required String source, bool dryRun = false}) {
+    final specs = _validateJsonList(
+      json,
+      (e) => AlarmSpec.fromJson(e),
+      'alarm settings',
+      minimumLength: 0,
+    );
+    if (specs == null) {
+      return false;
+    } else if (dryRun) {
+      return true;
+    }
+
+    _alarmSpecs.clear();
+    for (final spec in specs) {
+      _alarmSpecs[spec.key] = spec;
+    }
+    _log.info('Loaded ${specs.length} alarms from $source');
+    return true;
+  }
+
+  /// Saves the configuration of all alarms into shared prefs.
   void _save() {
     _prefs.setString(_prefKey, toJson());
   }
