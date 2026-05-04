@@ -1,4 +1,4 @@
-// Copyright Jody M Sankey 2023-2026
+// Copyright Jody M Sankey 2023
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 

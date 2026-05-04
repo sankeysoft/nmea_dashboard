@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:async/async.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/parsing/common.dart';
@@ -45,7 +46,7 @@ Stream<BoundValue?> _valuesFromTcpConnect(
     while (true) {
       try {
         var socket = await Socket.connect(ipAddress, portNum);
-        await for (final value in _valuesFromPackets(socket, parser)) {
+        await for (final value in valuesFromPackets(socket, parser)) {
           yield value;
         }
         socket.close();
@@ -73,7 +74,7 @@ Stream<BoundValue?> _valuesFromUdpListen(int portNum, NmeaParser parser) async* 
     while (true) {
       try {
         var receiver = await UDP.bind(Endpoint.any(port: Port(portNum)));
-        await for (final value in _valuesFromPackets(
+        await for (final value in valuesFromPackets(
           receiver.asStream().map((d) => d?.data ?? _emptyPacket),
           parser,
         )) {
@@ -104,7 +105,8 @@ Stream<Uint8List> _periodicEmptyPackets() {
 /// logging any errors, guaranteed to return (potentially null) values at
 /// least every _timeout seconds even if no network traffic is present to
 /// enable cancelling.
-Stream<BoundValue?> _valuesFromPackets(Stream<Uint8List> packetStream, NmeaParser parser) async* {
+@visibleForTesting
+Stream<BoundValue?> valuesFromPackets(Stream<Uint8List> packetStream, NmeaParser parser) async* {
   String remaining = '';
   await for (final packet in StreamGroup.merge([packetStream, _periodicEmptyPackets()])) {
     parser.logAndClearIfNeeded();
@@ -118,11 +120,11 @@ Stream<BoundValue?> _valuesFromPackets(Stream<Uint8List> packetStream, NmeaParse
       remaining += String.fromCharCodes(packet);
 
       // Keep going while the string contains terminators or a .
-      var nextSplit = _findSplit(remaining);
+      var nextSplit = findSplit(remaining);
       while (nextSplit >= 0) {
         final potentialMessage = remaining.substring(0, nextSplit).trim();
         remaining = remaining.substring(nextSplit).trim();
-        nextSplit = _findSplit(remaining);
+        nextSplit = findSplit(remaining);
 
         if (potentialMessage.isNotEmpty) {
           try {
@@ -141,7 +143,8 @@ Stream<BoundValue?> _valuesFromPackets(Stream<Uint8List> packetStream, NmeaParse
 /// Returns the best location to split remaing data based on the first CR LF,
 /// or message start indicator, or -1 if there is none. This is needed because
 /// annoyingly some networks don't CRLF terminate all messages correctly.
-int _findSplit(String remainingData) {
+@visibleForTesting
+int findSplit(String remainingData) {
   if (remainingData.length < 2) {
     return -1;
   }
