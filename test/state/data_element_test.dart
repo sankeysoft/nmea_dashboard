@@ -8,7 +8,7 @@ import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:nmea_dashboard/state/values.dart';
 import 'package:test/test.dart';
 
-import 'utils.dart';
+import '../utils.dart';
 
 final _staleness = Staleness(const Duration(milliseconds: 100));
 const _testName = 'Test element';

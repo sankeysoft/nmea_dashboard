@@ -7,7 +7,7 @@ import 'package:nmea_dashboard/state/data_element_history.dart';
 import 'package:nmea_dashboard/state/values.dart';
 import 'package:test/test.dart';
 
-import 'utils.dart';
+import '../utils.dart';
 
 const String _testDataId = 'test_data_id';
 const HistoryInterval _testInterval = HistoryInterval.fifteenMin;
