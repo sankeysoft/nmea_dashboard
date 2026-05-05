@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 import 'package:provider/provider.dart';
+import 'package:nmea_dashboard/state/alarms.dart';
 import 'package:nmea_dashboard/state/data_set.dart';
 import 'package:nmea_dashboard/state/data_element_history.dart';
 import 'package:nmea_dashboard/state/log_set.dart';
@@ -55,6 +56,8 @@ class NmeaDashboardApp extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.done) {
           final settings = snapshot.data![0];
           final historyManager = snapshot.data![1];
+          final dataSet = DataSet(settings.network, settings.derived, historyManager);
+          final alarmManager = AlarmManager.fromDataSet(settings.alarms, dataSet);
           return MultiProvider(
             providers: [
               ChangeNotifierProvider<LogSet>(create: (_) => _logSet),
@@ -63,9 +66,9 @@ class NmeaDashboardApp extends StatelessWidget {
               ChangeNotifierProvider<UiSettings>(create: (_) => settings.ui),
               ChangeNotifierProvider<PageSettings>(create: (_) => settings.pages),
               ChangeNotifierProvider<DerivedDataSettings>(create: (_) => settings.derived),
-              ChangeNotifierProvider<DataSet>(
-                create: (_) => DataSet(settings.network, settings.derived, historyManager),
-              ),
+              ChangeNotifierProvider<AlarmSettings>(create: (_) => settings.alarms),
+              ChangeNotifierProvider<DataSet>.value(value: dataSet),
+              ChangeNotifierProvider<AlarmManager>.value(value: alarmManager),
             ],
             child: _ThemedApp(),
           );
