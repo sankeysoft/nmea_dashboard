@@ -65,6 +65,89 @@ void main() {
     expect(spec2.key.value, equals(prototype.key.value));
   });
 
+  test('should serialize AlarmSpec', () {
+    final spec = AlarmSpec('Shallow water', 'network', 'depthWithOffset', 'feet', 'below', 40.0);
+    expect(spec.toJson(), {
+      'name': 'Shallow water',
+      'source': 'network',
+      'element': 'depthWithOffset',
+      'format': 'feet',
+      'comparison': 'below',
+      'threshold': 40.0,
+      'audible': false,
+      'enabled': true,
+    });
+  });
+
+  test('should serialize AlarmSpec with custom flags', () {
+    final spec = AlarmSpec(
+      'Overspeed',
+      'network',
+      'speedOverGround',
+      'knots',
+      'above',
+      10.5,
+      audible: true,
+      enabled: false,
+    );
+    expect(spec.toJson()['audible'], true);
+    expect(spec.toJson()['enabled'], false);
+  });
+
+  test('should deserialize AlarmSpec', () {
+    final spec = AlarmSpec.fromJson({
+      'name': 'Shallow water',
+      'source': 'network',
+      'element': 'depthWithOffset',
+      'format': 'feet',
+      'comparison': 'below',
+      'threshold': 40.0,
+      'audible': true,
+      'enabled': false,
+    });
+    expect(spec.name, 'Shallow water');
+    expect(spec.source, 'network');
+    expect(spec.element, 'depthWithOffset');
+    expect(spec.format, 'feet');
+    expect(spec.comparison, 'below');
+    expect(spec.threshold, 40.0);
+    expect(spec.audible, true);
+    expect(spec.enabled, false);
+  });
+
+  test('AlarmSpec should default audible to false and enabled to true', () {
+    final spec = AlarmSpec.fromJson({
+      'name': 'Default flags',
+      'source': 'network',
+      'element': 'depthWithOffset',
+      'format': 'feet',
+      'comparison': 'below',
+      'threshold': 20.0,
+    });
+    expect(spec.audible, false);
+    expect(spec.enabled, true);
+  });
+
+  test('AlarmSpec should generate unique keys when not supplied', () {
+    final a = AlarmSpec('A', 'network', 'depthWithOffset', 'feet', 'below', 10.0);
+    final b = AlarmSpec('B', 'network', 'depthWithOffset', 'feet', 'below', 20.0);
+    expect(a.key.value, isNot(equals(b.key.value)));
+  });
+
+  test('AlarmSpec should reuse a supplied key', () {
+    final prototype = AlarmSpec('proto', 'network', 'depthWithOffset', 'feet', 'below', 10.0);
+    final copy = AlarmSpec(
+      prototype.name,
+      prototype.source,
+      prototype.element,
+      prototype.format,
+      prototype.comparison,
+      prototype.threshold,
+      key: prototype.key,
+    );
+    expect(copy.key.value, equals(prototype.key.value));
+  });
+
   test('should serialize DerivedDataPage', () {
     final pageSpec = DataPageSpec('page 1', [
       DataCellSpec('network', 'element 1', 'current', 'feet'),

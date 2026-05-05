@@ -5,8 +5,10 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:nmea_dashboard/state/alarms.dart';
 import 'package:nmea_dashboard/state/specs.dart';
 import 'package:nmea_dashboard/ui/forms/edit_cell.dart';
+import 'package:provider/provider.dart';
 
 // A single cell used to populate one entry in some data grid.
 abstract class Cell extends StatelessWidget {
@@ -36,6 +38,41 @@ abstract class SpecCell extends Cell {
 
   @override
   Widget build(BuildContext context) {
+    final manager = context.watch<AlarmManager?>();
+    final inAlarm = manager?.isElementInAlarm(spec.source, spec.element) ?? false;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    final bgColor = inAlarm ? scheme.onSurface : scheme.surface;
+    final fgColor = inAlarm ? scheme.surface : scheme.onSurface;
+
+    Widget body = Container(
+      decoration: BoxDecoration(color: bgColor),
+      margin: const EdgeInsets.all(6.0),
+      padding: const EdgeInsets.all(10.0),
+      child: content,
+    );
+
+    if (inAlarm) {
+      // Swap surface ↔ onSurface and recolour the text styles used by data
+      // cells so heading, units, and value all flip together.
+      final swappedText = theme.textTheme.copyWith(
+        headlineLarge: theme.textTheme.headlineLarge?.copyWith(color: fgColor),
+        headlineMedium: theme.textTheme.headlineMedium?.copyWith(color: fgColor),
+      );
+      body = Theme(
+        data: theme.copyWith(
+          colorScheme: scheme.copyWith(
+            surface: scheme.onSurface,
+            onSurface: scheme.surface,
+            primary: fgColor,
+          ),
+          textTheme: swappedText,
+        ),
+        child: body,
+      );
+    }
+
     return Expanded(
       child: GestureDetector(
         onLongPress: () {
@@ -43,12 +80,7 @@ abstract class SpecCell extends Cell {
             context,
           ).push(MaterialPageRoute(builder: (context) => EditCellPage(spec: spec)));
         },
-        child: Container(
-          decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface),
-          margin: const EdgeInsets.all(6.0),
-          padding: const EdgeInsets.all(10.0),
-          child: content,
-        ),
+        child: body,
       ),
     );
   }

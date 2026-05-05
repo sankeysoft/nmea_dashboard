@@ -6,11 +6,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 import 'package:provider/provider.dart';
+import 'package:nmea_dashboard/state/alarm_audio.dart';
+import 'package:nmea_dashboard/state/alarms.dart';
 import 'package:nmea_dashboard/state/data_set.dart';
 import 'package:nmea_dashboard/state/data_element_history.dart';
 import 'package:nmea_dashboard/state/log_set.dart';
 import 'package:nmea_dashboard/state/settings.dart';
 import 'package:nmea_dashboard/state/specs.dart';
+import 'package:nmea_dashboard/ui/alarm_popup.dart';
 import 'package:nmea_dashboard/ui/forms/view_help.dart';
 import 'package:nmea_dashboard/ui/theme.dart';
 import 'package:nmea_dashboard/ui/pages/data_table.dart';
@@ -55,24 +58,68 @@ class NmeaDashboardApp extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.done) {
           final settings = snapshot.data![0];
           final historyManager = snapshot.data![1];
-          return MultiProvider(
-            providers: [
-              ChangeNotifierProvider<LogSet>(create: (_) => _logSet),
-              ChangeNotifierProvider<Settings>(create: (_) => settings),
-              ChangeNotifierProvider<NetworkSettings>(create: (_) => settings.network),
-              ChangeNotifierProvider<UiSettings>(create: (_) => settings.ui),
-              ChangeNotifierProvider<PageSettings>(create: (_) => settings.pages),
-              ChangeNotifierProvider<DerivedDataSettings>(create: (_) => settings.derived),
-              ChangeNotifierProvider<DataSet>(
-                create: (_) => DataSet(settings.network, settings.derived, historyManager),
-              ),
-            ],
-            child: _ThemedApp(),
-          );
+          return _AppRuntime(logSet: _logSet, settings: settings, historyManager: historyManager);
         } else {
           return _LoadingPage();
         }
       },
+    );
+  }
+}
+
+/// Owns the long-lived runtime objects (data set, alarm manager, audio
+/// controller) and exposes them through providers. Lives for as long as the
+/// loaded settings are available.
+class _AppRuntime extends StatefulWidget {
+  final LogSet logSet;
+  final Settings settings;
+  final HistoryManager historyManager;
+
+  const _AppRuntime({
+    required this.logSet,
+    required this.settings,
+    required this.historyManager,
+  });
+
+  @override
+  State<_AppRuntime> createState() => _AppRuntimeState();
+}
+
+class _AppRuntimeState extends State<_AppRuntime> {
+  late final DataSet _dataSet;
+  late final AlarmManager _alarmManager;
+  late final AlarmAudioController _audioController;
+
+  @override
+  void initState() {
+    super.initState();
+    _dataSet = DataSet(widget.settings.network, widget.settings.derived, widget.historyManager);
+    _alarmManager = AlarmManager.fromDataSet(widget.settings.alarms, _dataSet);
+    _audioController = AlarmAudioController(_alarmManager);
+  }
+
+  @override
+  void dispose() {
+    _audioController.dispose();
+    _alarmManager.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<LogSet>(create: (_) => widget.logSet),
+        ChangeNotifierProvider<Settings>(create: (_) => widget.settings),
+        ChangeNotifierProvider<NetworkSettings>(create: (_) => widget.settings.network),
+        ChangeNotifierProvider<UiSettings>(create: (_) => widget.settings.ui),
+        ChangeNotifierProvider<PageSettings>(create: (_) => widget.settings.pages),
+        ChangeNotifierProvider<DerivedDataSettings>(create: (_) => widget.settings.derived),
+        ChangeNotifierProvider<AlarmSettings>(create: (_) => widget.settings.alarms),
+        ChangeNotifierProvider<DataSet>.value(value: _dataSet),
+        ChangeNotifierProvider<AlarmManager>.value(value: _alarmManager),
+      ],
+      child: _ThemedApp(),
     );
   }
 }
@@ -117,7 +164,7 @@ class _ThemedApp extends StatelessWidget {
       child: MaterialApp(
         title: 'NMEA Dashboard',
         theme: createThemeData(uiSettings),
-        home: _HomePage(),
+        home: AlarmOverlay(child: _HomePage()),
       ),
     );
   }
