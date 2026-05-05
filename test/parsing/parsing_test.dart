@@ -7,7 +7,7 @@ import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/values.dart';
 import 'package:test/test.dart';
 
-import 'utils.dart';
+import '../state/utils.dart';
 
 BoundValue<SingleValue<T>> _boundSingleValue<T>(T data, Property property, {int tier = 1}) {
   return BoundValue(Source.network, property, SingleValue(data), tier: tier);
@@ -120,10 +120,7 @@ void main() {
   });
 
   test('should reject DPT with too few fields', () {
-    expect(
-      () => NmeaParser(false).parseString(r'$YDDPT,18.56'),
-      throwsFormatException,
-    );
+    expect(() => NmeaParser(false).parseString(r'$YDDPT,18.56'), throwsFormatException);
   });
 
   test('should parse DPT', () {
@@ -162,17 +159,11 @@ void main() {
   });
 
   test('should reject HDG with wrong field count', () {
-    expect(
-      () => NmeaParser(false).parseString(r'$YDHDG,7.3,X,Y'),
-      throwsFormatException,
-    );
+    expect(() => NmeaParser(false).parseString(r'$YDHDG,7.3,X,Y'), throwsFormatException);
   });
 
   test('should reject HDG with invalid variation direction', () {
-    expect(
-      () => NmeaParser(false).parseString(r'$YDHDG,7.3,,,13.1,X'),
-      throwsFormatException,
-    );
+    expect(() => NmeaParser(false).parseString(r'$YDHDG,7.3,,,13.1,X'), throwsFormatException);
   });
 
   test('should parse HDM', () {
@@ -284,10 +275,7 @@ void main() {
   });
 
   test('should reject MWD with invalid field count', () {
-    expect(
-      () => NmeaParser(false).parseString(r'$YDMWD,154.7,T,141.8'),
-      throwsFormatException,
-    );
+    expect(() => NmeaParser(false).parseString(r'$YDMWD,154.7,T,141.8'), throwsFormatException);
   });
 
   test('should reject MWD with wrong field value', () {
@@ -587,10 +575,7 @@ void main() {
   });
 
   test('should reject XTE with invalid direction', () {
-    expect(
-      () => NmeaParser(false).parseString(r'$YDXTE,A,A,1.000,X,N,A'),
-      throwsFormatException,
-    );
+    expect(() => NmeaParser(false).parseString(r'$YDXTE,A,A,1.000,X,N,A'), throwsFormatException);
   });
 
   test('should parse ZDA', () {

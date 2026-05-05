@@ -7,7 +7,7 @@ import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:nmea_dashboard/state/values.dart';
 import 'package:test/test.dart';
 
-import '../utils.dart';
+import 'utils.dart';
 
 void main() {
   test('should return no formatters for null dimension', () {

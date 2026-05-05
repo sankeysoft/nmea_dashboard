@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/values.dart';
 
-import '../utils.dart';
+import 'utils.dart';
 
 void main() {
   test('All dimensions should be serializable', () {

@@ -7,7 +7,6 @@ import 'dart:typed_data';
 import 'package:nmea_dashboard/parsing/common.dart';
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/network.dart';
-import 'package:nmea_dashboard/state/values.dart';
 import 'package:test/test.dart';
 
 // A valid DPT sentence that yields depthWithOffset and depthUncalibrated.
@@ -108,7 +107,13 @@ void main() {
 
     test('invalid checksum logs warning and yields no value', () async {
       final stream = valuesFromPackets(
-        Stream.fromIterable([_pkt(r'$YDDPT,18.56,-1.61,140.0,*00' '\n'), Uint8List(0)]),
+        Stream.fromIterable([
+          _pkt(
+            r'$YDDPT,18.56,-1.61,140.0,*00'
+            '\n',
+          ),
+          Uint8List(0),
+        ]),
         parser,
       );
       // The FormatException is caught; the subsequent empty packet emits null.
