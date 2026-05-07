@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/state/common.dart';
+import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:nmea_dashboard/state/specs.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -27,13 +28,15 @@ class Settings with ChangeNotifier {
   final DerivedDataSettings derived;
   final UiSettings ui;
   final PageSettings pages;
+  final FormatPreferences formatPreferences;
   final PackageInfo packageInfo;
 
   Settings(SharedPreferences prefs, String defaultPages, this.packageInfo)
     : network = NetworkSettings(prefs),
       derived = DerivedDataSettings(prefs),
       ui = UiSettings(prefs),
-      pages = PageSettings(prefs, defaultPages);
+      pages = PageSettings(prefs, defaultPages),
+      formatPreferences = FormatPreferences(prefs);
 
   static Future<Settings> create() async {
     // Create all Futures then await them all. Futures.wait() would lose
@@ -229,6 +232,7 @@ enum NetworkMode {
 /// Settings for the user interface style.
 class UiSettings with ChangeNotifier {
   final _PrefValue<bool> _firstRun;
+  final _PrefValue<int> _maxRunVersion;
   final _PrefValue<bool> _nightMode;
   final _PrefValue<bool> _darkTheme;
   final _PrefValue<String> _valueFont;
@@ -250,6 +254,7 @@ class UiSettings with ChangeNotifier {
 
   UiSettings(SharedPreferences prefs)
     : _firstRun = _PrefValue(prefs, 'ui_first_run', true),
+      _maxRunVersion = _PrefValue(prefs, 'ui_max_run_version', 0),
       _nightMode = _PrefValue(prefs, 'ui_night_mode', false),
       _darkTheme = _PrefValue(prefs, 'ui_dark_theme', true),
       _valueFont = _PrefValue(prefs, 'ui_value_font', 'Lexend'),
@@ -257,14 +262,20 @@ class UiSettings with ChangeNotifier {
       _keepScreenAwake = _PrefValue(prefs, 'ui_keep_screen_awake', false);
 
   bool get firstRun => _firstRun.value;
+  int get maxRunVersion => _maxRunVersion.value;
   bool get nightMode => _nightMode.value;
   bool get darkTheme => _darkTheme.value;
   String get valueFont => _valueFont.value;
   String get headingFont => _headingFont.value;
   bool get keepScreenAwake => _keepScreenAwake.value;
 
-  void clearFirstRun() {
+  void recordNewRun(int version) {
     _firstRun.set(false);
+    // Only ever let the last run version increase; if a user downgrades then
+    // upgrades we don't want to communicate new changes twice.
+    if (version > _maxRunVersion.value) {
+      _maxRunVersion.set(version);
+    }
     notifyListeners();
   }
 
@@ -405,8 +416,8 @@ class PageSettings with ChangeNotifier {
   /// Creates a settings page from the supplied prefs, or from defaults if
   /// the shared prefs are missing or invalid.
   PageSettings(this._prefs, String defaultJson) {
-    final prefString = _prefs.getString(_prefKey);
-    if (!_fromJson(json: prefString ?? '', source: 'shared preferences')) {
+    final pagePrefString = _prefs.getString(_prefKey);
+    if (!_fromJson(json: pagePrefString ?? '', source: 'shared preferences')) {
       _fromJson(json: defaultJson, source: 'defaults');
     }
   }
@@ -535,5 +546,99 @@ class PageSettings with ChangeNotifier {
   /// Saves the configuration of all data pages into shared prefs.
   void _save() {
     _prefs.setString(_prefKey, toJson());
+  }
+}
+
+class FormatPreferences with ChangeNotifier {
+  static const String _prefKey = 'format_usage_v1';
+  static const int _initial = 1000;
+  static const double _relaxation = 0.75;
+
+  final SharedPreferences _prefs;
+  final Map<String, Map<String, int>> _dimensionMap = {};
+
+  FormatPreferences(this._prefs) {
+    // Build a complete map for the current set of dimensions first, poplulated with defaults.
+    for (final d in Dimension.values) {
+      final Map<String, int> formatterMap = {};
+      for (final f in formattersFor(d).entries) {
+        formatterMap[f.key] = f.value.isDefault ? 1 : 0;
+      }
+      _dimensionMap[d.name] = formatterMap;
+    }
+
+    // Update this map using the prefs values where they exists. Note: Superficially this looked
+    // similar to the _validateJsonList function, but the nested map and updating an existing
+    // variable make it awkward to repeat that same pattern, just inline for now.
+    final prefString = _prefs.getString(_prefKey) ?? '';
+    if (prefString.isEmpty) {
+      _log.info('No format usage found in shared preferences');
+      return;
+    }
+    final dynamic decodedJson;
+    try {
+      decodedJson = json.decode(prefString);
+    } on FormatException catch (ex) {
+      _log.warning('Could not json decode format usage: $ex');
+      return;
+    }
+    if (decodedJson is! Map<String, dynamic>) {
+      _log.warning('Format usage did not decode to a json dict: $prefString');
+      return;
+    }
+
+    for (final dimensionEntry in decodedJson.entries) {
+      if (dimensionEntry.value is! Map<String, dynamic>) {
+        _log.warning('Format usage value did not decode to a json dict: $prefString');
+        return;
+      }
+      if (!_dimensionMap.containsKey(dimensionEntry.key)) {
+        continue;
+      }
+      for (final formatterEntry in (dimensionEntry.value as Map<String, dynamic>).entries) {
+        final rawValue = formatterEntry.value;
+        final usageInt = rawValue is int ? rawValue : int.tryParse(rawValue?.toString() ?? '');
+        if (_dimensionMap[dimensionEntry.key]?[formatterEntry.key] == null || usageInt == null) {
+          continue;
+        }
+        _dimensionMap[dimensionEntry.key]?[formatterEntry.key] = usageInt;
+      }
+    }
+  }
+
+  // Record an instance of the user choosing a particular formatter on a dimension.
+  void recordUsage(String? dimension, String? formatter) {
+    // Leave silently if the caller provided null inputs.
+    if (dimension == null || formatter == null) {
+      return;
+    }
+    final formatters = _dimensionMap[dimension];
+    if (formatters == null) {
+      _log.warning('Recording format usage on unknown dimension: $dimension');
+      return;
+    }
+    if (!formatters.containsKey(formatter)) {
+      _log.warning('Recording format usage for unknown formatter on $dimension: $formatter');
+      return;
+    }
+    formatters.updateAll((key, value) => (value * _relaxation).floor());
+    formatters.update(formatter, (value) => value + _initial);
+    _save();
+    notifyListeners();
+  }
+
+  // Returns the most likely preffered formatter name for the supplied dimension based on past
+  // usage.
+  String? forDimension(String? dimension) {
+    final formatters = _dimensionMap[dimension];
+    if (formatters == null || formatters.isEmpty) {
+      return null;
+    }
+    return formatters.entries.reduce((a, b) => a.value > b.value ? a : b).key;
+  }
+
+  /// Saves the configuration of usage data into shared prefs.
+  void _save() {
+    _prefs.setString(_prefKey, json.encode(_dimensionMap));
   }
 }

@@ -24,6 +24,7 @@ void main() {
   group('EditCellPage', () {
     late DataSet dataSet;
     late PageSettings pageSettings;
+    late FormatPreferences formatPrefs;
 
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
@@ -34,6 +35,7 @@ void main() {
         HistoryManagerImpl(prefs),
       );
       pageSettings = PageSettings(prefs, _defaultPagesJson);
+      formatPrefs = FormatPreferences(prefs);
     });
 
     Future<void> pumpForm(
@@ -61,6 +63,7 @@ void main() {
           providers: [
             ChangeNotifierProvider<DataSet>.value(value: dataSet),
             ChangeNotifierProvider<PageSettings>.value(value: pageSettings),
+            ChangeNotifierProvider<FormatPreferences>.value(value: formatPrefs),
           ],
           child: MaterialApp(
             navigatorObservers: [?observer],
@@ -137,7 +140,8 @@ void main() {
       expect(find.text('Type must be set'), findsOneWidget);
     });
 
-    testWidgets('clear format when spec has invalid format key', (tester) async {
+    testWidgets('resets format to preferred default when spec has invalid format key',
+        (tester) async {
       final spec = DataCellSpec(
         'network',
         'speedOverGround',
@@ -147,7 +151,8 @@ void main() {
       );
       await pumpForm(tester, spec);
 
-      expect(getDropdownByLabel('Format:', tester).value, isNull);
+      // speedOverGround is Dimension.speed; default preferred formatter is 'knots'.
+      expect(getDropdownByLabel('Format:', tester).value, 'knots');
     });
 
     testWidgets('enabling name override makes name field interactive', (tester) async {
@@ -180,22 +185,26 @@ void main() {
       expect(getDropdownByLabel('Element:', tester).value, isNull);
     });
 
-    testWidgets('changing element dropdown clears format if incompatible', (tester) async {
+    testWidgets('changing element dropdown resets format to preferred default when incompatible',
+        (tester) async {
       final spec = DataCellSpec('network', 'speedOverGround', 'current', 'knots');
       await pumpForm(tester, spec);
       expect(getDropdownByLabel('Format:', tester).value, 'knots');
 
+      // Switching to a compatible dimension keeps the current format.
       await tester.tap(find.text('Speed over ground'));
       await tester.pump();
       await tester.tap(find.text('Speed through water'));
       await tester.pump();
       expect(getDropdownByLabel('Format:', tester).value, 'knots');
 
+      // Switching to an incompatible dimension resets to the preferred default
+      // for the new dimension. Roll angle is Dimension.angle whose default is 'degrees'.
       await tester.tap(find.text('Speed through water'));
       await tester.pump();
       await tester.tap(find.text('Roll angle'));
       await tester.pump();
-      expect(getDropdownByLabel('Format:', tester).value, isNull);
+      expect(getDropdownByLabel('Format:', tester).value, 'degrees');
     });
 
     testWidgets('SAVE creates updated spec and pops navigator', (tester) async {

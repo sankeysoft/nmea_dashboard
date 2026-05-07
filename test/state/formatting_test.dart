@@ -20,6 +20,13 @@ void main() {
     }
   });
 
+  test('should have exactly one default formatter for each dimension', () {
+    for (Dimension dimension in Dimension.values) {
+      final defaults = formattersFor(dimension).values.where((f) => f.isDefault).length;
+      expect(defaults, equals(1), reason: 'Dimension.$dimension has $defaults default formatters');
+    }
+  });
+
   test('simple formatter should format', () {
     final fmt = SimpleFormatter('test', '', 'invalid', 2.0, 3);
     expect(fmt.format(SingleValue<double>(0.0)), equals('0.000'));

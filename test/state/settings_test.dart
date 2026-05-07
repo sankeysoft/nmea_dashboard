@@ -5,6 +5,7 @@
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/settings.dart';
 import 'package:nmea_dashboard/state/specs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -111,6 +112,7 @@ void main() {
     test('uses defaults when prefs are empty', () async {
       final s = UiSettings(await _prefs());
       expect(s.firstRun, isTrue);
+      expect(s.maxRunVersion, 0);
       expect(s.nightMode, isFalse);
       expect(s.darkTheme, isTrue);
       expect(s.valueFont, 'Lexend');
@@ -123,6 +125,7 @@ void main() {
       final s = UiSettings(
         await _prefs({
           'ui_first_run': !defaults.firstRun,
+          'ui_max_run_version': 42,
           'ui_night_mode': !defaults.nightMode,
           'ui_dark_theme': !defaults.darkTheme,
           'ui_value_font': 'Orbitron',
@@ -131,6 +134,7 @@ void main() {
         }),
       );
       expect(s.firstRun, isNot(defaults.firstRun));
+      expect(s.maxRunVersion, 42);
       expect(s.nightMode, isNot(defaults.nightMode));
       expect(s.darkTheme, isNot(defaults.darkTheme));
       expect(s.valueFont, 'Orbitron');
@@ -138,15 +142,30 @@ void main() {
       expect(s.keepScreenAwake, isNot(defaults.keepScreenAwake));
     });
 
-    test('clearFirstRun sets firstRun false, persists, and notifies', () async {
+    test('recordNewRun sets firstRun false, persists version, and notifies', () async {
       final p = await _prefs();
       final s = UiSettings(p);
       int count = 0;
       s.addListener(() => count++);
-      s.clearFirstRun();
+      s.recordNewRun(42);
       expect(s.firstRun, isFalse);
+      expect(s.maxRunVersion, 42);
       expect(p.getBool('ui_first_run'), isFalse);
+      expect(p.getInt('ui_max_run_version'), 42);
       expect(count, 1);
+    });
+
+    test('recordNewRun does not decrease version', () async {
+      final p = await _prefs();
+      final s = UiSettings(p);
+      int count = 0;
+      s.addListener(() => count++);
+      s.recordNewRun(42);
+      expect(s.maxRunVersion, 42);
+      s.recordNewRun(40);
+      expect(s.maxRunVersion, 42);
+      expect(p.getInt('ui_max_run_version'), 42);
+      expect(count, 2);
     });
 
     test('toggleNightMode flips nightMode and notifies each toggle', () async {
@@ -484,6 +503,82 @@ void main() {
       final s2 = PageSettings(await _prefs({'page_v1': s1.toJson()}), _pageJson1);
       expect(s2.dataPageSpecs.length, 2);
       expect(s2.dataPageSpecs.last.name, 'added');
+    });
+  });
+
+  // ──────────────── FormatPreferences ────────────────
+
+  group('FormatPreferences', () {
+    test('construction with invalid JSON falls back to defaults', () async {
+      final s = FormatPreferences(await _prefs({'format_usage_v1': 'not json'}));
+      expect(s.forDimension(Dimension.speed.name), 'knots');
+      expect(s.forDimension(Dimension.depth.name), 'feet');
+      expect(s.forDimension(Dimension.angle.name), 'degrees');
+    });
+
+    test('construction with non-map JSON falls back to defaults', () async {
+      final s = FormatPreferences(await _prefs({'format_usage_v1': '[1, 2, 3]'}));
+      expect(s.forDimension(Dimension.speed.name), 'knots');
+      expect(s.forDimension(Dimension.depth.name), 'feet');
+      expect(s.forDimension(Dimension.angle.name), 'degrees');
+    });
+
+    test('forDimension returns null for unknown dimension', () async {
+      expect(FormatPreferences(await _prefs()).forDimension(null), isNull);
+      expect(FormatPreferences(await _prefs()).forDimension('not_a_dimension'), isNull);
+    });
+
+    test('recordUsage with null dimension or formatter does nothing silently', () async {
+      final p = await _prefs();
+      final s = FormatPreferences(p);
+      int count = 0;
+      s.addListener(() => count++);
+      s.recordUsage(null, 'knots');
+      s.recordUsage(Dimension.speed.name, null);
+      expect(count, 0);
+      expect(p.getString('format_usage_v1'), isNull);
+    });
+
+    test('recordUsage with unknown dimension or formatter does not notify', () async {
+      final p = await _prefs();
+      final s = FormatPreferences(p);
+      int count = 0;
+      s.addListener(() => count++);
+      s.recordUsage(Dimension.speed.name, 'not_a_formatter');
+      s.recordUsage('not_a_dimension', 'knots');
+      expect(count, 0);
+      expect(p.getString('format_usage_v1'), isNull);
+    });
+
+    test('recordUsage notifies and persists to prefs', () async {
+      final p = await _prefs();
+      final s = FormatPreferences(p);
+      int count = 0;
+      s.addListener(() => count++);
+      s.recordUsage(Dimension.speed.name, 'knots');
+      expect(count, 1);
+      expect(p.getString('format_usage_v1'), isNotNull);
+    });
+
+    test('recordUsage makes a non-default formatter preferred after one use', () async {
+      final s = FormatPreferences(await _prefs());
+      // 'knots' is the default (weight 1), 'metersPerSec' starts at 0.
+      expect(s.forDimension(Dimension.speed.name), 'knots');
+      // Relaxation drops knots to floor(1*0.75)=0, then metersPerSec gets +1000.
+      s.recordUsage(Dimension.speed.name, 'metersPerSec');
+      expect(s.forDimension(Dimension.speed.name), 'metersPerSec');
+    });
+
+    test('usage preference is restored from persisted prefs', () async {
+      final p = await _prefs();
+      final s1 = FormatPreferences(p);
+      expect(s1.forDimension(Dimension.speed.name), 'knots');
+
+      s1.recordUsage(Dimension.speed.name, 'metersPerSec');
+      expect(s1.forDimension(Dimension.speed.name), 'metersPerSec');
+
+      final s2 = FormatPreferences(p);
+      expect(s2.forDimension(Dimension.speed.name), 'metersPerSec');
     });
   });
 }

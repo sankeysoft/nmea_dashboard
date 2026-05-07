@@ -1,4 +1,4 @@
-// Copyright Jody M Sankey 2022
+// Cmpyright Jody M Sankey 2022
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
@@ -12,8 +12,9 @@ abstract class Formatter<V> {
   final String? units;
   final double heightFraction;
   final Type valueType = V;
+  final bool isDefault;
 
-  Formatter(this.longName, this.units, {this.heightFraction = 1.0});
+  Formatter(this.longName, this.units, {this.heightFraction = 1.0, this.isDefault = false});
 
   /// Returns the formatted string to display the supplied input.
   String format(V? input);
@@ -22,7 +23,7 @@ abstract class Formatter<V> {
 /// A formatter that can also generate a scalar number for each input,
 /// e.g. for graphing.
 abstract class NumericFormatter<V> extends Formatter<V> {
-  NumericFormatter(super.longName, super.units, {super.heightFraction});
+  NumericFormatter(super.longName, super.units, {super.heightFraction, super.isDefault});
 
   /// Returns a numeric representation of the supplied input.
   double? toNumber(V? input);
@@ -35,7 +36,7 @@ Map<String, Formatter> formattersFor(Dimension? dimension) {
 
 /// A numeric formatter that is able to reverse conversion toNumber.
 abstract class ConvertingFormatter<V> extends NumericFormatter<V> {
-  ConvertingFormatter(super.longName, super.units, {super.heightFraction});
+  ConvertingFormatter(super.longName, super.units, {super.heightFraction, super.isDefault});
 
   /// Returns a conversion of the supplied input in the units displayed
   /// by this formatter back to the native units for the dimension.
@@ -48,7 +49,14 @@ class SimpleFormatter extends ConvertingFormatter<SingleValue<double>> {
   final double scale;
   final int dp;
 
-  SimpleFormatter(super.longName, super.units, this.invalid, this.scale, this.dp);
+  SimpleFormatter(
+    super.longName,
+    super.units,
+    this.invalid,
+    this.scale,
+    this.dp, {
+    super.isDefault,
+  });
 
   /// Returns a conversion of the supplied input to the units displayed
   /// by this formatter.
@@ -75,7 +83,7 @@ class SimpleFormatter extends ConvertingFormatter<SingleValue<double>> {
 class IntegerFormatter extends Formatter<SingleValue<int>> {
   final String invalid;
 
-  IntegerFormatter(super.longName, super.units, this.invalid);
+  IntegerFormatter(super.longName, super.units, this.invalid, {super.isDefault});
 
   @override
   String format(SingleValue<int>? input) {
@@ -87,7 +95,7 @@ class IntegerFormatter extends Formatter<SingleValue<int>> {
 class PositionFormatter extends Formatter<DoubleValue<double>> {
   final bool includeSeconds;
 
-  PositionFormatter(String longName, this.includeSeconds) : super(longName, ' ');
+  PositionFormatter(String longName, this.includeSeconds, {super.isDefault}) : super(longName, ' ');
 
   @override
   String format(DoubleValue<double>? input) {
@@ -114,7 +122,13 @@ class PositionFormatter extends Formatter<DoubleValue<double>> {
 class CustomFormatter<V> extends Formatter<V> {
   final String Function(V?) function;
 
-  CustomFormatter(super.longName, super.units, this.function, {super.heightFraction});
+  CustomFormatter(
+    super.longName,
+    super.units,
+    this.function, {
+    super.heightFraction,
+    super.isDefault,
+  });
 
   @override
   String format(V? input) {
@@ -131,6 +145,7 @@ class CustomNumericFormatter<V> extends NumericFormatter<V> {
     super.longName,
     super.units, {
     super.heightFraction,
+    super.isDefault,
     required this.conversion,
     required this.formatting,
   });
@@ -158,6 +173,7 @@ class CustomConvertingFormatter extends ConvertingFormatter<SingleValue<double>>
     super.units,
     this.invalid, {
     super.heightFraction,
+    super.isDefault,
     required this.conversion,
     required this.unconversion,
     required this.formatting,
@@ -181,8 +197,10 @@ class CustomConvertingFormatter extends ConvertingFormatter<SingleValue<double>>
 
 /// A map of all the possible formatters for all dimensions.
 final Map<Dimension, Map<String, Formatter>> _formatters = {
-  Dimension.angle: {'degrees': SimpleFormatter('degrees', '°', '--', 1.0, 0)},
-  Dimension.angularRate: {'degreesPerSec': SimpleFormatter('deg/sec', '°/s', '--.-', 1.0, 1)},
+  Dimension.angle: {'degrees': SimpleFormatter('degrees', '°', '--', 1.0, 0, isDefault: true)},
+  Dimension.angularRate: {
+    'degreesPerSec': SimpleFormatter('deg/sec', '°/s', '--.-', 1.0, 1, isDefault: true),
+  },
   Dimension.lateralAngle: {
     'degrees': CustomNumericFormatter<SingleValue<double>>(
       'degrees',
@@ -195,6 +213,7 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
       '°',
       conversion: (value) => (value == null) ? null : _normalizeLateralAngle(value.data),
       formatting: (value) => (value == null) ? '---' : _lateralAngleString(value.data, true),
+      isDefault: true,
     ),
   },
   Dimension.bearing: {
@@ -218,6 +237,7 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
           return _bearingString((value.bearing + value.variation!) % 360.0, 'M');
         }
       },
+      isDefault: true,
     ),
   },
   Dimension.crossTrackError: {
@@ -232,36 +252,37 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
       null,
       conversion: (value) => (value == null) ? null : value.data * metersToFeet,
       formatting: (value) => (value == null) ? '---' : _xteString(value.data * metersToFeet, 'ft'),
+      isDefault: true,
     ),
   },
   Dimension.distance: {
     'km': SimpleFormatter('km', 'km', '---.--', metersToKilometers, 2),
-    'nm': SimpleFormatter('nm', 'nm', '---.--', metersToNauticalMiles, 2),
+    'nm': SimpleFormatter('nm', 'nm', '---.--', metersToNauticalMiles, 2, isDefault: true),
   },
   Dimension.depth: {
     'meters': SimpleFormatter('meters', 'm', '--.-', 1.0, 1),
-    'feet': SimpleFormatter('feet', 'ft', '--.-', metersToFeet, 1),
+    'feet': SimpleFormatter('feet', 'ft', '--.-', metersToFeet, 1, isDefault: true),
     'fathoms': SimpleFormatter('fathoms', 'f', '-.--', metersToFeet / 6, 2),
   },
-  Dimension.integer: {'default': IntegerFormatter('default', null, '-')},
+  Dimension.integer: {'default': IntegerFormatter('default', null, '-', isDefault: true)},
   Dimension.position: {
-    'degMin': PositionFormatter('decimal min', false),
+    'degMin': PositionFormatter('decimal min', false, isDefault: true),
     'degMinSec': PositionFormatter('deg min sec', true),
   },
-  Dimension.percentage: {'percent': SimpleFormatter('percent', '%', '--.-', 1.0, 1)},
+  Dimension.percentage: {'percent': SimpleFormatter('percent', '%', '--.-', 1.0, 1, isDefault: true)},
   Dimension.pressure: {
-    'millibars': SimpleFormatter('millibar', 'mb', '----.-', pascalsToMillibar, 1),
+    'millibars': SimpleFormatter('millibar', 'mb', '----.-', pascalsToMillibar, 1, isDefault: true),
     'inchHg': SimpleFormatter('inches mercury', 'in.hg', '--.--', pascalsToInchesMercury, 2),
     'psi': SimpleFormatter('pounds per sq.inch', 'psi', '---.-', pascalsToPsi, 1),
   },
-  Dimension.rotationalSpeed: {'rpm': SimpleFormatter('rpm', 'rpm', '---', 1.0, 0)},
+  Dimension.rotationalSpeed: {'rpm': SimpleFormatter('rpm', 'rpm', '---', 1.0, 0, isDefault: true)},
   Dimension.speed: {
     'metersPerSec': SimpleFormatter('m/sec', 'm/s', '-.-', 1.0, 1),
-    'knots': SimpleFormatter('knots', 'kt', '-.-', metersPerSecondToKnots, 1),
+    'knots': SimpleFormatter('knots', 'kt', '-.-', metersPerSecondToKnots, 1, isDefault: true),
     'knots2dp': SimpleFormatter('knots (2dp)', 'kt', '-.--', metersPerSecondToKnots, 2),
   },
   Dimension.temperature: {
-    'celcius': SimpleFormatter('celcius', '°C', '--.-', 1.0, 1),
+    'celcius': SimpleFormatter('celcius', '°C', '--.-', 1.0, 1, isDefault: true),
     'farenheit': CustomConvertingFormatter(
       'farenheit',
       '°F',
@@ -283,6 +304,7 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
       null,
       (val) => val == null ? '--:--:--' : DateFormat('Hms').format(val.data),
       heightFraction: 0.7,
+      isDefault: true,
     ),
     'ymdhms': CustomFormatter<SingleValue<DateTime>>(
       'Y-M-D H:M:S',
@@ -291,7 +313,7 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
           val == null ? '-------\n--:--:--' : DateFormat('yyyy-MM-dd\nHH:mm:ss').format(val.data),
     ),
   },
-  Dimension.voltage: {'volts': SimpleFormatter('volts', 'V', '--.-', 1.0, 1)},
+  Dimension.voltage: {'volts': SimpleFormatter('volts', 'V', '--.-', 1.0, 1, isDefault: true)},
 };
 
 String _bearingString(double number, String suffix) {

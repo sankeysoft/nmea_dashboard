@@ -85,6 +85,7 @@ class _SourceAndGroup {
 class _EditCellFormState extends StatefulFormState<_EditCellForm> {
   late DataSet _dataSet;
   late PageSettings _pageSettings;
+  late FormatPreferences _formatPrefs;
 
   Source? _source;
   Group? _group;
@@ -119,8 +120,8 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
     super.initState();
   }
 
-  // Clears any internal fields that are now inconsistent given the present
-  // value of higher level fields.
+  // Clears any internal fields that are now inconsistent given the present value of higher level
+  // fields. For format we return to the user's preffered default for the dimension.
   void _wipeInvalidFields() {
     final dataElement = _dataSet.sources[_source]?[_element];
     if (dataElement == null) {
@@ -138,7 +139,7 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
 
     final dimension = dataElement?.property.dimension;
     if (!formattersFor(dimension).keys.contains(_format)) {
-      _format = null;
+      _format = _formatPrefs.forDimension(dimension?.name);
     }
     if (_type == CellType.history && formattersFor(dimension)[_format] is! NumericFormatter) {
       _format = null;
@@ -149,6 +150,7 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
   Widget build(BuildContext context) {
     _dataSet = Provider.of<DataSet>(context);
     _pageSettings = Provider.of<PageSettings>(context);
+    _formatPrefs = Provider.of<FormatPreferences>(context);
 
     // Set the group from the element now we have a dataSet to do the lookup.
     final elementProperty = _dataSet.sources[_source]?[_element]?.property;
@@ -193,6 +195,9 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
                 key: widget.spec.key,
               );
               _pageSettings.updateCell(cellSpec);
+              final dimension = _dataSet.sources[_source]?[_element]?.property.dimension;
+              _formatPrefs.recordUsage(dimension?.name, _format);
+
               Navigator.pop(context);
             },
           ),
