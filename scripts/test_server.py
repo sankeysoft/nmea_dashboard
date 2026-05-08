@@ -7,7 +7,7 @@
 """This is a simple python script I use to playback recorded NMEA network on a local network
 during development, optionally with fragmentation, trunctation and corruption."""
 
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 from datetime import datetime, timedelta
 import socket
 import os
@@ -20,7 +20,7 @@ EWMA_ALPHA = 0.2
 ONE_MS = timedelta(milliseconds=1)
 
 
-def send_file(args: ArgumentParser, open_file: typing.TextIO):
+def send_file(args: Namespace, open_file: typing.TextIO):
     """Sends all the lines in the supplied file, corrupting some of them if requested in args."""
     exclude = set(args.exclude.split(",")) if args.exclude else set()
     carry = ""
@@ -69,7 +69,7 @@ def send_file(args: ArgumentParser, open_file: typing.TextIO):
         time.sleep(interval.total_seconds())
 
 
-def sentence_type(line: str) -> str:
+def sentence_type(line: str) -> str | None:
     """Returns the NMEA sentence type for the supplied string."""
     return line[3:6] if len(line) > 6 else None
 
@@ -90,7 +90,7 @@ def datetime_from_zda(line: str) -> datetime:
     )
 
 
-def send_line(args: ArgumentParser, line: str) -> str:
+def send_line(args: Namespace, line: str) -> str:
     """Sends a single line, potentially with corruption and potentially as multiple packets
     or with some of the output carried into the next send through the return value."""
     if args.corrupt and introduce_random_event():
@@ -132,7 +132,7 @@ def truncate_data(data_string: str) -> str:
     return data_string[:idx]
 
 
-def send_data(args: ArgumentParser, data_string: str):
+def send_data(args: Namespace, data_string: str):
     """Sends the supplied string over a new connection then closes it."""
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP) as sock:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)

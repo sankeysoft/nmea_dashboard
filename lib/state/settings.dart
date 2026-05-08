@@ -272,7 +272,7 @@ class UiSettings with ChangeNotifier {
   void recordNewRun(int version) {
     _firstRun.set(false);
     // Only ever let the last run version increase; if a user downgrades then
-    // upgrades we don't want to communicate new changes twice.
+    // upgrades we don't want to communicate new changed twice.
     if (version > _maxRunVersion.value) {
       _maxRunVersion.set(version);
     }
@@ -588,16 +588,15 @@ class FormatPreferences with ChangeNotifier {
     }
 
     for (final dimensionEntry in decodedJson.entries) {
-      if (dimensionEntry.value is! Map<String, dynamic>) {
+      if (dimensionEntry.value is! Map<String, String>) {
         _log.warning('Format usage value did not decode to a json dict: $prefString');
         return;
       }
       if (!_dimensionMap.containsKey(dimensionEntry.key)) {
         continue;
       }
-      for (final formatterEntry in (dimensionEntry.value as Map<String, dynamic>).entries) {
-        final rawValue = formatterEntry.value;
-        final usageInt = rawValue is int ? rawValue : int.tryParse(rawValue?.toString() ?? '');
+      for (final formatterEntry in dimensionEntry.value.entries) {
+        final usageInt = int.tryParse(formatterEntry.value);
         if (_dimensionMap[dimensionEntry.key]?[formatterEntry.key] == null || usageInt == null) {
           continue;
         }
@@ -617,7 +616,7 @@ class FormatPreferences with ChangeNotifier {
       _log.warning('Recording format usage on unknown dimension: $dimension');
       return;
     }
-    if (!formatters.containsKey(formatter)) {
+    if (formatters.containsKey(formatter)) {
       _log.warning('Recording format usage for unknown formatter on $dimension: $formatter');
       return;
     }

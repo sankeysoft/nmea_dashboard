@@ -63,6 +63,7 @@ class NmeaDashboardApp extends StatelessWidget {
               ChangeNotifierProvider<UiSettings>(create: (_) => settings.ui),
               ChangeNotifierProvider<PageSettings>(create: (_) => settings.pages),
               ChangeNotifierProvider<DerivedDataSettings>(create: (_) => settings.derived),
+              ChangeNotifierProvider<FormatPreferences>(create: (_) => settings.formatPreferences),
               ChangeNotifierProvider<DataSet>(
                 create: (_) => DataSet(settings.network, settings.derived, historyManager),
               ),
@@ -153,15 +154,28 @@ class _HomePage extends StatelessWidget {
     final uiSettings = Provider.of<UiSettings>(context);
     final initialIdx = dataSettings.selectedPageIndex ?? 0;
     final controller = PageController(initialPage: initialIdx, keepPage: false);
+    final packageInfo = Provider.of<Settings>(context).packageInfo;
+
+    final buildNumber = int.tryParse(packageInfo.buildNumber) ?? 0;
+
     // Even though we tell the controller to not keep page it doesn't use the
     // initialIdx correctly. Force a transition post-build.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       controller.jumpToPage(initialIdx);
       if (uiSettings.firstRun) {
-        uiSettings.clearFirstRun();
+        uiSettings.recordNewRun(buildNumber);
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) =>
+                ViewHelpPage(title: 'Welcome to NMEA Dashboard', filename: 'help_overview.md'),
+          ),
+        );
+      } else if (buildNumber > uiSettings.maxRunVersion) {
+        uiSettings.recordNewRun(buildNumber);
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) =>
+                // TODO: Replace with what's new page.
                 ViewHelpPage(title: 'Welcome to NMEA Dashboard', filename: 'help_overview.md'),
           ),
         );
