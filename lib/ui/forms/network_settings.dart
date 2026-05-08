@@ -13,7 +13,7 @@ class NetworkSettingsPage extends StatefulFormPage {
   NetworkSettingsPage({required NetworkSettings settings, super.key})
     : super(
         title: 'Network settings',
-        actions: [const HelpButton('help_network_settings.md')],
+        actions: [const HelpButton('network_settings.md')],
         child: _NetworkSettingsForm(settings),
       );
 }

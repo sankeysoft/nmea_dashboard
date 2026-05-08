@@ -25,7 +25,7 @@ class ViewLogPage extends StatelessFormPage {
   ViewLogPage({super.key})
     : super(
         title: 'Debug Log',
-        actions: [_CopyButton(), _ClearButton(), const HelpButton('help_view_log.md')],
+        actions: [_CopyButton(), _ClearButton(), const HelpButton('view_log.md')],
         maxWidth: double.infinity,
         maxHeight: double.infinity,
         content: _ViewLogContent(),

@@ -15,7 +15,7 @@ class EditDerivedElementsPage extends StatelessFormPage {
   EditDerivedElementsPage({super.key})
     : super(
         title: 'Edit derived elements',
-        actions: [_CopyButton(), _PasteButton(), const HelpButton('help_edit_derived_elements.md')],
+        actions: [_CopyButton(), _PasteButton(), const HelpButton('edit_derived_elements.md')],
         content: _EditDerivedElementsContent(),
       );
 }

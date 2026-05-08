@@ -17,7 +17,7 @@ class EditCellPage extends StatefulFormPage {
   EditCellPage({required DataCellSpec spec, super.key})
     : super(
         title: 'Edit cell',
-        actions: [const HelpButton('help_edit_cell.md')],
+        actions: [const HelpButton('edit_cell.md')],
         child: _EditCellForm(spec: spec),
       );
 }

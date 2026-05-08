@@ -588,15 +588,15 @@ class FormatPreferences with ChangeNotifier {
     }
 
     for (final dimensionEntry in decodedJson.entries) {
-      if (dimensionEntry.value is! Map<String, String>) {
+      if (dimensionEntry.value is! Map<String, dynamic>) {
         _log.warning('Format usage value did not decode to a json dict: $prefString');
         return;
       }
       if (!_dimensionMap.containsKey(dimensionEntry.key)) {
         continue;
       }
-      for (final formatterEntry in dimensionEntry.value.entries) {
-        final usageInt = int.tryParse(formatterEntry.value);
+      for (final formatterEntry in (dimensionEntry.value as Map<String, dynamic>).entries) {
+        final usageInt = formatterEntry.value is int ? formatterEntry.value as int : null;
         if (_dimensionMap[dimensionEntry.key]?[formatterEntry.key] == null || usageInt == null) {
           continue;
         }
@@ -616,7 +616,7 @@ class FormatPreferences with ChangeNotifier {
       _log.warning('Recording format usage on unknown dimension: $dimension');
       return;
     }
-    if (formatters.containsKey(formatter)) {
+    if (!formatters.containsKey(formatter)) {
       _log.warning('Recording format usage for unknown formatter on $dimension: $formatter');
       return;
     }

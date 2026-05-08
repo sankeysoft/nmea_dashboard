@@ -168,8 +168,11 @@ class _DrawerContent extends StatelessWidget {
             Navigator.pop(context);
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) =>
-                    ViewHelpPage(title: 'Help Overview & License', filename: 'help_overview.md'),
+                builder: (context) => ViewHelpPage(
+                  title: 'Help Overview & License',
+                  filename: 'overview.md',
+                  linkToReleaseNotes: true,
+                ),
               ),
             );
           },

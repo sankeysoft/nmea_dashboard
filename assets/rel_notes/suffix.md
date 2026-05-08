@@ -1,0 +1,1 @@
+*If you're enjoying this free and open source software please consider leaving a review on Google Play or telling a friend about it.*

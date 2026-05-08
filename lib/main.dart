@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
+import 'package:nmea_dashboard/ui/forms/view_release_notes.dart';
 import 'package:provider/provider.dart';
 import 'package:nmea_dashboard/state/data_set.dart';
 import 'package:nmea_dashboard/state/data_element_history.dart';
@@ -167,18 +168,14 @@ class _HomePage extends StatelessWidget {
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) =>
-                ViewHelpPage(title: 'Welcome to NMEA Dashboard', filename: 'help_overview.md'),
+                ViewHelpPage(title: 'Welcome to NMEA Dashboard', filename: 'overview.md'),
           ),
         );
       } else if (buildNumber > uiSettings.maxRunVersion) {
         uiSettings.recordNewRun(buildNumber);
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) =>
-                // TODO: Replace with what's new page.
-                ViewHelpPage(title: 'Welcome to NMEA Dashboard', filename: 'help_overview.md'),
-          ),
-        );
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (context) => ViewReleaseNotesPage(displayAll: false)));
       }
     });
     controller.addListener(() {

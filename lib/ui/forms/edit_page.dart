@@ -26,7 +26,7 @@ class EditPagePage extends StatefulFormPage {
   EditPagePage({DataPageSpec? pageSpec, required CreatePageSpecFunction onCreate, super.key})
     : super(
         title: 'Edit page',
-        actions: [const HelpButton('help_edit_page.md')],
+        actions: [const HelpButton('edit_page.md')],
         child: _EditPageForm(pageSpec, onCreate),
       );
 }

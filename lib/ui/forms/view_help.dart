@@ -4,23 +4,28 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:nmea_dashboard/ui/forms/abstract.dart';
+import 'package:nmea_dashboard/ui/forms/view_release_notes.dart';
 
-/// A form that lets the user view and copy the log in real time.
+/// A form that lets the user view help markdown, either for the entire app or for a specific page.
 class ViewHelpPage extends StatelessFormPage {
-  ViewHelpPage({required String filename, required super.title, super.key})
-    : super(
-        maxWidth: double.infinity,
-        maxHeight: double.infinity,
-        content: _ViewHelpContent(filename),
-      );
+  ViewHelpPage({
+    required String filename,
+    required super.title,
+    bool linkToReleaseNotes = false,
+    super.key,
+  }) : super(
+         maxWidth: double.infinity,
+         maxHeight: double.infinity,
+         content: _ViewHelpContent(filename, linkToReleaseNotes),
+       );
 }
 
 class _ViewHelpContent extends StatelessWidget {
   final String _filename;
+  final bool _linkToReleaseNotes;
 
-  const _ViewHelpContent(this._filename);
+  const _ViewHelpContent(this._filename, this._linkToReleaseNotes);
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +36,26 @@ class _ViewHelpContent extends StatelessWidget {
         children: [
           Expanded(child: _buildText(context)),
           const SizedBox(height: 15),
-          buildCloseButton(context),
+          if (_linkToReleaseNotes)
+            Row(
+              children: [
+                Expanded(
+                  child: buildOtherButton(
+                    context: context,
+                    onPressed: () => Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (context) => ViewReleaseNotesPage(displayAll: true),
+                      ),
+                    ),
+                    text: 'VERSIONS',
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(child: buildCloseButton(context)),
+              ],
+            )
+          else
+            buildCloseButton(context),
         ],
       ),
     );
@@ -40,39 +64,15 @@ class _ViewHelpContent extends StatelessWidget {
   Widget _buildText(BuildContext context) {
     // Annoyingly Image assets can be read synchronously but text can't.
     return FutureBuilder(
-      future: rootBundle.loadString('assets/$_filename'),
+      future: rootBundle.loadString('assets/help/$_filename'),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.done) {
           final data = snapshot.data ?? 'ASSET NOT FOUND';
-          return _buildThemedMarkdown(context, data);
+          return buildThemedMarkdown(context, data);
         } else {
-          return Center(child: _spinner());
+          return Center(child: spinner());
         }
       },
     );
-  }
-
-  Widget _buildThemedMarkdown(BuildContext context, String data) {
-    final current = Theme.of(context);
-    return Theme(
-      data: current.copyWith(
-        textTheme: current.textTheme.copyWith(
-          bodyMedium: TextStyle(fontSize: 16, color: current.colorScheme.primary),
-          headlineSmall: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            height: 2,
-            color: current.colorScheme.primaryContainer,
-          ),
-          //bodyLarge: current.textTheme.bodyLarge!.copyWith(height: 10),
-          //headlineSmall: current.textTheme.headlineSmall!.copyWith(height: 10),
-        ),
-      ),
-      child: Markdown(data: data),
-    );
-  }
-
-  Widget _spinner() {
-    return const SizedBox(height: 40, width: 40, child: CircularProgressIndicator());
   }
 }

@@ -20,7 +20,9 @@ This form lets you define one of the cells on a data page.
   the app is displayed.
 
 * **Format**: Which format and units should be used to display the data. The
-  formats in this list depend on the selected element.
+  formats in this list depend on the selected element. A default format is
+  selected automatically based on previously used formats for the same dimension
+  (i.e. speed, distance, etc).
 
 * **Set Manual Name**: Normally the name of a cell is set automatically based
   on the selected element. If you prefer you can turn "Set Manual Name" on to

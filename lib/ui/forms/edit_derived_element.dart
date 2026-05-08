@@ -27,7 +27,7 @@ class EditDerivedDataPage extends StatefulFormPage {
     super.key,
   }) : super(
          title: 'Edit derived element',
-         actions: [const HelpButton('help_edit_derived_element.md')],
+         actions: [const HelpButton('edit_derived_element.md')],
          child: _EditDerivedDataForm(spec, onCreate),
        );
 }

@@ -3,6 +3,7 @@
 // of the MIT license. See the LICENCE.md file for details.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:nmea_dashboard/ui/forms/view_help.dart';
 
 typedef FormPostSaver = void Function();
@@ -12,7 +13,7 @@ const double _elementPadding = 8;
 // Default width, height, and padding
 const double _defaultWidth = 400;
 const double _defaultHeight = 500;
-const double _defaultPad = 20;
+const double _defaultPad = 15;
 // Padding of content in a list tile.
 const double _tilePadding = 6;
 
@@ -133,6 +134,29 @@ Widget buildOtherButton({
       child: Text(text),
     ),
   );
+}
+
+/// Builds a themed markdown widget.
+Widget buildThemedMarkdown(BuildContext context, String data) {
+  final current = Theme.of(context);
+  return Theme(
+    data: current.copyWith(
+      textTheme: current.textTheme.copyWith(
+        bodyMedium: TextStyle(fontSize: 16, color: current.colorScheme.primary),
+        headlineSmall: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          height: 2,
+          color: current.colorScheme.primaryContainer,
+        ),
+      ),
+    ),
+    child: Markdown(data: data),
+  );
+}
+
+Widget spinner() {
+  return const SizedBox(height: 40, width: 40, child: CircularProgressIndicator());
 }
 
 /// Builds a button to close the current form.
