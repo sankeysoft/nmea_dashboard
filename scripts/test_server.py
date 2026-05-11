@@ -20,6 +20,43 @@ EWMA_ALPHA = 0.2
 ONE_MS = timedelta(milliseconds=1)
 
 
+def find_start_index(lines: list[str], offset_minutes: int) -> int:
+    """Returns the line index to start sending from when applying a time offset.
+
+    Scans for ZDA timestamps, returns the index of the first line whose timestamp is at least
+    offset_minutes after the first timestamp in the file. Exits with an error if the offset
+    exceeds the file duration.
+    """
+    first_timestamp = None
+    last_timestamp = None
+
+    for i, line in enumerate(lines):
+        if sentence_type(line) == "ZDA":
+            try:
+                ts = datetime_from_zda(line)
+            except (ValueError, IndexError):
+                continue
+            if first_timestamp is None:
+                first_timestamp = ts
+                print(f'First timestamp: {ts.strftime("%Y-%m-%d %H:%M:%S")}')
+            last_timestamp = ts
+            if ts >= first_timestamp + timedelta(minutes=offset_minutes):
+                print(
+                    f'Skipping to {ts.strftime("%Y-%m-%d %H:%M:%S")} '
+                    f"({offset_minutes}m offset from first timestamp, line {i + 1})"
+                )
+                return i
+
+    if first_timestamp is None:
+        print("Error: no timestamps found in file, cannot apply --offset.")
+    else:
+        duration_min = (last_timestamp - first_timestamp).total_seconds() / 60
+        print(
+            f"Error: --offset {offset_minutes}m exceeds file duration of {duration_min:.1f} minutes."
+        )
+    raise SystemExit(1)
+
+
 def send_file(args: Namespace, open_file: typing.TextIO):
     """Sends all the lines in the supplied file, corrupting some of them if requested in args."""
     exclude = set(args.exclude.split(",")) if args.exclude else set()
@@ -33,7 +70,10 @@ def send_file(args: Namespace, open_file: typing.TextIO):
     last_timestamp = None
     line_count = 0
 
-    for line in open_file.readlines():
+    lines = open_file.readlines()
+    start_index = find_start_index(lines, args.offset) if args.offset else 0
+
+    for line in lines[start_index:]:
         line_count += 1
         if sentence_type(line) in exclude:
             print(f"Not sending {line}", end="")
@@ -183,6 +223,14 @@ def create_parser() -> ArgumentParser:
         "--exclude",
         action="store",
         help="Comma separated list of message types to exclude.",
+    )
+    parser.add_argument(
+        "-o",
+        "--offset",
+        action="store",
+        type=int,
+        metavar="MINUTES",
+        help="Skip to this many minutes into the file before sending.",
     )
     return parser
 
