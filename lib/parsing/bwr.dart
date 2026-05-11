@@ -8,11 +8,15 @@ class BwrParser extends SentenceParser {
   @override
   List<BoundValue> parse(List<String> fields) {
     _validateMinFieldCount(fields, 12);
-    _validateFieldValue(fields, index: 6, expected: 'T');
-    _validateFieldValue(fields, index: 10, expected: 'N');
-    return [
-      _parseSingleValue(fields[9], Property.waypointRange, divisor: metersToNauticalMiles),
-      _parseSingleValue(fields[5], Property.waypointBearing),
-    ].nonNulls.toList();
+    final ret = <BoundValue<SingleValue<double>>?>[];
+    if (fields[9].isNotEmpty) {
+      _validateFieldValue(fields, index: 10, expected: 'N');
+      ret.add(_parseSingleValue(fields[9], Property.waypointRange, divisor: metersToNauticalMiles));
+    }
+    if (fields[5].isNotEmpty) {
+      _validateFieldValue(fields, index: 6, expected: 'T');
+      ret.add(_parseSingleValue(fields[5], Property.waypointBearing));
+    }
+    return ret.nonNulls.toList();
   }
 }

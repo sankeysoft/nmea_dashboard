@@ -210,6 +210,8 @@ def mwv_apparent_sentence(state: State) -> str:
 def mwv_true_sentence(state: State) -> str:
     """Creates an NMEA MWV sentence for true wind angle and speed."""
     angle = (state.wind_direction - state.true_heading) % 360.0
+    if angle > 180:
+        angle -= 360.0
     body = f"YDMWV,{angle:.1f},T,{state.wind_speed_kt:.1f},N,A"
     return f"${body}*{nmea_checksum(body)}\r\n"
 

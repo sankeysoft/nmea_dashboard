@@ -112,6 +112,12 @@ void main() {
     );
   });
 
+  test('should skip empty RMB ', () {
+    final parser = NmeaParser(true);
+    expect(() => parser.parseString(r'$IIBWR,,,N,,E,,T,,M,,N,*1B'), throwsFormatException);
+    expect(parser.emptyCounts.total, 1);
+  });
+
   test('should support DBT', () {
     expect(
       NmeaParser(true).parseString(r'$SDDBT,58.10,f,17.71,M,,F*24'),
@@ -335,6 +341,23 @@ void main() {
     );
   });
 
+  test('should parse MWV without angle', () {
+    expect(
+      NmeaParser(true).parseString(r'$YDMWV,,R,0.9,M,A*04'),
+      BoundValueListMatches([_boundSingleValue(0.9, Property.apparentWindSpeed)]),
+    );
+  });
+
+  test('should parse MWV with true in knots', () {
+    expect(
+      NmeaParser(true).parseString(r'$YDMWV,352.5,T,20.0,N,A*15'),
+      BoundValueListMatches([
+        _boundSingleValue(352.5, Property.trueWindAngle),
+        _boundSingleValue(10.28891, Property.trueWindSpeed),
+      ]),
+    );
+  });
+
   test('should parse MTW', () {
     expect(
       NmeaParser(true).parseString(r'$YDMTW,20.4,C*08'),
@@ -353,6 +376,12 @@ void main() {
         _boundSingleValue(-185.1999, Property.crossTrackError, tier: 2),
       ]),
     );
+  });
+
+  test('should skip empty RMB ', () {
+    final parser = NmeaParser(true);
+    expect(() => parser.parseString(r'$IIRMB,A,,R,,,,N,,E,,,,,*45'), throwsFormatException);
+    expect(parser.emptyCounts.total, 1);
   });
 
   test('should parse RMC', () {
@@ -428,6 +457,13 @@ void main() {
     );
   });
 
+  test('should parse VLW without trip', () {
+    expect(
+      NmeaParser(true).parseString(r'$YDVLW,363.135,N,,*31'),
+      BoundValueListMatches([_boundSingleValue(672525.7752, Property.distanceTotal)]),
+    );
+  });
+
   test('should parse VTG', () {
     expect(
       NmeaParser(true).parseString(r'$YDVTG,210.9,T,197.8,M,0.6,N,1.2,K,A*21'),
@@ -436,6 +472,16 @@ void main() {
         _boundSingleValue(0.33333, Property.speedOverGround),
       ]),
     );
+  });
+
+  test('should skip XDR with no known data', () {
+    final parser = NmeaParser(true);
+    expect(parser.emptyCounts.total, 0);
+    expect(
+      () => parser.parseString(r'$YDXDR,A,0.0,D,Foo,A,1.00,D,Bar,A,0.25,D,Baz*30'),
+      throwsFormatException,
+    );
+    expect(parser.emptyCounts.total, 1);
   });
 
   test('should parse XDR with roll pitch yaw in degrees', () {
@@ -576,6 +622,12 @@ void main() {
 
   test('should reject XTE with invalid direction', () {
     expect(() => NmeaParser(false).parseString(r'$YDXTE,A,A,1.000,X,N,A'), throwsFormatException);
+  });
+
+  test('should skip empty XTE', () {
+    final parser = NmeaParser(true);
+    expect(() => parser.parseString(r'$IIXTE,A,A,,R,N*79'), throwsFormatException);
+    expect(parser.emptyCounts.total, 1);
   });
 
   test('should parse ZDA', () {

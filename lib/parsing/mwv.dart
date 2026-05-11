@@ -9,17 +9,21 @@ class MwvParser extends SentenceParser {
   List<BoundValue> parse(List<String> fields) {
     _validateFieldCount(fields, 5);
     _validateValidityIndicator(fields, index: 4);
+    final ret = <BoundValue<SingleValue<double>>?>[];
     final relative = (fields[1] == 'R');
-    final angle = double.parse(fields[0]);
-    final divisor = switch (fields[3]) {
-      'N' => metersPerSecondToKnots,
-      'K' => metersPerSecondToKmph,
-      _ => 1.0,
-    };
-    final speed = double.parse(fields[2]) / divisor;
-    return [
-      _boundSingleValue(angle, relative ? Property.apparentWindAngle : Property.trueWindAngle),
-      _boundSingleValue(speed, relative ? Property.apparentWindSpeed : Property.trueWindSpeed),
-    ];
+    if (fields[0].isNotEmpty) {
+      final prop = relative ? Property.apparentWindAngle : Property.trueWindAngle;
+      ret.add(_parseSingleValue(fields[0], prop));
+    }
+    if (fields[2].isNotEmpty) {
+      final divisor = switch (fields[3]) {
+        'N' => metersPerSecondToKnots,
+        'K' => metersPerSecondToKmph,
+        _ => 1.0,
+      };
+      final prop = relative ? Property.apparentWindSpeed : Property.trueWindSpeed;
+      ret.add(_parseSingleValue(fields[2], prop, divisor: divisor));
+    }
+    return ret.nonNulls.toList();
   }
 }

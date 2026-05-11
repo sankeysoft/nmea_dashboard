@@ -8,11 +8,15 @@ class VlwParser extends SentenceParser {
   @override
   List<BoundValue> parse(List<String> fields) {
     _validateMinFieldCount(fields, 4);
-    _validateFieldValue(fields, index: 1, expected: 'N');
-    _validateFieldValue(fields, index: 3, expected: 'N');
-    return [
-      _parseSingleValue(fields[0], Property.distanceTotal, divisor: metersToNauticalMiles),
-      _parseSingleValue(fields[2], Property.distanceTrip, divisor: metersToNauticalMiles),
-    ].nonNulls.toList();
+    final ret = <BoundValue<SingleValue<double>>?>[];
+    if (fields[0].isNotEmpty) {
+      _validateFieldValue(fields, index: 1, expected: 'N');
+      ret.add(_parseSingleValue(fields[0], Property.distanceTotal, divisor: metersToNauticalMiles));
+    }
+    if (fields[2].isNotEmpty) {
+      _validateFieldValue(fields, index: 3, expected: 'N');
+      ret.add(_parseSingleValue(fields[2], Property.distanceTrip, divisor: metersToNauticalMiles));
+    }
+    return ret.nonNulls.toList();
   }
 }

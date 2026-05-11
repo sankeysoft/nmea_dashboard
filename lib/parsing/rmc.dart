@@ -28,15 +28,19 @@ class RmcParser extends SentenceParser {
       _boundDoubleValue(lat, long, Property.gpsPosition, tier: 3),
       _boundSingleValue(dt, Property.utcTime, tier: 2),
     ];
-    ret.add(
-      _parseSingleValue(
-        fields[6],
-        Property.speedOverGround,
-        divisor: metersPerSecondToKnots,
-        tier: 2,
-      ),
-    );
-    ret.add(_parseSingleValue(fields[7], Property.courseOverGround, tier: 2));
+    if (fields[6].isNotEmpty) {
+      ret.add(
+        _parseSingleValue(
+          fields[6],
+          Property.speedOverGround,
+          divisor: metersPerSecondToKnots,
+          tier: 2,
+        ),
+      );
+    }
+    if (fields[7].isNotEmpty) {
+      ret.add(_parseSingleValue(fields[7], Property.courseOverGround, tier: 2));
+    }
     if (fields[9].isNotEmpty) {
       final variation = _parseVariation(fields[9], fields[10]);
       ret.add(_boundSingleValue(variation, Property.variation, tier: 2));
