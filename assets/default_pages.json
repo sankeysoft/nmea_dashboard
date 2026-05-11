@@ -15,7 +15,7 @@
 }, {
 	"name": "All data",
 	"cells": [
-    {"source": "local", "element": "utcTime", "format": "ymdhms"},
+    	{"source": "local", "element": "utcTime", "format": "ymdhms"},
 		{"source": "network", "element": "gpsPosition", "format": "degMinSec"},
 		{"source": "network", "element": "gpsHdop", "format": "meters"},
 		{"source": "network", "element": "heading", "format": "mag"},
@@ -33,6 +33,7 @@
 		{"source": "network", "element": "trueWindSpeed", "format": "knots"},
 		{"source": "network", "element": "trueWindAngle", "format": "degrees"},
 		{"source": "network", "element": "trueWindDirection", "format": "true"},
+		{"source": "computed", "element": "vmgWind", "format": "knots2dp"},
 		{"source": "network", "element": "apparentWindSpeed", "format": "knots"},
 		{"source": "network", "element": "apparentWindAngle", "format": "degrees"},
 		{"source": "network", "element": "pressure", "format": "millibars"},
@@ -47,12 +48,15 @@
 		{"source": "network", "element": "waypointRange", "format": "nm"},
 		{"source": "network", "element": "waypointBearing", "format": "true"},
 		{"source": "network", "element": "crossTrackError", "format": "feet"},
+		{"source": "computed", "element": "vmgWaypoint", "format": "knots2dp"},
 		{"source": "network", "element": "battery1Voltage", "format": "volts"},
 		{"source": "network", "element": "battery2Voltage", "format": "volts"},
 		{"source": "network", "element": "fuelLevel", "format": "percent"},
+		{"source": "network", "element": "water1Level", "format": "percent"},
 		{"source": "network", "element": "engine1Rpm", "format": "rpm"},
 		{"source": "network", "element": "engine1OilPressure", "format": "psi"},
-		{"source": "network", "element": "engine1Temperature", "format": "farenheit"}
+		{"source": "network", "element": "engine1Temperature", "format": "farenheit"},
+		{"source": "network", "element": "alternator1Voltage", "format": "volts"}
   ]
 }, {
   "name": "Medium",

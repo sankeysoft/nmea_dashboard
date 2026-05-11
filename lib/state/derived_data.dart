@@ -2,6 +2,10 @@
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
+import 'dart:math';
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/data_element.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
@@ -48,7 +52,8 @@ enum Operation {
   }
 }
 
-/// A DataElement whose value is derived from some other value.
+/// A DataElement whose value is derived from some other value via a user-specified operation
+/// and operand.
 class DerivedDataElement extends DataElement<SingleValue<double>, SingleValue<double>>
     with WithHistory, WithStats {
   final String _name;
@@ -110,4 +115,89 @@ class DerivedDataElement extends DataElement<SingleValue<double>, SingleValue<do
 
   @override
   String get longName => _name;
+}
+
+/// A DataElement for VMG to wind, calculated from SOG and TWA.
+/// TODO: If we get more of these consider moving the calculations into a different file and
+/// defining a common base class.
+class VmgWindCalculatedDataElement extends SingleValueDoubleConsistentDataElement {
+  final DataElement<SingleValue<double>, Value> _sog;
+  final DataElement<SingleValue<double>, Value> _twa;
+
+  VmgWindCalculatedDataElement(Map<String, DataElement<Value, Value>> network)
+    : _sog = network[Property.speedOverGround.name]! as DataElement<SingleValue<double>, Value>,
+      _twa = network[Property.trueWindAngle.name]! as DataElement<SingleValue<double>, Value>,
+      super(
+        Source.computed,
+        Property.vmgWind,
+        /* No staleness, source will notify on invalid */ null,
+      ) {
+    // Update self when either sourceElement sends a notification.
+    for (final element in [_sog, _twa]) {
+      element.addListener(() {
+        final value = _calculateValue();
+        if (value == null) {
+          invalidateValue();
+        } else {
+          updateValue(BoundValue(Source.derived, Property.vmgWind, value));
+        }
+      });
+    }
+  }
+
+  SingleValue<double>? _calculateValue() {
+    final sog = _sog.value?.data;
+    final twaDeg = _twa.value?.data;
+    if (sog == null || twaDeg == null) {
+      return null;
+    }
+    final twaRad = twaDeg * math.pi / 180.0;
+    // Always display VMG for wind as positive; we assume if you're headed downwind then
+    // your objective is to head downwind.
+    return SingleValue<double>((sog * cos(twaRad)).abs());
+  }
+}
+
+/// A DataElement for VMG to waypoint, calculated from SOG, COG, and waypoint bearing.
+class VmgWptCalculatedDataElement extends SingleValueDoubleConsistentDataElement {
+  final DataElement<SingleValue<double>, Value> _sog;
+  final BearingDataElement _cog;
+  final BearingDataElement _wptBearing;
+
+  VmgWptCalculatedDataElement(Map<String, DataElement<Value, Value>> network)
+    : _sog = network[Property.speedOverGround.name]! as DataElement<SingleValue<double>, Value>,
+      _cog = network[Property.courseOverGround.name]! as BearingDataElement,
+      _wptBearing = network[Property.waypointBearing.name]! as BearingDataElement,
+      super(
+        Source.computed,
+        Property.vmgWaypoint,
+        /* No staleness, source will notify on invalid */ null,
+      ) {
+    // Update self when either sourceElement sends a notification.
+    for (final element in [_sog, _cog, _wptBearing]) {
+      element.addListener(() {
+        final value = _calculateValue();
+        if (value == null) {
+          invalidateValue();
+        } else {
+          updateValue(BoundValue(Source.computed, Property.vmgWaypoint, value));
+        }
+      });
+    }
+  }
+
+  SingleValue<double>? _calculateValue() {
+    final sog = _sog.value?.data;
+    final cog = _cog.value?.bearing;
+    final wptBearing = _wptBearing.value?.bearing;
+    if (sog == null || cog == null || wptBearing == null) {
+      return null;
+    }
+    var relAngle = (cog - wptBearing) % 360.0;
+    if (relAngle > 180.0) {
+      relAngle = 360.0 - relAngle;
+    }
+    debugPrint('COG=$cog, BRG=$wptBearing, Rel=$relAngle, Fac=${cos(relAngle * math.pi / 180.0)}');
+    return SingleValue<double>(sog * cos(relAngle * math.pi / 180.0));
+  }
 }

@@ -2,6 +2,8 @@
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/data_element_history.dart';
@@ -29,6 +31,32 @@ DerivedDataSpec _depthSpec(String name) =>
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  group('DataSet default pages', () {
+    test('all cells reference valid elements', () async {
+      final prefs = await _prefs();
+      final defaultJson = await File('assets/default_pages.json').readAsString();
+      final pageSettings = PageSettings(prefs, defaultJson);
+      final dataSet = _makeDataSet(prefs);
+
+      expect(pageSettings.dataPageSpecs, isNotEmpty);
+      for (final page in pageSettings.dataPageSpecs) {
+        for (final cell in page.cells) {
+          final source = Source.fromString(cell.source);
+          expect(
+            source,
+            isNotNull,
+            reason: '"${cell.source}" in page "${page.name}" is not a valid source',
+          );
+          expect(
+            dataSet.find(source!, cell.element),
+            isNotNull,
+            reason: '"${cell.source}:${cell.element}" in page "${page.name}" not found in dataset',
+          );
+        }
+      }
+    });
+  });
 
   group('DataSet structure', () {
     test('sources contains all three source types', () async {

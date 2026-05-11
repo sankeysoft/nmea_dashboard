@@ -82,6 +82,8 @@ enum Property {
   trueWindSpeed('True wind speed', 'TWS', Dimension.speed, group: Group.environment),
   utcTime('UTC datetime', 'UTC', Dimension.time, sources: {Source.local, Source.network}),
   variation('Magnetic variation', 'MagVar', Dimension.angle, group: Group.navigation),
+  vmgWind('Speed to/from wind', 'VMG Wind', Dimension.speed, sources: {}),
+  vmgWaypoint('Speed to waypoint', 'VMG Wpt', Dimension.speed, sources: {}),
   water1Level('Fresh Water 1 Level', 'Water 1', Dimension.percentage, group: Group.systems),
   waterTemperature('Water temperature', 'Water', Dimension.temperature, group: Group.environment),
   water2Level('Fresh Water 2 Level', 'Water 2', Dimension.percentage, group: Group.systems),
@@ -133,7 +135,11 @@ enum Source {
   unset('Not Yet Set', selectable: false),
   network('Network'),
   local('Local device'),
-  derived('Derived data');
+  // Derived data is configurable by the user.
+  derived('Derived data'),
+  // Computer data is similar to derived but defined statically and in
+  // a different namespace to avoid user collisions.
+  computed('Computed data');
 
   final String longName;
   final bool selectable;

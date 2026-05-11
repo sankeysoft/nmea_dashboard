@@ -51,8 +51,11 @@ class DataSet with ChangeNotifier {
     for (final source in [Source.network, Source.local]) {
       sources[source] = _createPrimaryDataElements(source);
     }
+    // Create all known standard computed data.
+    sources[Source.computed] = _createComputedDataElements();
+
     // Create all known derived data and register to rebuild if the specs for
-    // this change.
+    // these change.
     sources[Source.derived] = _createDerivedDataElements();
     _derivedDataSettings.addListener(() {
       sources[Source.derived] = _createDerivedDataElements();
@@ -152,6 +155,20 @@ class DataSet with ChangeNotifier {
         );
         element.registerManager(_historyManager);
         elementMap[spec.name] = element;
+      }
+    }
+    return elementMap;
+  }
+
+  /// Create all known data for standard computed elements, keyed by the name of the property.
+  Map<String, DataElement> _createComputedDataElements() {
+    Map<String, DataElement> elementMap = {};
+    Map<String, DataElement> networkElements = sources[Source.network]!;
+    elementMap[Property.vmgWind.name] = VmgWindCalculatedDataElement(networkElements);
+    elementMap[Property.vmgWaypoint.name] = VmgWptCalculatedDataElement(networkElements);
+    for (final element in elementMap.values) {
+      if (element is WithHistory) {
+        element.registerManager(_historyManager);
       }
     }
     return elementMap;
