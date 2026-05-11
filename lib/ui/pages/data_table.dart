@@ -38,15 +38,17 @@ class DataTablePage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text(pageSpec.name), actions: [_EditPageButton()]),
       drawer: Drawer(child: _DrawerContent()),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return SizedBox.expand(
-            child: _Grid(
-              cells: pageSpec.cells.map((cellSpec) => createCell(dataSet, cellSpec)).toList(),
-              numColumns: _decideNumColumns(constraints, pageSpec.cells.length),
-            ),
-          );
-        },
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SizedBox.expand(
+              child: _Grid(
+                cells: pageSpec.cells.map((cellSpec) => createCell(dataSet, cellSpec)).toList(),
+                numColumns: _decideNumColumns(constraints, pageSpec.cells.length),
+              ),
+            );
+          },
+        ),
       ),
     );
   }

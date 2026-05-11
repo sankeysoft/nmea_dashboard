@@ -51,7 +51,7 @@ class StatelessFormPage extends StatelessWidget {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(title), actions: actions),
-      body: Center(
+      body: SafeArea(
         child: Container(
           padding: const EdgeInsets.all(_defaultPad),
           margin: const EdgeInsets.all(_defaultPad),
@@ -241,13 +241,15 @@ class StatefulFormPage<T extends StatefulWidget> extends StatelessWidget {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(title), actions: actions),
-      body: Center(
-        child: Container(
-          padding: const EdgeInsets.all(_defaultPad),
-          margin: const EdgeInsets.all(_defaultPad),
-          constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
-          decoration: BoxDecoration(color: theme.colorScheme.surface),
-          child: child,
+      body: SafeArea(
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.all(_defaultPad),
+            margin: const EdgeInsets.all(_defaultPad),
+            constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
+            decoration: BoxDecoration(color: theme.colorScheme.surface),
+            child: child,
+          ),
         ),
       ),
     );

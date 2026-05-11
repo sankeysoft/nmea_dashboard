@@ -123,26 +123,40 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
   // Clears any internal fields that are now inconsistent given the present value of higher level
   // fields. For format we return to the user's preffered default for the dimension.
   void _wipeInvalidFields() {
-    final dataElement = _dataSet.sources[_source]?[_element];
+    // Clear the data element if its not known on this source and is in the correct group.
+    var dataElement = _dataSet.sources[_source]?[_element];
     if (dataElement == null) {
       _element = null;
     } else if (sourceUsesGrouping(_source) && dataElement.property.group != _group) {
+      dataElement = null;
       _element = null;
     }
 
-    if (_type == CellType.average && dataElement is! WithStats) {
+    // Clear the type if there isn't a data element. Set to Current value by default when selecting
+    // a new data element or a data element that doesn't support the previous value.
+    if (dataElement == null) {
       _type = null;
-    }
-    if (_type == CellType.history && dataElement is! WithHistory) {
-      _type = null;
+    } else if (_type == null) {
+      _type = CellType.current;
+    } else if (_type == CellType.average && dataElement is! WithStats) {
+      _type = CellType.current;
+    } else if (_type == CellType.history && dataElement is! WithHistory) {
+      _type = CellType.current;
     }
 
+    // Clear the format if there isn't a data element or if the current format needs to support
+    // history and doesn't. Set the default format for the dimension if the current format is
+    // not valid for the element.
     final dimension = dataElement?.property.dimension;
-    if (!formattersFor(dimension).keys.contains(_format)) {
-      _format = _formatPrefs.forDimension(dimension?.name);
-    }
-    if (_type == CellType.history && formattersFor(dimension)[_format] is! NumericFormatter) {
+    if (dimension == null) {
       _format = null;
+    } else {
+      if (!formattersFor(dimension).keys.contains(_format)) {
+        _format = _formatPrefs.forDimension(dimension.name);
+      }
+      if (_type == CellType.history && formattersFor(dimension)[_format] is! NumericFormatter) {
+        _format = null;
+      }
     }
   }
 
@@ -259,13 +273,18 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
   }
 
   Widget _buildTypeField() {
-    final List<DropdownEntry<_CellTypeAndAssociatedFields>> entries = [
-      DropdownEntry(
-        value: _CellTypeAndAssociatedFields(CellType.current, null, null),
-        text: CellType.current.longName,
-      ),
-    ];
-    if (_dataSet.sources[_source]?[_element] is WithStats) {
+    final dataElement = _dataSet.sources[_source]?[_element];
+
+    final List<DropdownEntry<_CellTypeAndAssociatedFields>> entries = [];
+    if (dataElement != null) {
+      entries.add(
+        DropdownEntry(
+          value: _CellTypeAndAssociatedFields(CellType.current, null, null),
+          text: CellType.current.longName,
+        ),
+      );
+    }
+    if (dataElement is WithStats) {
       entries.addAll(
         StatsInterval.values.map(
           (s) => DropdownEntry(
@@ -275,7 +294,7 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
         ),
       );
     }
-    if (_dataSet.sources[_source]?[_element] is WithHistory) {
+    if (dataElement is WithHistory) {
       entries.addAll(
         HistoryInterval.values.map(
           (h) => DropdownEntry(

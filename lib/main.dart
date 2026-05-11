@@ -44,6 +44,8 @@ class NmeaDashboardApp extends StatelessWidget {
   // before deciding the theme and delegating to a themed application.
   @override
   Widget build(BuildContext context) {
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
     /// Display the loading screen for at least the minimum time, potentially
     /// it could be displayed longer if loading the setting takes a while.
     return FutureBuilder(
@@ -89,17 +91,19 @@ class _LoadingPage extends StatelessWidget {
         title: 'NMEA Dashboard',
         theme: ThemeData.dark(),
         home: Scaffold(
-          body: Center(
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text("NMEA Dashboard", style: TextStyle(fontSize: 40)),
-                  const SizedBox(height: 30),
-                  Image.asset("assets/rounded_icon.png"),
-                  const SizedBox(height: 60),
-                  const SizedBox(width: 250, child: LinearProgressIndicator()),
-                ],
+          body: SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text("NMEA Dashboard", style: TextStyle(fontSize: 40)),
+                    const SizedBox(height: 30),
+                    Image.asset("assets/rounded_icon.png"),
+                    const SizedBox(height: 60),
+                    const SizedBox(width: 250, child: LinearProgressIndicator()),
+                  ],
+                ),
               ),
             ),
           ),
