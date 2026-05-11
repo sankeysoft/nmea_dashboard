@@ -177,47 +177,6 @@ enum Dimension {
   }
 }
 
-/// An operation that may be performed on one data element to derive another.
-enum Operation {
-  add('+'),
-  subtract('-'),
-  multiply('*');
-
-  /// The string to display.
-  final String display;
-
-  const Operation(this.display);
-
-  /// Applies this operation to the supplied input.
-  double apply(double input, double operand) {
-    switch (this) {
-      case Operation.add:
-        return input + operand;
-      case Operation.subtract:
-        return input - operand;
-      case Operation.multiply:
-        return input * operand;
-    }
-  }
-
-  /// Applies the inverse of this operation to the supplied input.
-  double reverse(double input, double operand) {
-    switch (this) {
-      case Operation.add:
-        return input - operand;
-      case Operation.subtract:
-        return input + operand;
-      case Operation.multiply:
-        return input / operand;
-    }
-  }
-
-  /// Returns an operation from its unqualified name.
-  static Operation? fromString(String? name) {
-    return Operation.values.asNameMap()[name];
-  }
-}
-
 /// The various sources types of data cell that can be defined.
 enum CellType {
   current('Current Value'),

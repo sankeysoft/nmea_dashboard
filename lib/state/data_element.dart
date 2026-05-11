@@ -9,7 +9,6 @@ import 'package:logging/logging.dart';
 
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/data_element_stats.dart';
-import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:nmea_dashboard/state/data_element_history.dart';
 import 'package:nmea_dashboard/state/values.dart';
 
@@ -276,66 +275,3 @@ class BearingDataElement extends DataElement<AugmentedBearing, SingleValue<doubl
   }
 }
 
-/// A DataElement whose value is derived from some other value.
-class DerivedDataElement extends DataElement<SingleValue<double>, SingleValue<double>>
-    with WithHistory, WithStats {
-  final String _name;
-  final DataElement<SingleValue<double>, Value> _sourceElement;
-  final ConvertingFormatter _formatter;
-  final Operation _operation;
-  final double _operand;
-
-  DerivedDataElement(
-    this._name,
-    this._sourceElement,
-    this._formatter,
-    this._operation,
-    this._operand,
-  ) : super(
-        '${_name}_from_${_sourceElement.id}',
-        _sourceElement.property,
-        /* No staleness, source will notify on invalid */ null,
-      ) {
-    // Update self when the sourceElement sends a notification.
-    _sourceElement.addListener(() {
-      final sourceValue = _sourceElement.value;
-      final sourceConverted = _formatter.toNumber(sourceValue);
-      // Convert the source value to the target units and check its not null
-      if (sourceConverted == null) {
-        invalidateValue();
-      } else {
-        // Apply the operation then convert back to the native units for its
-        // dimension.
-        final derivedConverted = _operation.apply(sourceConverted, _operand);
-        updateValue(
-          BoundValue(
-            Source.derived,
-            _sourceElement.property,
-            _formatter.fromNumber(derivedConverted),
-          ),
-        );
-      }
-    });
-  }
-
-  @override
-  bool updateValue(final BoundValue<SingleValue<double>> newValue) {
-    final accepted = super.updateValue(newValue);
-    if (accepted && _value != null) {
-      addStatsValue(_value!);
-      addHistoryValue(_value!);
-    }
-    return accepted;
-  }
-
-  @override
-  SingleValue<double> convertValue(SingleValue<double> newValue) {
-    return newValue;
-  }
-
-  @override
-  String get shortName => _name;
-
-  @override
-  String get longName => _name;
-}

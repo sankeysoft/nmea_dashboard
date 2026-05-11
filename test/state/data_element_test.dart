@@ -4,14 +4,12 @@
 
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/data_element.dart';
-import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:nmea_dashboard/state/values.dart';
 import 'package:test/test.dart';
 
 import 'utils.dart';
 
 final _staleness = Staleness(const Duration(milliseconds: 100));
-const _testName = 'Test element';
 const _testSource = Source.local;
 const _testProperty = Property.dewPoint;
 
@@ -152,33 +150,6 @@ void main() {
     variation.updateValue(_boundVariation(10.0));
     expect(bearing.updateValue(_boundTrueHeading(55)), true);
     expect(bearing.value, ValueMatches(AugmentedBearing(SingleValue(55.0), SingleValue(10.0))));
-  });
-
-  test('derived data element accepts updates', () async {
-    final source = ConsistentDataElement<SingleValue<double>>(
-      _testSource,
-      Property.depthUncalibrated,
-      _staleness,
-    );
-    final formatter = formattersFor(Dimension.depth)['feet'] as ConvertingFormatter;
-    final derived = DerivedDataElement(_testName, source, formatter, Operation.add, 100);
-
-    int eventCount = 0;
-    derived.addListener(() => eventCount++);
-
-    // We should echo updates on the source and pass through notifications.
-    expect(derived.value, null);
-    expect(derived.shortName, _testName);
-    expect(derived.longName, _testName);
-    source.updateValue(BoundValue(_testSource, Property.depthUncalibrated, SingleValue(5)));
-    expect(derived.value, ValueMatches(SingleValue((5 * metersToFeet + 100) / metersToFeet)));
-    expect(eventCount, 1);
-
-    // And go stale when our source does.
-    await Future.delayed(_staleness.duration * 2);
-    expect(source.value, null);
-    expect(derived.value, null);
-    expect(eventCount, 2);
   });
 
   test('data element long and short names come from property', () {

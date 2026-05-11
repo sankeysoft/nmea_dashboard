@@ -23,11 +23,6 @@ void main() {
     expect(Dimension.fromString('invalid'), null);
   });
 
-  test('Operation.fromString should return matching value or null', () {
-    expect(Operation.fromString('add'), Operation.add);
-    expect(Operation.fromString('invalid'), null);
-  });
-
   test('CellType.fromString should return matching value or null', () {
     expect(CellType.fromString('current'), CellType.current);
     expect(CellType.fromString('invalid'), null);
@@ -51,21 +46,6 @@ void main() {
         }
       }
     }
-  });
-
-  test('add operation should give correct results', () {
-    expect(Operation.add.apply(3, 2), 5);
-    expect(Operation.add.reverse(3, 2), 1);
-  });
-
-  test('subtract operation should give correct results', () {
-    expect(Operation.subtract.apply(3, 2), 1);
-    expect(Operation.subtract.reverse(3, 2), 5);
-  });
-
-  test('multiply operation should give correct results', () {
-    expect(Operation.multiply.apply(3, 2), 6);
-    expect(Operation.multiply.reverse(3, 2), 1.5);
   });
 
   test('HistoryInterval should format cell names', () {
