@@ -5,7 +5,6 @@
 import 'dart:math';
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/data_element.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
@@ -197,7 +196,6 @@ class VmgWptCalculatedDataElement extends SingleValueDoubleConsistentDataElement
     if (relAngle > 180.0) {
       relAngle = 360.0 - relAngle;
     }
-    debugPrint('COG=$cog, BRG=$wptBearing, Rel=$relAngle, Fac=${cos(relAngle * math.pi / 180.0)}');
     return SingleValue<double>(sog * cos(relAngle * math.pi / 180.0));
   }
 }
