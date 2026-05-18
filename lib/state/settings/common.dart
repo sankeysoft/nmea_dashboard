@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/state/common.dart';
+import 'package:nmea_dashboard/state/settings/alarm.dart';
 import 'package:nmea_dashboard/state/settings/derived_data.dart';
 import 'package:nmea_dashboard/state/settings/format.dart';
 import 'package:nmea_dashboard/state/settings/network.dart';
@@ -21,6 +22,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class Settings with ChangeNotifier {
   final NetworkSettings network;
   final DerivedDataSettings derived;
+  final AlarmSettings alarm;
   final UiSettings ui;
   final PageSettings pages;
   final FormatPreferences formatPreferences;
@@ -29,6 +31,7 @@ class Settings with ChangeNotifier {
   Settings(SharedPreferences prefs, String defaultPages, this.packageInfo)
     : network = NetworkSettings(prefs),
       derived = DerivedDataSettings(prefs),
+      alarm = AlarmSettings(prefs),
       ui = UiSettings(prefs),
       pages = PageSettings(prefs, defaultPages),
       formatPreferences = FormatPreferences(prefs);

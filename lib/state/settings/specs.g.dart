@@ -6,23 +6,25 @@ part of 'specs.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-DerivedDataSpec _$DerivedDataSpecFromJson(Map<String, dynamic> json) => DerivedDataSpec(
-  json['name'] as String,
-  json['inputSource'] as String,
-  json['inputElement'] as String,
-  json['inputFormat'] as String,
-  json['operation'] as String,
-  (json['operand'] as num).toDouble(),
-);
+DerivedDataSpec _$DerivedDataSpecFromJson(Map<String, dynamic> json) =>
+    DerivedDataSpec(
+      json['name'] as String,
+      json['inputSource'] as String,
+      json['inputElement'] as String,
+      json['inputFormat'] as String,
+      json['operation'] as String,
+      (json['operand'] as num).toDouble(),
+    );
 
-Map<String, dynamic> _$DerivedDataSpecToJson(DerivedDataSpec instance) => <String, dynamic>{
-  'name': instance.name,
-  'inputSource': instance.inputSource,
-  'inputElement': instance.inputElement,
-  'inputFormat': instance.inputFormat,
-  'operation': instance.operation,
-  'operand': instance.operand,
-};
+Map<String, dynamic> _$DerivedDataSpecToJson(DerivedDataSpec instance) =>
+    <String, dynamic>{
+      'name': instance.name,
+      'inputSource': instance.inputSource,
+      'inputElement': instance.inputElement,
+      'inputFormat': instance.inputFormat,
+      'operation': instance.operation,
+      'operand': instance.operand,
+    };
 
 DataPageSpec _$DataPageSpecFromJson(Map<String, dynamic> json) => DataPageSpec(
   json['name'] as String,
@@ -31,10 +33,11 @@ DataPageSpec _$DataPageSpecFromJson(Map<String, dynamic> json) => DataPageSpec(
       .toList(),
 );
 
-Map<String, dynamic> _$DataPageSpecToJson(DataPageSpec instance) => <String, dynamic>{
-  'name': instance.name,
-  'cells': instance.cells.map((e) => e.toJson()).toList(),
-};
+Map<String, dynamic> _$DataPageSpecToJson(DataPageSpec instance) =>
+    <String, dynamic>{
+      'name': instance.name,
+      'cells': instance.cells.map((e) => e.toJson()).toList(),
+    };
 
 DataCellSpec _$DataCellSpecFromJson(Map<String, dynamic> json) => DataCellSpec(
   json['source'] as String,
@@ -46,12 +49,35 @@ DataCellSpec _$DataCellSpecFromJson(Map<String, dynamic> json) => DataCellSpec(
   historyInterval: json['historyInterval'] as String?,
 );
 
-Map<String, dynamic> _$DataCellSpecToJson(DataCellSpec instance) => <String, dynamic>{
+Map<String, dynamic> _$DataCellSpecToJson(DataCellSpec instance) =>
+    <String, dynamic>{
+      'source': instance.source,
+      'element': instance.element,
+      'type': instance.type,
+      'statsInterval': ?instance.statsInterval,
+      'historyInterval': ?instance.historyInterval,
+      'format': instance.format,
+      'name': ?instance.name,
+    };
+
+AlarmSpec _$AlarmSpecFromJson(Map<String, dynamic> json) => AlarmSpec(
+  json['source'] as String,
+  json['element'] as String,
+  json['type'] as String,
+  json['format'] as String,
+  statsInterval: json['statsInterval'] as String?,
+  min: (json['min'] as num?)?.toDouble(),
+  max: (json['max'] as num?)?.toDouble(),
+  sound: json['sound'] as String?,
+);
+
+Map<String, dynamic> _$AlarmSpecToJson(AlarmSpec instance) => <String, dynamic>{
   'source': instance.source,
   'element': instance.element,
   'type': instance.type,
   'statsInterval': ?instance.statsInterval,
-  'historyInterval': ?instance.historyInterval,
   'format': instance.format,
-  'name': ?instance.name,
+  'min': ?instance.min,
+  'max': ?instance.max,
+  'sound': ?instance.sound,
 };

@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:logging/logging.dart';
 
+// Use `dart run build_runner build` to update the generated specs.g.dart.
+
 /// This allows the other class to access private members in
 /// the JsonSerializable generated file.
 part 'specs.g.dart';
@@ -157,4 +159,58 @@ class DataCellSpec {
   factory DataCellSpec.fromJson(Map<String, dynamic> json) => _$DataCellSpecFromJson(json);
 
   Map<String, dynamic> toJson() => _$DataCellSpecToJson(this);
+}
+
+/// A serializable specification that may be used to recreate an alarm.
+@JsonSerializable()
+class AlarmSpec {
+  /// A unique identifier within the current power cycle.
+  @JsonKey(includeToJson: false, includeFromJson: false)
+  final SpecKey key;
+
+  /// The name of the source.
+  final String source;
+
+  /// The name of the element to monitor within the source.
+  final String element;
+
+  /// The type of alert, currently caution or warning.
+  final String type;
+
+  /// The data averaging interval, if null implies no averaging.
+  @JsonKey(includeIfNull: false)
+  final String? statsInterval;
+
+  /// The format to use to interpret the min and max values.
+  final String format;
+
+  /// The minimum value below which the alarm will trigger.
+  /// At least one of min or max will be populated.
+  @JsonKey(includeIfNull: false)
+  final double? min;
+
+  /// The maximum value above which the alarm will trigger.
+  /// At least one of min or max will be populated.
+  @JsonKey(includeIfNull: false)
+  final double? max;
+
+  /// The sound to play for this alert (only applies to warnings).
+  @JsonKey(includeIfNull: false)
+  final String? sound;
+
+  AlarmSpec(
+    this.source,
+    this.element,
+    this.type,
+    this.format, {
+    this.statsInterval,
+    this.min,
+    this.max,
+    this.sound,
+    SpecKey? key,
+  }) : key = key ?? SpecKey.make();
+
+  factory AlarmSpec.fromJson(Map<String, dynamic> json) => _$AlarmSpecFromJson(json);
+
+  Map<String, dynamic> toJson() => _$AlarmSpecToJson(this);
 }

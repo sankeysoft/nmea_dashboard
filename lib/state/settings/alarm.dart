@@ -10,52 +10,50 @@ import 'package:nmea_dashboard/state/settings/common.dart';
 import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-final _log = Logger('DerivedDataSettings');
+final _log = Logger('AlarmSettings');
 
-/// Settings for the derived data definitions, notifies when any
-/// of these change.
-class DerivedDataSettings with ChangeNotifier {
-  static const String _prefKey = 'derived_v1';
+/// Settings for the alarms, notifies when any of these change.
+class AlarmSettings with ChangeNotifier {
+  static const String _prefKey = 'alarm_v1';
   final SharedPreferences _prefs;
-  final Map<SpecKey, DerivedDataSpec> _derivedDataSpecs = {};
+  final Map<SpecKey, AlarmSpec> _alarmSpecs = {};
 
   /// Creates settings from the supplied prefs, starting empty if
   /// the shared prefs are missing or invalid.
-  DerivedDataSettings(this._prefs) {
+  AlarmSettings(this._prefs) {
     final prefString = _prefs.getString(_prefKey);
     // Stick with the default empty map if load fails.
     _fromJson(json: prefString ?? '', source: 'shared preferences');
   }
 
-  /// An iterator over the data specs in order.
-  Iterable<DerivedDataSpec> get derivedDataSpecs => _derivedDataSpecs.values;
+  /// An iterator over the alarm specs in order.
+  Iterable<AlarmSpec> get alarmSpecs => _alarmSpecs.values;
 
-  /// Replaces the current set of derived data with the supplied specifications.
-  void replaceElements(Iterable<DerivedDataSpec> derivedDataSpecs) {
-    _derivedDataSpecs.clear();
-    for (final derivedDataSpec in derivedDataSpecs) {
-      _derivedDataSpecs[derivedDataSpec.key] = derivedDataSpec;
+  /// Replaces the current set of alarms with the supplied specifications.
+  void replaceElements(Iterable<AlarmSpec> alarmSpecs) {
+    _alarmSpecs.clear();
+    for (final alarmSpec in alarmSpecs) {
+      _alarmSpecs[alarmSpec.key] = alarmSpec;
     }
     _save();
     notifyListeners();
   }
 
-  /// Adds or replaces the supplied specification in the current set of derived
-  /// data.
-  void setElement(DerivedDataSpec spec) {
-    _derivedDataSpecs[spec.key] = spec;
+  /// Adds or replaces the supplied specification in the current set of alarms.
+  void setElement(AlarmSpec spec) {
+    _alarmSpecs[spec.key] = spec;
     _save();
     notifyListeners();
   }
 
-  /// Deletes the supplied specification from current set of pages.
-  void removeElement(DerivedDataSpec spec) {
-    _derivedDataSpecs.remove(spec.key);
+  /// Deletes the supplied specification from current set of alarms.
+  void removeElement(AlarmSpec spec) {
+    _alarmSpecs.remove(spec.key);
     _save();
     notifyListeners();
   }
 
-  /// Replaces the current set of derived data with specs from a json encoded string,
+  /// Replaces the current set of alarms with specs from a json encoded string,
   /// making no changes if the string is not valid or if dryRun is true.
   /// Returns true on success.
   bool useClipboard(String text, {bool dryRun = false}) {
@@ -67,9 +65,9 @@ class DerivedDataSettings with ChangeNotifier {
     return success;
   }
 
-  /// Returns a json string containing the configuration of all derived data.
+  /// Returns a json string containing the configuration of all alarms.
   String toJson() {
-    final jsonIterator = _derivedDataSpecs.values.toList();
+    final jsonIterator = _alarmSpecs.values.toList();
     return json.encode(jsonIterator);
   }
 
@@ -80,12 +78,12 @@ class DerivedDataSettings with ChangeNotifier {
     // Use the helper function to convert to a list of bare specs
     final specs = validateJsonList(
       json,
-      (e) => DerivedDataSpec.fromJson(e),
-      'derived data settings',
+      (e) => AlarmSpec.fromJson(e),
+      'alarm settings',
       _log,
       minimumLength: 0,
     );
-    // Leave with a failure if this didn't work or success we're dry running and
+    // Leave with a failure if this didn't work or success if we're dry running and
     // it did.
     if (specs == null) {
       return false;
@@ -94,16 +92,19 @@ class DerivedDataSettings with ChangeNotifier {
     }
 
     // If we're not dry run use the specs to repopulate the map.
-    _derivedDataSpecs.clear();
+    _alarmSpecs.clear();
     for (final spec in specs) {
-      _derivedDataSpecs[spec.key] = spec;
+      _alarmSpecs[spec.key] = spec;
     }
-    _log.info('Loaded ${specs.length} derived elements from $source');
+    _log.info('Loaded ${specs.length} alarms from $source');
     return true;
   }
 
-  /// Saves the configuration of all derived data into shared prefs.
+  /// Saves the configuration of all alarms into shared prefs.
   void _save() {
     _prefs.setString(_prefKey, toJson());
   }
 }
+
+// The different levels of alarm, driving the different ways they are announced.
+enum AlarmType { caution, warning }

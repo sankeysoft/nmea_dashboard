@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
+import 'package:nmea_dashboard/state/settings/alarm.dart';
 import 'package:nmea_dashboard/state/settings/derived_data.dart';
 import 'package:nmea_dashboard/state/settings/format.dart';
 import 'package:nmea_dashboard/state/settings/network.dart';
@@ -67,8 +68,8 @@ class NmeaDashboardApp extends StatelessWidget {
           return MultiProvider(
             providers: [
               ChangeNotifierProvider<LogSet>(create: (_) => _logSet),
-              ChangeNotifierProvider<Settings>(create: (_) => settings),
               ChangeNotifierProvider<NetworkSettings>(create: (_) => settings.network),
+              ChangeNotifierProvider<AlarmSettings>(create: (_) => settings.alarm),
               ChangeNotifierProvider<UiSettings>(create: (_) => settings.ui),
               ChangeNotifierProvider<PageSettings>(create: (_) => settings.pages),
               ChangeNotifierProvider<DerivedDataSettings>(create: (_) => settings.derived),
