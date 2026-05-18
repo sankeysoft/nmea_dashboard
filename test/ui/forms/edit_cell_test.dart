@@ -4,10 +4,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nmea_dashboard/state/data_element_history.dart';
-import 'package:nmea_dashboard/state/data_set.dart';
-import 'package:nmea_dashboard/state/settings.dart';
-import 'package:nmea_dashboard/state/specs.dart';
+import 'package:nmea_dashboard/state/data/data_element_history.dart';
+import 'package:nmea_dashboard/state/data/data_set.dart';
+import 'package:nmea_dashboard/state/settings/settings.dart';
+import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:nmea_dashboard/ui/forms/edit_cell.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -140,8 +140,9 @@ void main() {
       expect(find.text('Type must be set'), findsOneWidget);
     });
 
-    testWidgets('resets format to preferred default when spec has invalid format key',
-        (tester) async {
+    testWidgets('resets format to preferred default when spec has invalid format key', (
+      tester,
+    ) async {
       final spec = DataCellSpec(
         'network',
         'speedOverGround',
@@ -185,8 +186,9 @@ void main() {
       expect(getDropdownByLabel('Element:', tester).value, isNull);
     });
 
-    testWidgets('changing element dropdown resets format to preferred default when incompatible',
-        (tester) async {
+    testWidgets('changing element dropdown resets format to preferred default when incompatible', (
+      tester,
+    ) async {
       final spec = DataCellSpec('network', 'speedOverGround', 'current', 'knots');
       await pumpForm(tester, spec);
       expect(getDropdownByLabel('Format:', tester).value, 'knots');

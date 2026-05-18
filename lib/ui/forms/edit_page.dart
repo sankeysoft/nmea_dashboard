@@ -5,7 +5,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:nmea_dashboard/state/common.dart';
-import 'package:nmea_dashboard/state/specs.dart';
+import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:nmea_dashboard/ui/forms/abstract.dart';
 
 /// The initial spec for freshly created cells.

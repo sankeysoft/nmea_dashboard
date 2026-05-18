@@ -269,7 +269,9 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
     'degMin': PositionFormatter('decimal min', false, isDefault: true),
     'degMinSec': PositionFormatter('deg min sec', true),
   },
-  Dimension.percentage: {'percent': SimpleFormatter('percent', '%', '--.-', 1.0, 1, isDefault: true)},
+  Dimension.percentage: {
+    'percent': SimpleFormatter('percent', '%', '--.-', 1.0, 1, isDefault: true),
+  },
   Dimension.pressure: {
     'millibars': SimpleFormatter('millibar', 'mb', '----.-', pascalsToMillibar, 1, isDefault: true),
     'inchHg': SimpleFormatter('inches mercury', 'in.hg', '--.--', pascalsToInchesMercury, 2),

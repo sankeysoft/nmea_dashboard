@@ -6,8 +6,8 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nmea_dashboard/state/common.dart';
-import 'package:nmea_dashboard/state/settings.dart';
-import 'package:nmea_dashboard/state/specs.dart';
+import 'package:nmea_dashboard/state/settings/settings.dart';
+import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _pageJson1 =

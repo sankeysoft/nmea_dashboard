@@ -4,7 +4,7 @@
 
 import 'dart:convert';
 
-import 'package:nmea_dashboard/state/specs.dart';
+import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:test/test.dart';
 
 void main() {

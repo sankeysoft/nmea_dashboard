@@ -6,7 +6,7 @@ import 'dart:math';
 import 'dart:math' as math;
 
 import 'package:nmea_dashboard/state/common.dart';
-import 'package:nmea_dashboard/state/data_element.dart';
+import 'package:nmea_dashboard/state/data/data_element.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:nmea_dashboard/state/values.dart';
 

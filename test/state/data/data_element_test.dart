@@ -3,11 +3,11 @@
 // of the MIT license. See the LICENCE.md file for details.
 
 import 'package:nmea_dashboard/state/common.dart';
-import 'package:nmea_dashboard/state/data_element.dart';
+import 'package:nmea_dashboard/state/data/data_element.dart';
 import 'package:nmea_dashboard/state/values.dart';
 import 'package:test/test.dart';
 
-import 'utils.dart';
+import '../utils.dart';
 
 final _staleness = Staleness(const Duration(milliseconds: 100));
 const _testSource = Source.local;

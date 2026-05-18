@@ -3,9 +3,9 @@
 // of the MIT license. See the LICENCE.md file for details.
 
 import 'package:flutter/material.dart';
-import 'package:nmea_dashboard/state/data_set.dart';
-import 'package:nmea_dashboard/state/settings.dart';
-import 'package:nmea_dashboard/state/specs.dart';
+import 'package:nmea_dashboard/state/data/data_set.dart';
+import 'package:nmea_dashboard/state/settings/settings.dart';
+import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:nmea_dashboard/ui/cells/abstract.dart';
 import 'package:nmea_dashboard/ui/cells/creation.dart';
 import 'package:nmea_dashboard/ui/forms/edit_derived_elements.dart';

@@ -2,12 +2,12 @@
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
-import 'package:nmea_dashboard/parsing/common.dart';
+import 'package:nmea_dashboard/state/parsing/common.dart';
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/values.dart';
 import 'package:test/test.dart';
 
-import '../state/utils.dart';
+import '../utils.dart';
 
 BoundValue<SingleValue<T>> _boundSingleValue<T>(T data, Property property, {int tier = 1}) {
   return BoundValue(Source.network, property, SingleValue(data), tier: tier);

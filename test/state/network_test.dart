@@ -4,7 +4,7 @@
 
 import 'dart:typed_data';
 
-import 'package:nmea_dashboard/parsing/common.dart';
+import 'package:nmea_dashboard/state/parsing/common.dart';
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/network.dart';
 import 'package:test/test.dart';

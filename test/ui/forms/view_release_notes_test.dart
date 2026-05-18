@@ -7,7 +7,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nmea_dashboard/state/settings.dart';
+import 'package:nmea_dashboard/state/settings/settings.dart';
 import 'package:nmea_dashboard/ui/forms/view_release_notes.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';

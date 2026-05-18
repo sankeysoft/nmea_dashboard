@@ -4,11 +4,11 @@
 
 import 'package:fake_async/fake_async.dart';
 import 'package:nmea_dashboard/state/common.dart';
-import 'package:nmea_dashboard/state/data_element_stats.dart';
+import 'package:nmea_dashboard/state/data/data_element_stats.dart';
 import 'package:nmea_dashboard/state/values.dart';
 import 'package:test/test.dart';
 
-import 'utils.dart';
+import '../utils.dart';
 
 const String _testDataId = 'test_data_id';
 const StatsInterval _testInterval = StatsInterval.oneMin;

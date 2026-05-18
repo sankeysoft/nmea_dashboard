@@ -4,10 +4,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nmea_dashboard/state/data_element_history.dart';
-import 'package:nmea_dashboard/state/data_set.dart';
-import 'package:nmea_dashboard/state/settings.dart';
-import 'package:nmea_dashboard/state/specs.dart';
+import 'package:nmea_dashboard/state/data/data_element_history.dart';
+import 'package:nmea_dashboard/state/data/data_set.dart';
+import 'package:nmea_dashboard/state/settings/settings.dart';
+import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:nmea_dashboard/ui/forms/edit_derived_elements.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';

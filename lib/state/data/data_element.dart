@@ -8,8 +8,8 @@ import 'package:flutter/widgets.dart';
 import 'package:logging/logging.dart';
 
 import 'package:nmea_dashboard/state/common.dart';
-import 'package:nmea_dashboard/state/data_element_stats.dart';
-import 'package:nmea_dashboard/state/data_element_history.dart';
+import 'package:nmea_dashboard/state/data/data_element_stats.dart';
+import 'package:nmea_dashboard/state/data/data_element_history.dart';
 import 'package:nmea_dashboard/state/values.dart';
 
 /// The shortest time between triggering updates on an element.
@@ -274,4 +274,3 @@ class BearingDataElement extends DataElement<AugmentedBearing, SingleValue<doubl
     return AugmentedBearing(newValue, variation.value);
   }
 }
-

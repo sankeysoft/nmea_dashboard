@@ -5,8 +5,8 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:nmea_dashboard/state/data_element.dart';
-import 'package:nmea_dashboard/state/data_element_stats.dart';
+import 'package:nmea_dashboard/state/data/data_element.dart';
+import 'package:nmea_dashboard/state/data/data_element_stats.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:nmea_dashboard/state/values.dart';
 import 'package:nmea_dashboard/ui/cells/abstract.dart';

@@ -5,8 +5,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nmea_dashboard/ui/forms/edit_derived_element.dart';
-import 'package:nmea_dashboard/state/settings.dart';
-import 'package:nmea_dashboard/state/specs.dart';
+import 'package:nmea_dashboard/state/settings/settings.dart';
+import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:nmea_dashboard/ui/forms/abstract.dart';
 import 'package:provider/provider.dart';
 

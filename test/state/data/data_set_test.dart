@@ -6,10 +6,10 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nmea_dashboard/state/common.dart';
-import 'package:nmea_dashboard/state/data_element_history.dart';
-import 'package:nmea_dashboard/state/data_set.dart';
-import 'package:nmea_dashboard/state/settings.dart';
-import 'package:nmea_dashboard/state/specs.dart';
+import 'package:nmea_dashboard/state/data/data_element_history.dart';
+import 'package:nmea_dashboard/state/data/data_set.dart';
+import 'package:nmea_dashboard/state/settings/settings.dart';
+import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<SharedPreferences> _prefs() async {
