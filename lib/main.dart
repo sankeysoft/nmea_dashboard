@@ -5,12 +5,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
+import 'package:nmea_dashboard/state/settings/derived_data.dart';
+import 'package:nmea_dashboard/state/settings/format.dart';
+import 'package:nmea_dashboard/state/settings/network.dart';
+import 'package:nmea_dashboard/state/settings/page.dart';
+import 'package:nmea_dashboard/state/settings/ui.dart';
 import 'package:nmea_dashboard/ui/forms/view_release_notes.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:nmea_dashboard/state/data/data_set.dart';
 import 'package:nmea_dashboard/state/data/data_element_history.dart';
 import 'package:nmea_dashboard/state/log_set.dart';
-import 'package:nmea_dashboard/state/settings/settings.dart';
+import 'package:nmea_dashboard/state/settings/common.dart';
 import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:nmea_dashboard/ui/forms/view_help.dart';
 import 'package:nmea_dashboard/ui/theme.dart';
@@ -67,6 +73,7 @@ class NmeaDashboardApp extends StatelessWidget {
               ChangeNotifierProvider<PageSettings>(create: (_) => settings.pages),
               ChangeNotifierProvider<DerivedDataSettings>(create: (_) => settings.derived),
               ChangeNotifierProvider<FormatPreferences>(create: (_) => settings.formatPreferences),
+              Provider<PackageInfo>(create: (_) => settings.packageInfo),
               ChangeNotifierProvider<DataSet>(
                 create: (_) => DataSet(settings.network, settings.derived, historyManager),
               ),

@@ -10,7 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/state/parsing/common.dart';
-import 'package:nmea_dashboard/state/settings/settings.dart';
+import 'package:nmea_dashboard/state/settings/network.dart';
 import 'package:nmea_dashboard/state/values.dart';
 import 'package:udp/udp.dart';
 

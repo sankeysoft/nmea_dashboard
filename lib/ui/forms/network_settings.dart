@@ -5,7 +5,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:nmea_dashboard/state/settings/settings.dart';
+import 'package:nmea_dashboard/state/settings/network.dart';
 import 'package:nmea_dashboard/ui/forms/abstract.dart';
 
 /// A form that lets the user edit network settings.

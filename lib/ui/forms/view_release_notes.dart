@@ -7,7 +7,7 @@ import 'dart:convert';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:nmea_dashboard/state/settings/settings.dart';
+import 'package:nmea_dashboard/state/settings/common.dart';
 import 'package:nmea_dashboard/ui/forms/abstract.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';

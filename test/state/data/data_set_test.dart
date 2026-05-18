@@ -8,7 +8,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/data/data_element_history.dart';
 import 'package:nmea_dashboard/state/data/data_set.dart';
-import 'package:nmea_dashboard/state/settings/settings.dart';
+import 'package:nmea_dashboard/state/settings/derived_data.dart';
+import 'package:nmea_dashboard/state/settings/network.dart';
+import 'package:nmea_dashboard/state/settings/page.dart';
 import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

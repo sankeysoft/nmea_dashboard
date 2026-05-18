@@ -4,8 +4,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:nmea_dashboard/state/data/data_set.dart';
-import 'package:nmea_dashboard/state/settings/settings.dart';
+import 'package:nmea_dashboard/state/settings/network.dart';
+import 'package:nmea_dashboard/state/settings/page.dart';
 import 'package:nmea_dashboard/state/settings/specs.dart';
+import 'package:nmea_dashboard/state/settings/ui.dart';
 import 'package:nmea_dashboard/ui/cells/abstract.dart';
 import 'package:nmea_dashboard/ui/cells/creation.dart';
 import 'package:nmea_dashboard/ui/forms/edit_derived_elements.dart';
@@ -15,6 +17,7 @@ import 'package:nmea_dashboard/ui/forms/ui_settings.dart';
 import 'package:nmea_dashboard/ui/forms/network_settings.dart';
 import 'package:nmea_dashboard/ui/forms/view_help.dart';
 import 'package:nmea_dashboard/ui/forms/view_log.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
@@ -83,7 +86,7 @@ class _DrawerContent extends StatelessWidget {
     final theme = Theme.of(context);
     final networkSettings = Provider.of<NetworkSettings>(context);
     final uiSettings = Provider.of<UiSettings>(context);
-    final packageInfo = Provider.of<Settings>(context).packageInfo;
+    final packageInfo = Provider.of<PackageInfo>(context);
     final enabledColor = theme.colorScheme.onSurface;
     final enabledStyle = TextStyle(fontSize: 18, color: enabledColor);
 

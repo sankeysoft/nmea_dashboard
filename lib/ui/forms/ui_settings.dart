@@ -4,7 +4,7 @@
 
 import 'package:flutter/material.dart';
 
-import 'package:nmea_dashboard/state/settings/settings.dart';
+import 'package:nmea_dashboard/state/settings/ui.dart';
 import 'package:nmea_dashboard/ui/forms/abstract.dart';
 
 /// A form that lets the user edit user interface settings.

@@ -14,7 +14,8 @@ import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:nmea_dashboard/state/data/data_element_history.dart';
 import 'package:nmea_dashboard/state/local.dart';
 import 'package:nmea_dashboard/state/network.dart';
-import 'package:nmea_dashboard/state/settings/settings.dart';
+import 'package:nmea_dashboard/state/settings/derived_data.dart';
+import 'package:nmea_dashboard/state/settings/network.dart';
 import 'package:nmea_dashboard/state/values.dart';
 
 /// The default staleness. Used for non-network sources and for the network

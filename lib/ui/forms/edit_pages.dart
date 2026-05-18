@@ -4,9 +4,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:nmea_dashboard/state/settings/page.dart';
 import 'package:provider/provider.dart';
 
-import 'package:nmea_dashboard/state/settings/settings.dart';
 import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:nmea_dashboard/ui/forms/abstract.dart';
 import 'package:nmea_dashboard/ui/forms/edit_page.dart';
