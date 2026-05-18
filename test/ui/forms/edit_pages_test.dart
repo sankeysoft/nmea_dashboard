@@ -14,7 +14,11 @@ import 'package:nmea_dashboard/ui/forms/edit_pages.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../utils.dart';
+
 const _emptyPagesJson = '[]';
+// Valid page JSON (minimum one page required for useClipboard to accept).
+const _validPagesJson = '[{"name":"TestPage","cells":[]}]';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -34,14 +38,17 @@ void main() {
       pageSettings = PageSettings(prefs, _emptyPagesJson);
     });
 
-    Future<void> pumpPage(WidgetTester tester) async {
+    Future<void> pumpPage(WidgetTester tester, {NavigatorObserver? observer}) async {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
             ChangeNotifierProvider<DataSet>.value(value: dataSet),
             ChangeNotifierProvider<PageSettings>.value(value: pageSettings),
           ],
-          child: MaterialApp(home: EditPagesPage()),
+          child: MaterialApp(
+            navigatorObservers: [?observer],
+            home: EditPagesPage(),
+          ),
         ),
       );
       await tester.pump();
@@ -67,6 +74,103 @@ void main() {
       await tester.pump();
 
       expect(find.text('Delete MyPage page?'), findsOneWidget);
+    });
+
+    testWidgets('confirm delete removes page', (tester) async {
+      pageSettings.setPage(DataPageSpec('MyPage', []));
+      await pumpPage(tester);
+
+      await tester.tap(find.byIcon(Icons.delete_outline));
+      await tester.pump();
+      await tester.tap(find.text('OK'));
+      await tester.pump();
+
+      expect(pageSettings.dataPageSpecs, isEmpty);
+    });
+
+    testWidgets('tapping page tile navigates to edit form', (tester) async {
+      pageSettings.setPage(DataPageSpec('MyPage', []));
+      final observer = TestNavObserver();
+      await pumpPage(tester, observer: observer);
+
+      await tester.tap(find.text('MyPage'));
+      await tester.pump();
+
+      expect(observer.pushCount, greaterThan(0));
+    });
+
+    testWidgets('tapping add page tile navigates to edit form', (tester) async {
+      final observer = TestNavObserver();
+      await pumpPage(tester, observer: observer);
+
+      await tester.tap(find.text('Add new page'));
+      await tester.pump();
+
+      expect(observer.pushCount, greaterThan(0));
+    });
+
+    testWidgets('reset button shows confirmation dialog', (tester) async {
+      await pumpPage(tester);
+
+      await tester.tap(find.byIcon(Icons.settings_backup_restore_outlined));
+      await tester.pump();
+
+      expect(find.text('Reset to default?'), findsOneWidget);
+    });
+
+    testWidgets('confirm reset shows snackbar', (tester) async {
+      await pumpPage(tester);
+
+      await tester.tap(find.byIcon(Icons.settings_backup_restore_outlined));
+      await tester.pump();
+      await tester.tap(find.text('OK'));
+      await tester.pump();
+
+      expect(find.text('Reset page definitions to default'), findsOneWidget);
+    });
+
+    testWidgets('copy button shows snackbar', (tester) async {
+      mockClipboard(tester);
+      await pumpPage(tester);
+
+      await tester.tap(find.byIcon(Icons.copy_all_outlined));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Page definitions copied to clipboard'), findsOneWidget);
+    });
+
+    testWidgets('paste with no clipboard text shows snackbar', (tester) async {
+      mockClipboard(tester, text: null);
+      await pumpPage(tester);
+
+      await tester.tap(find.byIcon(Icons.content_paste_outlined));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Clipboard does not contain text'), findsOneWidget);
+    });
+
+    testWidgets('paste with invalid json shows snackbar', (tester) async {
+      mockClipboard(tester, text: 'not valid json');
+      await pumpPage(tester);
+
+      await tester.tap(find.byIcon(Icons.content_paste_outlined));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Clipboard does not contain valid page definition json'), findsOneWidget);
+    });
+
+    testWidgets('paste with valid json shows confirmation dialog', (tester) async {
+      mockClipboard(tester, text: _validPagesJson);
+      await pumpPage(tester);
+
+      await tester.tap(find.byIcon(Icons.content_paste_outlined));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Load pages from clipboard?'), findsOneWidget);
     });
   });
 }

@@ -13,6 +13,8 @@ import 'package:nmea_dashboard/ui/forms/edit_derived_elements.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../utils.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -31,18 +33,24 @@ void main() {
       );
     });
 
-    Future<void> pumpPage(WidgetTester tester) async {
+    Future<void> pumpPage(WidgetTester tester, {NavigatorObserver? observer}) async {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
             ChangeNotifierProvider<DataSet>.value(value: dataSet),
             ChangeNotifierProvider<DerivedDataSettings>.value(value: derivedDataSettings),
           ],
-          child: MaterialApp(home: EditDerivedElementsPage()),
+          child: MaterialApp(
+            navigatorObservers: [?observer],
+            home: EditDerivedElementsPage(),
+          ),
         ),
       );
       await tester.pump();
     }
+
+    DerivedDataSpec makeSpec(String name) =>
+        DerivedDataSpec(name, 'network', 'speedOverGround', 'knots', 'add', 0.0);
 
     testWidgets('shows title and add element tile', (tester) async {
       await pumpPage(tester);
@@ -51,23 +59,96 @@ void main() {
     });
 
     testWidgets('shows existing derived elements', (tester) async {
-      derivedDataSettings.setElement(
-        DerivedDataSpec('MyDerived', 'network', 'speedOverGround', 'knots', 'add', 0.0),
-      );
+      derivedDataSettings.setElement(makeSpec('MyDerived'));
       await pumpPage(tester);
       expect(find.text('MyDerived'), findsOneWidget);
     });
 
     testWidgets('delete tap shows confirmation dialog', (tester) async {
-      derivedDataSettings.setElement(
-        DerivedDataSpec('MyDerived', 'network', 'speedOverGround', 'knots', 'add', 0.0),
-      );
+      derivedDataSettings.setElement(makeSpec('MyDerived'));
       await pumpPage(tester);
 
       await tester.tap(find.byIcon(Icons.delete_outline));
       await tester.pump();
 
       expect(find.text('Delete MyDerived element?'), findsOneWidget);
+    });
+
+    testWidgets('confirm delete removes element', (tester) async {
+      derivedDataSettings.setElement(makeSpec('MyDerived'));
+      await pumpPage(tester);
+
+      await tester.tap(find.byIcon(Icons.delete_outline));
+      await tester.pump();
+      await tester.tap(find.text('OK'));
+      await tester.pump();
+
+      expect(derivedDataSettings.derivedDataSpecs, isEmpty);
+    });
+
+    testWidgets('tapping element tile navigates to edit form', (tester) async {
+      derivedDataSettings.setElement(makeSpec('MyDerived'));
+      final observer = TestNavObserver();
+      await pumpPage(tester, observer: observer);
+
+      await tester.tap(find.text('MyDerived'));
+      await tester.pump();
+
+      expect(observer.pushCount, greaterThan(0));
+    });
+
+    testWidgets('tapping add element tile navigates to edit form', (tester) async {
+      final observer = TestNavObserver();
+      await pumpPage(tester, observer: observer);
+
+      await tester.tap(find.text('Add new element'));
+      await tester.pump();
+
+      expect(observer.pushCount, greaterThan(0));
+    });
+
+    testWidgets('copy button shows snackbar', (tester) async {
+      mockClipboard(tester);
+      await pumpPage(tester);
+
+      await tester.tap(find.byIcon(Icons.copy_all_outlined));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Derived data definitions copied to clipboard'), findsOneWidget);
+    });
+
+    testWidgets('paste with no clipboard text shows snackbar', (tester) async {
+      mockClipboard(tester, text: null);
+      await pumpPage(tester);
+
+      await tester.tap(find.byIcon(Icons.content_paste_outlined));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Clipboard does not contain text'), findsOneWidget);
+    });
+
+    testWidgets('paste with invalid json shows snackbar', (tester) async {
+      mockClipboard(tester, text: 'not valid json');
+      await pumpPage(tester);
+
+      await tester.tap(find.byIcon(Icons.content_paste_outlined));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Clipboard does not contain valid data definition json'), findsOneWidget);
+    });
+
+    testWidgets('paste with valid json shows confirmation dialog', (tester) async {
+      mockClipboard(tester, text: '[]');
+      await pumpPage(tester);
+
+      await tester.tap(find.byIcon(Icons.content_paste_outlined));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Load derived data from clipboard?'), findsOneWidget);
     });
   });
 }

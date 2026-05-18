@@ -114,7 +114,7 @@ class _EditPageFormState extends StatefulFormState<_EditPageForm> {
       validator: (value) {
         final number = int.tryParse(value ?? '');
         if (number == null || number < 1 || number > 64) {
-          return 'Port must be between 1 and 65';
+          return 'Count must be between 1 and 65';
         }
         return null;
       },
