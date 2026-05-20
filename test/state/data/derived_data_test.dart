@@ -44,7 +44,7 @@ void main() {
       Property.depthUncalibrated,
       _staleness,
     );
-    final formatter = formattersFor(Dimension.depth)['feet'] as ConvertingFormatter;
+    final formatter = formattersFor(Dimension.depth)['feet'] as NumericFormatter;
     final derived = DerivedDataElement(_testName, source, formatter, Operation.add, 100);
 
     int eventCount = 0;

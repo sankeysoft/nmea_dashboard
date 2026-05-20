@@ -18,7 +18,7 @@ void main() {
   const source = Source.network;
   const property = Property.apparentWindSpeed;
   const formatName = 'knots';
-  final formatter = formattersFor(property.dimension)['knots']! as SimpleFormatter;
+  final formatter = formattersFor(property.dimension)['knots']! as SimpleSvdFormatter;
 
   ConsistentDataElement<SingleValue<double>> makeTestElement({double? initialSpeedMs}) {
     // Null staleness: no timer is scheduled, so tests don't leave pending timers.

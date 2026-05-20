@@ -57,7 +57,7 @@ class DerivedDataElement extends DataElement<SingleValue<double>, SingleValue<do
     with WithHistory, WithStats {
   final String _name;
   final DataElement<SingleValue<double>, Value> _sourceElement;
-  final ConvertingFormatter _formatter;
+  final NumericFormatter _formatter;
   final Operation _operation;
   final double _operand;
 

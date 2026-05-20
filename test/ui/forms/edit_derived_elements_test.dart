@@ -40,10 +40,7 @@ void main() {
             ChangeNotifierProvider<DataSet>.value(value: dataSet),
             ChangeNotifierProvider<DerivedDataSettings>.value(value: derivedDataSettings),
           ],
-          child: MaterialApp(
-            navigatorObservers: [?observer],
-            home: EditDerivedElementsPage(),
-          ),
+          child: MaterialApp(navigatorObservers: [?observer], home: EditDerivedElementsPage()),
         ),
       );
       await tester.pump();

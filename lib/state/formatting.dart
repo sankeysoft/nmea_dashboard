@@ -20,13 +20,19 @@ abstract class Formatter<V> {
   String format(V? input);
 }
 
-/// A formatter that can also generate a scalar number for each input,
-/// e.g. for graphing.
+/// A formatter that can also generate a floating point number for each input and attempt to
+/// recreate values based on this number, e.g. for graphing or supporting alarm triggering.
+/// Some numeric formatters may always return null for `fromNumber`.
 abstract class NumericFormatter<V> extends Formatter<V> {
   NumericFormatter(super.longName, super.units, {super.heightFraction, super.isDefault});
 
-  /// Returns a numeric representation of the supplied input.
+  /// Returns a numeric representation of the supplied input in the units
+  /// displayed by this formatter.
   double? toNumber(V? input);
+
+  /// Returns a conversion of the supplied input in the units displayed
+  /// by this formatter back to the native units for the dimension.
+  V? fromNumber(double? input);
 }
 
 /// Returns a map of allowable formatters for the supplied dimension.
@@ -34,22 +40,25 @@ Map<String, Formatter> formattersFor(Dimension? dimension) {
   return (dimension == null) ? {} : _formatters[dimension]!;
 }
 
-/// A numeric formatter that is able to reverse conversion toNumber.
-abstract class ConvertingFormatter<V> extends NumericFormatter<V> {
-  ConvertingFormatter(super.longName, super.units, {super.heightFraction, super.isDefault});
-
-  /// Returns a conversion of the supplied input in the units displayed
-  /// by this formatter back to the native units for the dimension.
-  V? fromNumber(double? input);
+/// Returns a map of allowable numeric formatters for the supplied dimension.
+Map<String, NumericFormatter> numericFormattersFor(Dimension? dimension) {
+  if (dimension == null) return {};
+  final ret = <String, NumericFormatter<dynamic>>{};
+  for (final f in _formatters[dimension]!.entries) {
+    if (f.value is NumericFormatter) {
+      ret[f.key] = f.value as NumericFormatter;
+    }
+  }
+  return ret;
 }
 
 /// A formatter to format floating point numbers with a fixed number of DPs.
-class SimpleFormatter extends ConvertingFormatter<SingleValue<double>> {
+class SimpleSvdFormatter extends NumericFormatter<SingleValue<double>> {
   final String invalid;
   final double scale;
   final int dp;
 
-  SimpleFormatter(
+  SimpleSvdFormatter(
     super.longName,
     super.units,
     this.invalid,
@@ -76,18 +85,6 @@ class SimpleFormatter extends ConvertingFormatter<SingleValue<double>> {
   String format(SingleValue<double>? input) {
     final number = toNumber(input);
     return (number == null) ? invalid : number.toStringAsFixed(dp);
-  }
-}
-
-/// A formatter to format integers.
-class IntegerFormatter extends Formatter<SingleValue<int>> {
-  final String invalid;
-
-  IntegerFormatter(super.longName, super.units, this.invalid, {super.isDefault});
-
-  @override
-  String format(SingleValue<int>? input) {
-    return (input == null) ? invalid : input.data.toString();
   }
 }
 
@@ -136,9 +133,10 @@ class CustomFormatter<V> extends Formatter<V> {
   }
 }
 
-/// A formatter based on custom conversion and format functions
+/// A numeric formatter based on custom conversion and format functions
 class CustomNumericFormatter<V> extends NumericFormatter<V> {
   final double? Function(V?) conversion;
+  final V? Function(double?) unconversion;
   final String Function(V?) formatting;
 
   CustomNumericFormatter(
@@ -147,6 +145,7 @@ class CustomNumericFormatter<V> extends NumericFormatter<V> {
     super.heightFraction,
     super.isDefault,
     required this.conversion,
+    required this.unconversion,
     required this.formatting,
   });
 
@@ -156,19 +155,25 @@ class CustomNumericFormatter<V> extends NumericFormatter<V> {
   }
 
   @override
+  V? fromNumber(double? input) {
+    return unconversion(input);
+  }
+
+  @override
   String format(V? input) {
     return formatting(input);
   }
 }
 
-/// A formatter based on custom conversion, unconversion, and format functions
-class CustomConvertingFormatter extends ConvertingFormatter<SingleValue<double>> {
+/// A numeric formatter for `SingleValue<double>` that provides a bit more convenience than the
+/// general case.
+class CustomSvdFormatter extends NumericFormatter<SingleValue<double>> {
   final String invalid;
   final double Function(double) conversion;
   final double Function(double) unconversion;
   final String Function(double) formatting;
 
-  CustomConvertingFormatter(
+  CustomSvdFormatter(
     super.longName,
     super.units,
     this.invalid, {
@@ -197,22 +202,26 @@ class CustomConvertingFormatter extends ConvertingFormatter<SingleValue<double>>
 
 /// A map of all the possible formatters for all dimensions.
 final Map<Dimension, Map<String, Formatter>> _formatters = {
-  Dimension.angle: {'degrees': SimpleFormatter('degrees', '°', '--', 1.0, 0, isDefault: true)},
+  Dimension.angle: {'degrees': SimpleSvdFormatter('degrees', '°', '--', 1.0, 0, isDefault: true)},
   Dimension.angularRate: {
-    'degreesPerSec': SimpleFormatter('deg/sec', '°/s', '--.-', 1.0, 1, isDefault: true),
+    'degreesPerSec': SimpleSvdFormatter('deg/sec', '°/s', '--.-', 1.0, 1, isDefault: true),
   },
   Dimension.lateralAngle: {
-    'degrees': CustomNumericFormatter<SingleValue<double>>(
+    'degrees': CustomSvdFormatter(
       'degrees',
       '°',
-      conversion: (value) => (value == null) ? null : _normalizeLateralAngle(value.data),
-      formatting: (value) => (value == null) ? '---' : _lateralAngleString(value.data, false),
+      '---',
+      conversion: (value) => _normalizeLateralAngle(value),
+      unconversion: (number) => (_normalizeLateralAngle(number)),
+      formatting: (value) => _lateralAngleString(value, false),
     ),
-    'degreesPS': CustomNumericFormatter<SingleValue<double>>(
+    'degreesPS': CustomSvdFormatter(
       'degrees P/S',
       '°',
-      conversion: (value) => (value == null) ? null : _normalizeLateralAngle(value.data),
-      formatting: (value) => (value == null) ? '---' : _lateralAngleString(value.data, true),
+      '---',
+      conversion: (value) => _normalizeLateralAngle(value),
+      unconversion: (number) => (_normalizeLateralAngle(number)),
+      formatting: (value) => _lateralAngleString(value, true),
       isDefault: true,
     ),
   },
@@ -221,6 +230,8 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
       'true',
       '°T',
       conversion: (value) => value?.bearing,
+      // Not possible to construct an augmented bearing without adding variation.
+      unconversion: (number) => null,
       formatting: (value) => (value == null) ? '---' : _bearingString(value.bearing, 'T'),
     ),
     'mag': CustomNumericFormatter<AugmentedBearing>(
@@ -228,6 +239,8 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
       '°M',
       conversion: (value) =>
           (value?.variation == null) ? null : (value!.bearing + value.variation!) % 360.0,
+      // Not possible to construct an augmented bearing without adding variation.
+      unconversion: (number) => null,
       formatting: (value) {
         if (value == null) {
           return '---';
@@ -241,51 +254,73 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
     ),
   },
   Dimension.crossTrackError: {
-    'meters': CustomNumericFormatter<SingleValue<double>>(
+    'meters': CustomSvdFormatter(
       'meters',
       null,
-      conversion: (value) => value?.data,
-      formatting: (value) => (value == null) ? '---' : _xteString(value.data, 'm'),
+      '---',
+      conversion: (value) => value,
+      unconversion: (value) => value,
+      formatting: (value) => _xteString(value, 'm'),
     ),
-    'feet': CustomNumericFormatter<SingleValue<double>>(
+    'feet': CustomSvdFormatter(
       'feet',
       null,
-      conversion: (value) => (value == null) ? null : value.data * metersToFeet,
-      formatting: (value) => (value == null) ? '---' : _xteString(value.data * metersToFeet, 'ft'),
+      '---',
+      conversion: (value) => value * metersToFeet,
+      unconversion: (value) => value / metersToFeet,
+      formatting: (value) => _xteString(value, 'ft'),
       isDefault: true,
     ),
   },
   Dimension.distance: {
-    'km': SimpleFormatter('km', 'km', '---.--', metersToKilometers, 2),
-    'nm': SimpleFormatter('nm', 'nm', '---.--', metersToNauticalMiles, 2, isDefault: true),
+    'km': SimpleSvdFormatter('km', 'km', '---.--', metersToKilometers, 2),
+    'nm': SimpleSvdFormatter('nm', 'nm', '---.--', metersToNauticalMiles, 2, isDefault: true),
   },
   Dimension.depth: {
-    'meters': SimpleFormatter('meters', 'm', '--.-', 1.0, 1),
-    'feet': SimpleFormatter('feet', 'ft', '--.-', metersToFeet, 1, isDefault: true),
-    'fathoms': SimpleFormatter('fathoms', 'f', '-.--', metersToFeet / 6, 2),
+    'meters': SimpleSvdFormatter('meters', 'm', '--.-', 1.0, 1),
+    'feet': SimpleSvdFormatter('feet', 'ft', '--.-', metersToFeet, 1, isDefault: true),
+    'fathoms': SimpleSvdFormatter('fathoms', 'f', '-.--', metersToFeet / 6, 2),
   },
-  Dimension.integer: {'default': IntegerFormatter('default', null, '-', isDefault: true)},
+  Dimension.integer: {
+    'default': CustomNumericFormatter<SingleValue<int>>(
+      'default',
+      null,
+      conversion: (value) => value?.data.toDouble(),
+      unconversion: (number) => (number == null) ? null : SingleValue(number.round()),
+      formatting: (value) => (value == null) ? '-' : value.data.toString(),
+      isDefault: true,
+    ),
+  },
   Dimension.position: {
     'degMin': PositionFormatter('decimal min', false, isDefault: true),
     'degMinSec': PositionFormatter('deg min sec', true),
   },
   Dimension.percentage: {
-    'percent': SimpleFormatter('percent', '%', '--.-', 1.0, 1, isDefault: true),
+    'percent': SimpleSvdFormatter('percent', '%', '--.-', 1.0, 1, isDefault: true),
   },
   Dimension.pressure: {
-    'millibars': SimpleFormatter('millibar', 'mb', '----.-', pascalsToMillibar, 1, isDefault: true),
-    'inchHg': SimpleFormatter('inches mercury', 'in.hg', '--.--', pascalsToInchesMercury, 2),
-    'psi': SimpleFormatter('pounds per sq.inch', 'psi', '---.-', pascalsToPsi, 1),
+    'millibars': SimpleSvdFormatter(
+      'millibar',
+      'mb',
+      '----.-',
+      pascalsToMillibar,
+      1,
+      isDefault: true,
+    ),
+    'inchHg': SimpleSvdFormatter('inches mercury', 'in.hg', '--.--', pascalsToInchesMercury, 2),
+    'psi': SimpleSvdFormatter('pounds per sq.inch', 'psi', '---.-', pascalsToPsi, 1),
   },
-  Dimension.rotationalSpeed: {'rpm': SimpleFormatter('rpm', 'rpm', '---', 1.0, 0, isDefault: true)},
+  Dimension.rotationalSpeed: {
+    'rpm': SimpleSvdFormatter('rpm', 'rpm', '---', 1.0, 0, isDefault: true),
+  },
   Dimension.speed: {
-    'metersPerSec': SimpleFormatter('m/sec', 'm/s', '-.-', 1.0, 1),
-    'knots': SimpleFormatter('knots', 'kt', '-.-', metersPerSecondToKnots, 1, isDefault: true),
-    'knots2dp': SimpleFormatter('knots (2dp)', 'kt', '-.--', metersPerSecondToKnots, 2),
+    'metersPerSec': SimpleSvdFormatter('m/sec', 'm/s', '-.-', 1.0, 1),
+    'knots': SimpleSvdFormatter('knots', 'kt', '-.-', metersPerSecondToKnots, 1, isDefault: true),
+    'knots2dp': SimpleSvdFormatter('knots (2dp)', 'kt', '-.--', metersPerSecondToKnots, 2),
   },
   Dimension.temperature: {
-    'celcius': SimpleFormatter('celcius', '°C', '--.-', 1.0, 1, isDefault: true),
-    'farenheit': CustomConvertingFormatter(
+    'celcius': SimpleSvdFormatter('celcius', '°C', '--.-', 1.0, 1, isDefault: true),
+    'farenheit': CustomSvdFormatter(
       'farenheit',
       '°F',
       '--.-',
@@ -315,7 +350,7 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
           val == null ? '-------\n--:--:--' : DateFormat('yyyy-MM-dd\nHH:mm:ss').format(val.data),
     ),
   },
-  Dimension.voltage: {'volts': SimpleFormatter('volts', 'V', '--.-', 1.0, 1, isDefault: true)},
+  Dimension.voltage: {'volts': SimpleSvdFormatter('volts', 'V', '--.-', 1.0, 1, isDefault: true)},
 };
 
 String _bearingString(double number, String suffix) {

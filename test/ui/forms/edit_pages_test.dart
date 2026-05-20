@@ -45,10 +45,7 @@ void main() {
             ChangeNotifierProvider<DataSet>.value(value: dataSet),
             ChangeNotifierProvider<PageSettings>.value(value: pageSettings),
           ],
-          child: MaterialApp(
-            navigatorObservers: [?observer],
-            home: EditPagesPage(),
-          ),
+          child: MaterialApp(navigatorObservers: [?observer], home: EditPagesPage()),
         ),
       );
       await tester.pump();

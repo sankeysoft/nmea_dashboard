@@ -28,13 +28,13 @@ void main() {
   });
 
   test('simple formatter should format', () {
-    final fmt = SimpleFormatter('test', '', 'invalid', 2.0, 3);
+    final fmt = SimpleSvdFormatter('test', '', 'invalid', 2.0, 3);
     expect(fmt.format(SingleValue<double>(0.0)), equals('0.000'));
     expect(fmt.format(SingleValue<double>(12.3)), equals('24.600'));
   });
 
   test('simple formatter should convert to and from a number', () {
-    final fmt = SimpleFormatter('test', '', 'invalid', 2.0, 3);
+    final fmt = SimpleSvdFormatter('test', '', 'invalid', 2.0, 3);
     expect(fmt.toNumber(SingleValue<double>(3.0)), equals(6.0));
     expect(fmt.fromNumber(6.0), ValueMatches(SingleValue(3.0)));
   });
@@ -77,6 +77,24 @@ void main() {
     expect(toNumber(5.7, 'degreesPS'), closeTo(5.7, 0.0001));
     expect(toNumber(-12.4, 'degreesPS'), closeTo(-12.4, 0.0001));
     expect(toNumber(181.0, 'degreesPS'), closeTo(-179.0, 0.0001));
+  });
+
+  test('lateral angle fromNumber should reverse toNumber', () {
+    SingleValue<double>? fromNumber(double? number, String name) {
+      final fmt = formattersFor(Property.rudderAngle.dimension)[name]!;
+      return (fmt as NumericFormatter).fromNumber(number) as SingleValue<double>?;
+    }
+
+    expect(fromNumber(null, 'degrees'), null);
+    expect(fromNumber(0.0, 'degrees'), ValueMatches(SingleValue(0.0)));
+    expect(fromNumber(5.7, 'degrees'), ValueMatches(SingleValue(5.7)));
+    expect(fromNumber(-12.4, 'degrees'), ValueMatches(SingleValue(-12.4)));
+    expect(fromNumber(-179.0, 'degrees'), ValueMatches(SingleValue(-179.0)));
+    expect(fromNumber(null, 'degreesPS'), null);
+    expect(fromNumber(0.0, 'degreesPS'), ValueMatches(SingleValue(0.0)));
+    expect(fromNumber(5.7, 'degreesPS'), ValueMatches(SingleValue(5.7)));
+    expect(fromNumber(-12.4, 'degreesPS'), ValueMatches(SingleValue(-12.4)));
+    expect(fromNumber(-179.0, 'degreesPS'), ValueMatches(SingleValue(-179.0)));
   });
 
   test('angular rates should be formatted appropriately', () {
@@ -162,6 +180,18 @@ void main() {
     expect(toNumber(100, 'feet'), equals(328.084));
   });
 
+  test('XTE fromNumber should reverse toNumber', () {
+    SingleValue<double>? fromNumber(double? number, String name) {
+      final fmt = formattersFor(Property.crossTrackError.dimension)[name]!;
+      return (fmt as NumericFormatter).fromNumber(number) as SingleValue<double>?;
+    }
+
+    expect(fromNumber(null, 'meters'), null);
+    expect(fromNumber(10.0, 'meters'), ValueMatches(SingleValue(10.0)));
+    expect(fromNumber(-10.0, 'meters'), ValueMatches(SingleValue(-10.0)));
+    expect(fromNumber(328.084, 'feet'), ValueMatches(SingleValue(100.0)));
+  });
+
   test('distance should be formatted appropriately', () {
     String format(double number, String name) {
       return formattersFor(Property.distanceTrip.dimension)[name]!.format(SingleValue(number));
@@ -171,13 +201,15 @@ void main() {
     expect(format(12345.67, 'nm'), equals('6.67'));
   });
 
-  test('integer formatter should format', () {
-    final fmt = IntegerFormatter('test', null, '-');
-    expect(fmt.format(null), equals('-'));
-    expect(fmt.format(SingleValue<int>(42)), equals('42'));
-  });
+  test('depth should be formatted appropriately', () {
+    String format(double number, String name) {
+      return formattersFor(Property.depthWithOffset.dimension)[name]!.format(SingleValue(number));
+    }
 
-  // Don't have any integer properties yet but should test them here.
+    expect(format(3.048, 'meters'), equals('3.0'));
+    expect(format(3.048, 'feet'), equals('10.0'));
+    expect(format(1.8288, 'fathoms'), equals('1.00'));
+  });
 
   test('position should be formatted appropriately', () {
     String format(double lat, double long, String name) {
@@ -246,10 +278,28 @@ void main() {
 
   test('temperature farenheit fromNumber should reverse conversion', () {
     final fmt =
-        formattersFor(Property.waterTemperature.dimension)['farenheit']! as ConvertingFormatter;
+        formattersFor(Property.waterTemperature.dimension)['farenheit']! as NumericFormatter;
     expect(fmt.fromNumber(null), null);
     expect(fmt.fromNumber(32.0), ValueMatches(SingleValue(0.0)));
     expect(fmt.fromNumber(212.0), ValueMatches(SingleValue(100.0)));
+  });
+
+  test('all SingleValue formatters should be ConvertingFormatters', () {
+    for (final dimension in Dimension.values) {
+      for (final entry in formattersFor(dimension).entries) {
+        final formatter = entry.value;
+        if (dimension != Dimension.time &&
+            formatter.valueType.toString().startsWith('SingleValue')) {
+          expect(
+            formatter,
+            isA<NumericFormatter>(),
+            reason:
+                'Dimension.$dimension formatter "${entry.key}" has a SingleValue type '
+                'but is not a ConvertingFormatter',
+          );
+        }
+      }
+    }
   });
 
   test('time should be formatted appropriately', () {

@@ -28,7 +28,7 @@ class DataSet with ChangeNotifier {
   /// Network settings we can use to drive the network subscription.
   final NetworkSettings _networkSettings;
 
-  /// Network settings we can use to drive the network subscription.
+  /// Settings for user-defined derived data elements.
   final DerivedDataSettings _derivedDataSettings;
 
   /// A manager for history persistence and progression.
@@ -143,7 +143,7 @@ class DataSet with ChangeNotifier {
         _log.warning(
           'Could not create ${spec.name} from non-double ${spec.inputSource}:${spec.inputElement}',
         );
-      } else if (formatter is! SimpleFormatter) {
+      } else if (formatter is! SimpleSvdFormatter) {
         _log.warning('Could not create ${spec.name} from non-simple format ${spec.inputFormat}');
       } else {
         // Derived elements are always working with doubles and support history.
