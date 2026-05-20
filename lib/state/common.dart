@@ -3,7 +3,7 @@
 // of the MIT license. See the LICENCE.md file for details.
 
 import 'package:intl/intl.dart';
-import 'package:nmea_dashboard/state/data/data_element.dart';
+import 'package:nmea_dashboard/state/data_element.dart';
 import 'package:nmea_dashboard/state/values.dart';
 
 const double barToPascals = 100000;

@@ -8,10 +8,10 @@ import 'package:flutter/widgets.dart';
 import 'package:logging/logging.dart';
 
 import 'package:nmea_dashboard/state/common.dart';
-import 'package:nmea_dashboard/state/data/data_element.dart';
-import 'package:nmea_dashboard/state/data/derived_data.dart';
+import 'package:nmea_dashboard/state/data_element.dart';
+import 'package:nmea_dashboard/state/derived_data.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
-import 'package:nmea_dashboard/state/data/data_element_history.dart';
+import 'package:nmea_dashboard/state/data_element_history.dart';
 import 'package:nmea_dashboard/state/local.dart';
 import 'package:nmea_dashboard/state/network.dart';
 import 'package:nmea_dashboard/state/settings/derived_data.dart';

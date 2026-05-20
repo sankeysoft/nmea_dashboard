@@ -6,9 +6,9 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' as intl;
-import 'package:nmea_dashboard/state/data/data_element.dart';
+import 'package:nmea_dashboard/state/data_element.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
-import 'package:nmea_dashboard/state/data/data_element_history.dart';
+import 'package:nmea_dashboard/state/data_element_history.dart';
 import 'package:nmea_dashboard/ui/cells/abstract.dart';
 import 'package:provider/provider.dart';
 

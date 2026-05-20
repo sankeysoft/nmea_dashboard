@@ -4,8 +4,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nmea_dashboard/state/data/data_element_history.dart';
-import 'package:nmea_dashboard/state/data/data_set.dart';
+import 'package:nmea_dashboard/state/data_element_history.dart';
+import 'package:nmea_dashboard/state/data_set.dart';
 import 'package:nmea_dashboard/state/settings/derived_data.dart';
 import 'package:nmea_dashboard/state/settings/format.dart';
 import 'package:nmea_dashboard/state/settings/network.dart';
