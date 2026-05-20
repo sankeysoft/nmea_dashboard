@@ -131,7 +131,7 @@ class _EditDerivedDataFormState extends StatefulFormState<_EditDerivedDataForm> 
     return buildTextField(
       label: 'Derived name',
       initialValue: _name,
-      keyboardType: TextInputType.text,
+      alphabet: Alphabet.any,
       maxLength: 20,
       validator: (value) {
         if (value == null || value.isEmpty) {
@@ -235,7 +235,7 @@ class _EditDerivedDataFormState extends StatefulFormState<_EditDerivedDataForm> 
   Widget _buildOperandField() {
     return buildTextField(
       initialValue: _operand.toString(),
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      alphabet: Alphabet.floatingPoint,
       maxLength: 8,
       validator: (value) {
         return (double.tryParse(value ?? '') == null) ? 'Must be a valid number' : null;

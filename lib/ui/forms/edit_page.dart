@@ -89,7 +89,7 @@ class _EditPageFormState extends StatefulFormState<_EditPageForm> {
     return buildTextField(
       label: 'Page name',
       initialValue: _name,
-      keyboardType: TextInputType.text,
+      alphabet: Alphabet.any,
       maxLength: 20,
       validator: (value) {
         if (value == null || value.isEmpty) {
@@ -109,7 +109,7 @@ class _EditPageFormState extends StatefulFormState<_EditPageForm> {
     return buildTextField(
       label: 'Cell count',
       initialValue: _size.toString(),
-      keyboardType: TextInputType.number,
+      alphabet: Alphabet.integer,
       maxLength: 2,
       validator: (value) {
         final number = int.tryParse(value ?? '');

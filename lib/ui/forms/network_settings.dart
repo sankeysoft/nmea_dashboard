@@ -106,7 +106,7 @@ class _NetworkSettingsFormState extends StatefulFormState<_NetworkSettingsForm> 
     return buildTextField(
       label: 'IP address',
       initialValue: _ipAddress.address,
-      keyboardType: TextInputType.text,
+      alphabet: Alphabet.any,
       enabled: enabled,
       maxLength: 15,
       validator: (value) {
@@ -127,7 +127,7 @@ class _NetworkSettingsFormState extends StatefulFormState<_NetworkSettingsForm> 
     return buildTextField(
       label: 'Port number',
       initialValue: _portNum.toString(),
-      keyboardType: TextInputType.number,
+      alphabet: Alphabet.integer,
       maxLength: 5,
       validator: (value) {
         final number = int.tryParse(value ?? '');
@@ -162,7 +162,7 @@ class _NetworkSettingsFormState extends StatefulFormState<_NetworkSettingsForm> 
       initialValue: _staleness.inSeconds.toString(),
       suffix: 'seconds',
       maxLength: 4,
-      keyboardType: TextInputType.number,
+      alphabet: Alphabet.integer,
       validator: (value) {
         final number = int.tryParse(value ?? '');
         if (number == null || number < 1 || number > 3600) {

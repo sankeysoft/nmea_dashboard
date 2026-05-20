@@ -3,6 +3,7 @@
 // of the MIT license. See the LICENCE.md file for details.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:nmea_dashboard/ui/forms/view_help.dart';
 
@@ -18,7 +19,26 @@ const double _defaultPad = 15;
 const double _tilePadding = 6;
 
 // The standard radius for rounded shapes, e.g. buttons.
-const BorderRadius roundedRadius = BorderRadius.all(Radius.circular(10));
+const BorderRadius _roundedRadius = BorderRadius.all(Radius.circular(10));
+
+/// Contrained alphabets for use in a text box.
+enum Alphabet {
+  any(null, null),
+  integer(TextInputType.number, r'[0-9]'),
+  floatingPoint(TextInputType.numberWithOptions(signed: true, decimal: true), r'[0-9+\-.,]');
+
+  final TextInputType? keyboard;
+  final String? _regex;
+
+  const Alphabet(this.keyboard, this._regex);
+
+  List<TextInputFormatter>? get inputFormatters {
+    if (_regex == null) {
+      return null;
+    }
+    return [FilteringTextInputFormatter.allow(RegExp(_regex))];
+  }
+}
 
 /// A data type for specifying an entry in a dropdown list.
 class DropdownEntry<V> {
@@ -85,7 +105,7 @@ Widget buildMovableDeletableTile({
         textColor: colorScheme.primary,
         iconColor: colorScheme.primary,
         tileColor: colorScheme.surfaceTint,
-        shape: const RoundedRectangleBorder(borderRadius: roundedRadius),
+        shape: const RoundedRectangleBorder(borderRadius: _roundedRadius),
         leading: icon,
         trailing: IconButton(icon: const Icon(Icons.delete_outline), onPressed: onDeleteTap),
         onTap: onTap,
@@ -109,7 +129,7 @@ Widget buildStaticTile({
       textColor: theme.colorScheme.primary,
       iconColor: theme.colorScheme.primary,
       tileColor: theme.canvasColor,
-      shape: const RoundedRectangleBorder(borderRadius: roundedRadius),
+      shape: const RoundedRectangleBorder(borderRadius: _roundedRadius),
       leading: icon,
       onTap: onTap,
     ),
@@ -318,7 +338,7 @@ abstract class StatefulFormState<T extends StatefulWidget> extends State<T> {
     bool expands = false,
     String? suffix,
     TextEditingController? controller,
-    TextInputType? keyboardType,
+    Alphabet alphabet = Alphabet.any,
     FormFieldValidator<String>? validator,
     FormFieldSetter<String>? onSaved,
   }) {
@@ -350,7 +370,8 @@ abstract class StatefulFormState<T extends StatefulWidget> extends State<T> {
           isDense: true,
         ),
         textAlign: TextAlign.right,
-        keyboardType: keyboardType,
+        keyboardType: alphabet.keyboard,
+        inputFormatters: alphabet.inputFormatters,
         maxLength: maxLength,
         style: textStyle.copyWith(color: fieldColor),
         validator: validator,
@@ -360,7 +381,7 @@ abstract class StatefulFormState<T extends StatefulWidget> extends State<T> {
   }
 
   Widget buildDropdownBox<V>({
-    required String label,
+    required String? label,
     required List<DropdownEntry<V>> items,
     required V? initialValue,
     ValueChanged<V?>? onChanged,
@@ -382,12 +403,16 @@ abstract class StatefulFormState<T extends StatefulWidget> extends State<T> {
       );
     }).toList();
 
+    final labelText = (label == null)
+        ? null
+        : Text('$label:', style: textStyle.copyWith(color: headingColor));
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: _elementPadding),
       child: DropdownButtonFormField<V>(
         items: dropdownItems,
         decoration: InputDecoration(
-          icon: Text('$label:', style: textStyle.copyWith(color: headingColor)),
+          icon: labelText,
           border: const OutlineInputBorder(),
           isDense: true,
         ),
