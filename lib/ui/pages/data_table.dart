@@ -3,7 +3,7 @@
 // of the MIT license. See the LICENCE.md file for details.
 
 import 'package:flutter/material.dart';
-import 'package:nmea_dashboard/state/data/data_set.dart';
+import 'package:nmea_dashboard/state/data_set.dart';
 import 'package:nmea_dashboard/state/settings/network.dart';
 import 'package:nmea_dashboard/state/settings/page.dart';
 import 'package:nmea_dashboard/state/settings/specs.dart';
