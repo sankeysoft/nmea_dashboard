@@ -15,12 +15,13 @@ void main() {
       SingleValue<int>(456),
       DoubleValue<double>(-23.4, 45.6),
       SingleValue<DateTime>(DateTime(2026, 4, 24, 1, 2, 3)),
+      AugmentedBearing(90.0, 5.0),
     ];
     final knownTypes = testValues.map((e) => e.runtimeType);
 
     // Verify this test will cover all the types used in all dimensions.
     for (final dim in Dimension.values) {
-      expect(knownTypes, contains(dim.type));
+      expect(knownTypes, contains(dim.storageType));
     }
 
     // Serialize is the only abstract method so verify its been implemented.
@@ -54,7 +55,7 @@ void main() {
   });
 
   test('AugmentedBearing with variation should serialize and deserialize.', () {
-    final original = AugmentedBearing.fromNumbers(123.0, 10.0);
+    final original = AugmentedBearing(123.0, 10.0);
     expect(original.toString(), '(Brg=123.0 Var=10.0)');
     var serialized = original.serialize();
     expect(serialized, '123.0000/10.0000');
@@ -67,7 +68,7 @@ void main() {
   });
 
   test('AugmentedBearing without variation should serialize and deserialize.', () {
-    final original = AugmentedBearing.fromNumbers(321.0, null);
+    final original = AugmentedBearing(321.0, null);
     expect(original.toString(), '(Brg=321.0 Var=null)');
     var serialized = original.serialize();
     expect(serialized, '321.0000/null');
@@ -122,29 +123,29 @@ void main() {
   test('AugmentedBearingAccumulator should give correct results.', () {
     final acc = ValueAccumulator.forType(AugmentedBearing);
     expect(acc.mean(), null);
-    acc.add(AugmentedBearing.fromNumbers(200.0, 5.0));
-    expect(acc.mean(), ValueMatches(AugmentedBearing.fromNumbers(200.0, 5.0)));
-    expect(acc.mean(), ValueMatches(AugmentedBearing.fromNumbers(200.0, 5.0)));
+    acc.add(AugmentedBearing(200.0, 5.0));
+    expect(acc.mean(), ValueMatches(AugmentedBearing(200.0, 5.0)));
+    expect(acc.mean(), ValueMatches(AugmentedBearing(200.0, 5.0)));
     acc.clear();
-    acc.add(AugmentedBearing.fromNumbers(100.0, null));
-    acc.add(AugmentedBearing.fromNumbers(150.0, null));
-    expect(acc.mean(), ValueMatches(AugmentedBearing.fromNumbers(125.0, null)));
+    acc.add(AugmentedBearing(100.0, null));
+    acc.add(AugmentedBearing(150.0, null));
+    expect(acc.mean(), ValueMatches(AugmentedBearing(125.0, null)));
     acc.removeFirst();
-    expect(acc.mean(), ValueMatches(AugmentedBearing.fromNumbers(150.0, null)));
+    expect(acc.mean(), ValueMatches(AugmentedBearing(150.0, null)));
     acc.removeFirst();
     expect(acc.mean(), null);
     acc.clear();
-    acc.add(AugmentedBearing.fromNumbers(200.0, 5.0));
-    acc.add(AugmentedBearing.fromNumbers(210.0, null));
-    acc.add(AugmentedBearing.fromNumbers(220.0, 10.0));
-    acc.add(AugmentedBearing.fromNumbers(230.0, null));
-    expect(acc.mean(), ValueMatches(AugmentedBearing.fromNumbers(215.0, 7.5)));
+    acc.add(AugmentedBearing(200.0, 5.0));
+    acc.add(AugmentedBearing(210.0, null));
+    acc.add(AugmentedBearing(220.0, 10.0));
+    acc.add(AugmentedBearing(230.0, null));
+    expect(acc.mean(), ValueMatches(AugmentedBearing(215.0, 7.5)));
     acc.removeFirst();
-    expect(acc.mean(), ValueMatches(AugmentedBearing.fromNumbers(220.0, 10.0)));
+    expect(acc.mean(), ValueMatches(AugmentedBearing(220.0, 10.0)));
     acc.removeFirst();
-    expect(acc.mean(), ValueMatches(AugmentedBearing.fromNumbers(225.0, 10.0)));
+    expect(acc.mean(), ValueMatches(AugmentedBearing(225.0, 10.0)));
     acc.removeFirst();
-    expect(acc.mean(), ValueMatches(AugmentedBearing.fromNumbers(230.0, null)));
+    expect(acc.mean(), ValueMatches(AugmentedBearing(230.0, null)));
     acc.removeFirst();
     expect(acc.mean(), null);
   });
@@ -162,7 +163,7 @@ void main() {
     );
     expect(
       Value.deserialize<AugmentedBearing>('90.0000/5.0000'),
-      ValueMatches(AugmentedBearing.fromNumbers(90.0, 5.0)),
+      ValueMatches(AugmentedBearing(90.0, 5.0)),
     );
     expect(() => Value.deserialize<SingleValue<String>>('x'), throwsA(isA<InvalidTypeException>()));
   });
@@ -186,12 +187,12 @@ void main() {
   test('AugmentedBearingAccumulator last should return the most recent value', () {
     final acc = ValueAccumulator.forType(AugmentedBearing) as AugmentedBearingAccumulator;
     expect(acc.last(), null);
-    acc.add(AugmentedBearing.fromNumbers(100.0, 5.0));
-    expect(acc.last(), ValueMatches(AugmentedBearing.fromNumbers(100.0, 5.0)));
-    acc.add(AugmentedBearing.fromNumbers(110.0, 6.0));
-    expect(acc.last(), ValueMatches(AugmentedBearing.fromNumbers(110.0, 6.0)));
-    acc.add(AugmentedBearing.fromNumbers(120.0, null));
-    expect(acc.last(), ValueMatches(AugmentedBearing.fromNumbers(120.0, 6.0)));
+    acc.add(AugmentedBearing(100.0, 5.0));
+    expect(acc.last(), ValueMatches(AugmentedBearing(100.0, 5.0)));
+    acc.add(AugmentedBearing(110.0, 6.0));
+    expect(acc.last(), ValueMatches(AugmentedBearing(110.0, 6.0)));
+    acc.add(AugmentedBearing(120.0, null));
+    expect(acc.last(), ValueMatches(AugmentedBearing(120.0, 6.0)));
   });
 
   test('BoundValue should throw on property type mismatch', () {

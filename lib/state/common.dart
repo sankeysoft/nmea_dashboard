@@ -197,26 +197,87 @@ class SourceAndGroup {
 enum Dimension {
   angle(type: SingleValue<double>, nativeUnits: 'degrees', derivationFriendly: true),
   angularRate(type: SingleValue<double>, nativeUnits: 'degrees/sec'),
-  bearing(type: SingleValue<double>, nativeUnits: 'degrees true'),
+  bearing(
+    type: AugmentedBearing,
+    inputType: SingleValue<double>,
+    nativeUnits: 'degrees true',
+    minValue: AugmentedBearing(0.0, 0.0),
+    maxValue: AugmentedBearing(359.9, 0.0),
+  ),
   crossTrackError(type: SingleValue<double>, nativeUnits: 'meters'),
-  distance(type: SingleValue<double>, nativeUnits: 'meters', derivationFriendly: true),
+  distance(
+    type: SingleValue<double>,
+    nativeUnits: 'meters',
+    derivationFriendly: true,
+    minValue: SingleValue(0.0),
+  ),
   depth(type: SingleValue<double>, nativeUnits: 'meters', derivationFriendly: true),
   integer(type: SingleValue<int>, nativeUnits: 'N/A'),
-  lateralAngle(type: SingleValue<double>, nativeUnits: 'degrees', derivationFriendly: true),
-  percentage(type: SingleValue<double>, nativeUnits: 'N/A'),
+  lateralAngle(
+    type: SingleValue<double>,
+    nativeUnits: 'degrees',
+    derivationFriendly: true,
+    minValue: SingleValue(-180.0),
+    maxValue: SingleValue(180.0),
+  ),
+  percentage(
+    type: SingleValue<double>,
+    nativeUnits: 'N/A',
+    minValue: SingleValue(0.0),
+    maxValue: SingleValue(100.0),
+  ),
   position(type: DoubleValue<double>, nativeUnits: 'lat/long degrees'),
-  pressure(type: SingleValue<double>, nativeUnits: 'pascals', derivationFriendly: true),
-  rotationalSpeed(type: SingleValue<double>, nativeUnits: 'rpm', derivationFriendly: true),
-  speed(type: SingleValue<double>, nativeUnits: 'meters/sec', derivationFriendly: true),
-  temperature(type: SingleValue<double>, nativeUnits: 'degrees celcius'),
+  pressure(
+    type: SingleValue<double>,
+    nativeUnits: 'pascals',
+    derivationFriendly: true,
+    minValue: SingleValue(0.0),
+  ),
+  rotationalSpeed(
+    type: SingleValue<double>,
+    nativeUnits: 'rpm',
+    derivationFriendly: true,
+    minValue: SingleValue(0.0),
+  ),
+  speed(
+    type: SingleValue<double>,
+    nativeUnits: 'meters/sec',
+    derivationFriendly: true,
+    minValue: SingleValue(0.0),
+  ),
+  temperature(
+    type: SingleValue<double>,
+    nativeUnits: 'degrees celcius',
+    minValue: SingleValue(-273.15),
+  ),
   time(type: SingleValue<DateTime>, nativeUnits: 'datetime'),
-  voltage(type: SingleValue<double>, nativeUnits: 'volts', derivationFriendly: true);
+  voltage(
+    type: SingleValue<double>,
+    nativeUnits: 'volts',
+    derivationFriendly: true,
+    minValue: SingleValue(0.0),
+  );
 
-  final Type type;
+  final Type storageType;
+  // TODO: I do have doubts about whether the dimension should be coupled into the implementation
+  // of the data element like this. The alternative would be to delay the type check on a bound
+  // value from on creation to when its passed to the DataElement.
+  final Type inputType;
   final String nativeUnits;
   final bool derivationFriendly;
 
-  const Dimension({required this.type, required this.nativeUnits, this.derivationFriendly = false});
+  final Value? minValue;
+  final Value? maxValue;
+
+  const Dimension({
+    required Type type,
+    required this.nativeUnits,
+    Type? inputType,
+    this.minValue,
+    this.maxValue,
+    this.derivationFriendly = false,
+  }) : storageType = type,
+       inputType = inputType ?? type;
 
   /// Returns a derivation operation from its unqualified name.
   static Dimension? fromString(String? name) {

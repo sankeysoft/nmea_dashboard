@@ -6,7 +6,7 @@ import 'dart:collection';
 
 import 'package:nmea_dashboard/state/common.dart';
 
-/// A bound value is a single instance of the data for some property in some
+/// A bound value is a single instance of the input data for some property in some
 /// source.
 class BoundValue<V extends Value> {
   /// The high level source that the datum came from (e.g. network).
@@ -24,7 +24,7 @@ class BoundValue<V extends Value> {
   final V value;
 
   BoundValue(this.source, this.property, this.value, {this.tier = 1}) {
-    _verifyType(property, V);
+    _verifyInputType(property, V);
   }
 
   @override
@@ -36,6 +36,8 @@ class BoundValue<V extends Value> {
 /// A value is a single instance of the data that may be associated with some
 /// property.
 abstract class Value {
+  const Value();
+
   /// Serializes this value to a string.
   String serialize();
 
@@ -56,7 +58,7 @@ abstract class Value {
 class SingleValue<T> extends Value {
   final T data;
 
-  SingleValue(this.data);
+  const SingleValue(this.data);
 
   /// Deserialized the supplied string (created by calling serialize) back to
   /// the original value, returning null if the input was not valid.
@@ -123,18 +125,7 @@ class AugmentedBearing extends Value {
   final double bearing;
   final double? variation;
 
-  AugmentedBearing(SingleValue<double> bearing, SingleValue<double>? variation)
-    : bearing = bearing.data,
-      variation = variation?.data;
-
-  /// Convenience method to create an AugmentedBearing with doubles rather
-  /// than `SingleValue<double>s`.
-  static AugmentedBearing fromNumbers(double bearing, double? variation) {
-    return AugmentedBearing(
-      SingleValue(bearing),
-      variation == null ? null : SingleValue(variation),
-    );
-  }
+  const AugmentedBearing(this.bearing, this.variation);
 
   /// Deserialized the supplied string (created by calling serialize) back to
   /// the original value, returning null if the input was not valid.
@@ -148,13 +139,13 @@ class AugmentedBearing extends Value {
       return null;
     }
     if (components[1] == 'null') {
-      return AugmentedBearing(SingleValue(bearing), null);
+      return AugmentedBearing(bearing, null);
     }
     final variation = double.tryParse(components[1]);
     if (variation == null) {
       return null;
     }
-    return AugmentedBearing(SingleValue(bearing), SingleValue(variation));
+    return AugmentedBearing(bearing, variation);
   }
 
   @override
@@ -245,7 +236,7 @@ class AugmentedBearingAccumulator extends ValueAccumulator<AugmentedBearing> {
   AugmentedBearing? mean() {
     final b = bearing.mean();
     final v = variation.mean();
-    return b == null ? null : AugmentedBearing.fromNumbers(b, v);
+    return b == null ? null : AugmentedBearing(b, v);
   }
 
   @override
@@ -254,7 +245,7 @@ class AugmentedBearingAccumulator extends ValueAccumulator<AugmentedBearing> {
     // Note we deliberately use the last available variation, even if it isn't from the
     // most recent bearing.
     final v = variation.last();
-    return b == null ? null : AugmentedBearing.fromNumbers(b, v);
+    return b == null ? null : AugmentedBearing(b, v);
   }
 
   @override
@@ -327,11 +318,11 @@ class NumericAccumulator {
 }
 
 /// Verifies that the expected type of the supplied property matches
-/// the supplied storage type, throwing an exception if not.
-Property _verifyType(Property property, Type storage) {
-  if (property.dimension.type != storage) {
+/// the supplied input type, throwing an exception if not.
+Property _verifyInputType(Property property, Type input) {
+  if (property.dimension.inputType != input) {
     throw InvalidTypeException(
-      'Cannot bind $storage to $property, expected ${property.dimension.type}',
+      'Cannot bind $input to $property, expected ${property.dimension.inputType}',
     );
   }
   return property;

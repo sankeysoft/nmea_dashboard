@@ -38,6 +38,19 @@ void main() {
     expect(StatsInterval.fromString('invalid'), null);
   });
 
+  test('Dimension min and max values must match storageType', () {
+    for (final dim in Dimension.values) {
+      if (dim.minValue != null) {
+        expect(dim.minValue.runtimeType, dim.storageType,
+            reason: '${dim.name}.minValue type does not match storageType');
+      }
+      if (dim.maxValue != null) {
+        expect(dim.maxValue.runtimeType, dim.storageType,
+            reason: '${dim.name}.maxValue type does not match storageType');
+      }
+    }
+  });
+
   test('derivation friendly dimensions should have numeric formatters.', () {
     for (final dim in Dimension.values) {
       if (dim.derivationFriendly) {

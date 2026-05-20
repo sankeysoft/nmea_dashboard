@@ -128,9 +128,9 @@ void main() {
     variation.updateValue(_boundVariation(10.0));
     expect(bearing.value, null);
     expect(bearing.updateValue(_boundMagHeading(45)), true);
-    expect(bearing.value, ValueMatches(AugmentedBearing(SingleValue(35.0), SingleValue(10.0))));
+    expect(bearing.value, ValueMatches(AugmentedBearing(35.0, 10.0)));
     expect(bearing.updateValue(_boundMagHeading(1)), true);
-    expect(bearing.value, ValueMatches(AugmentedBearing(SingleValue(351.0), SingleValue(10.0))));
+    expect(bearing.value, ValueMatches(AugmentedBearing(351.0, 10.0)));
   });
 
   test('bearing data element should accept true inputs', () {
@@ -144,12 +144,12 @@ void main() {
     // If variation is null, we accept true inputs.
     expect(bearing.value, null);
     expect(bearing.updateValue(_boundTrueHeading(45)), true);
-    expect(bearing.value, ValueMatches(AugmentedBearing(SingleValue(45.0), null)));
+    expect(bearing.value, ValueMatches(AugmentedBearing(45.0, null)));
 
     // Once variation is set we still accept them.
     variation.updateValue(_boundVariation(10.0));
     expect(bearing.updateValue(_boundTrueHeading(55)), true);
-    expect(bearing.value, ValueMatches(AugmentedBearing(SingleValue(55.0), SingleValue(10.0))));
+    expect(bearing.value, ValueMatches(AugmentedBearing(55.0, 10.0)));
   });
 
   test('data element long and short names come from property', () {
@@ -187,7 +187,7 @@ void main() {
   });
 
   test('WithHistory elements should accumulate.', () {
-    // TODO: If we get a DataSet inintializable in a test, would be better to
+    // TODO: If we get a DataSet initializable in a test, would be better to
     // run this test on that.
     final staleness = Staleness(const Duration(seconds: 1));
     final variation = ConsistentDataElement<SingleValue<double>>(

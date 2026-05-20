@@ -27,14 +27,28 @@ void main() {
     }
   });
 
+  test('all formatters should have a dimension matching their map key', () {
+    for (final dimension in Dimension.values) {
+      for (final entry in formattersFor(dimension).entries) {
+        expect(
+          entry.value.dimension,
+          equals(dimension),
+          reason:
+              'Dimension.$dimension formatter "${entry.key}" '
+              'has dimension ${entry.value.dimension}',
+        );
+      }
+    }
+  });
+
   test('simple formatter should format', () {
-    final fmt = SimpleSvdFormatter('test', '', 'invalid', 2.0, 3);
+    final fmt = SimpleSvdFormatter(Dimension.speed, 'test', '', 'invalid', 2.0, 3);
     expect(fmt.format(SingleValue<double>(0.0)), equals('0.000'));
     expect(fmt.format(SingleValue<double>(12.3)), equals('24.600'));
   });
 
   test('simple formatter should convert to and from a number', () {
-    final fmt = SimpleSvdFormatter('test', '', 'invalid', 2.0, 3);
+    final fmt = SimpleSvdFormatter(Dimension.speed, 'test', '', 'invalid', 2.0, 3);
     expect(fmt.toNumber(SingleValue<double>(3.0)), equals(6.0));
     expect(fmt.fromNumber(6.0), ValueMatches(SingleValue(3.0)));
   });
@@ -108,12 +122,7 @@ void main() {
 
   test('bearings should be formatted appropriately', () {
     String format(double? bearing, double? variation, String name) {
-      final val = (bearing == null)
-          ? null
-          : AugmentedBearing(
-              SingleValue(bearing),
-              variation == null ? null : SingleValue(variation),
-            );
+      final val = (bearing == null) ? null : AugmentedBearing(bearing, variation);
       return formattersFor(Property.trueWindDirection.dimension)[name]!.format(val);
     }
 
@@ -130,12 +139,7 @@ void main() {
 
   test('bearing numeric conversion should be correct', () {
     double? toNumber(double? bearing, double? variation, String name) {
-      final val = (bearing == null)
-          ? null
-          : AugmentedBearing(
-              SingleValue(bearing),
-              variation == null ? null : SingleValue(variation),
-            );
+      final val = (bearing == null) ? null : AugmentedBearing(bearing, variation);
       final fmt = formattersFor(Property.trueWindDirection.dimension)[name]!;
       return (fmt as NumericFormatter).toNumber(val);
     }
@@ -284,7 +288,16 @@ void main() {
     expect(fmt.fromNumber(212.0), ValueMatches(SingleValue(100.0)));
   });
 
-  test('all SingleValue formatters should be ConvertingFormatters', () {
+  test('time should be formatted appropriately', () {
+    String format(DateTime datetime, String name) {
+      return formattersFor(Property.utcTime.dimension)[name]!.format(SingleValue(datetime));
+    }
+
+    expect(format(DateTime.utc(2023, 4, 5, 7, 2, 37), 'hms'), equals('07:02:37'));
+    expect(format(DateTime.utc(2023, 4, 5, 7, 2, 37), 'ymdhms'), equals('2023-04-05\n07:02:37'));
+  });
+
+  test('all SingleValue formatters should be NumericFormatters', () {
     for (final dimension in Dimension.values) {
       for (final entry in formattersFor(dimension).entries) {
         final formatter = entry.value;
@@ -295,19 +308,10 @@ void main() {
             isA<NumericFormatter>(),
             reason:
                 'Dimension.$dimension formatter "${entry.key}" has a SingleValue type '
-                'but is not a ConvertingFormatter',
+                'but is not a NumericFormatter',
           );
         }
       }
     }
-  });
-
-  test('time should be formatted appropriately', () {
-    String format(DateTime datetime, String name) {
-      return formattersFor(Property.utcTime.dimension)[name]!.format(SingleValue(datetime));
-    }
-
-    expect(format(DateTime.utc(2023, 4, 5, 7, 2, 37), 'hms'), equals('07:02:37'));
-    expect(format(DateTime.utc(2023, 4, 5, 7, 2, 37), 'ymdhms'), equals('2023-04-05\n07:02:37'));
   });
 }

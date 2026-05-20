@@ -140,12 +140,12 @@ class ConsistentDataElement<V extends Value> extends DataElement<V, V> {
     Staleness staleness,
   ) {
     // Hideousness to deal with Dart's crappy type system.
-    if (property.dimension.type == SingleValue<double>) {
+    if (property.dimension.storageType == SingleValue<double>) {
       // Create a different subclass with history when possible.
       return SingleValueDoubleConsistentDataElement(source, property, staleness);
-    } else if (property.dimension.type == SingleValue<DateTime>) {
+    } else if (property.dimension.storageType == SingleValue<DateTime>) {
       return ConsistentDataElement<SingleValue<DateTime>>(source, property, staleness);
-    } else if (property.dimension.type == DoubleValue<double>) {
+    } else if (property.dimension.storageType == DoubleValue<double>) {
       return ConsistentDataElement<DoubleValue<double>>(source, property, staleness);
     } else {
       throw InvalidTypeException(
@@ -271,6 +271,6 @@ class BearingDataElement extends DataElement<AugmentedBearing, SingleValue<doubl
     // we can't update the output if the variation changes without bearing
     // updates but since variation changes far less frequently thats unlikely
     // to be a problem.
-    return AugmentedBearing(newValue, variation.value);
+    return AugmentedBearing(newValue.data, variation.value?.data);
   }
 }
