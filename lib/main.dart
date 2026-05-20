@@ -167,7 +167,7 @@ class _HomePage extends StatelessWidget {
     final uiSettings = Provider.of<UiSettings>(context);
     final initialIdx = dataSettings.selectedPageIndex ?? 0;
     final controller = PageController(initialPage: initialIdx, keepPage: false);
-    final packageInfo = Provider.of<Settings>(context).packageInfo;
+    final packageInfo = Provider.of<PackageInfo>(context);
 
     final buildNumber = int.tryParse(packageInfo.buildNumber) ?? 0;
 

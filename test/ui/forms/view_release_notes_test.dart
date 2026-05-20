@@ -37,8 +37,11 @@ void main() {
 
     Future<void> pumpPage(WidgetTester tester, {required bool displayAll}) async {
       await tester.pumpWidget(
-        ChangeNotifierProvider<Settings>.value(
-          value: settings,
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<Settings>.value(value: settings),
+            Provider<PackageInfo>.value(value: settings.packageInfo),
+          ],
           child: MaterialApp(home: ViewReleaseNotesPage(displayAll: displayAll)),
         ),
       );

@@ -7,7 +7,6 @@ import 'dart:convert';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:nmea_dashboard/state/settings/common.dart';
 import 'package:nmea_dashboard/ui/forms/abstract.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
@@ -75,7 +74,7 @@ class _ViewReleaseNotes extends StatelessWidget {
   }
 
   Widget _buildText(BuildContext context) {
-    final packageInfo = Provider.of<Settings>(context).packageInfo;
+    final packageInfo = Provider.of<PackageInfo>(context);
 
     // Annoyingly Image assets can be read synchronously but text can't.
     return FutureBuilder(
