@@ -47,7 +47,9 @@ class _EditDerivedDataForm extends StatefulWidget {
 class _EditDerivedDataFormState extends StatefulFormState<_EditDerivedDataForm> {
   late DataSet _dataSet;
   late String _name;
+
   Source? _inputSource;
+  Group? _inputGroup;
   String? _inputName;
   String? _inputFormat;
   Operation _operation = Operation.add;
@@ -57,6 +59,8 @@ class _EditDerivedDataFormState extends StatefulFormState<_EditDerivedDataForm> 
   void initState() {
     _name = widget._spec.name;
     _inputSource = Source.fromString(widget._spec.inputSource);
+    // Init group to null now, will set if relevant in build when we have a dataSet.
+    _inputGroup = null;
     _inputName = widget._spec.inputElement;
     _inputFormat = widget._spec.inputFormat;
     _operation = Operation.fromString(widget._spec.operation) ?? Operation.add;
@@ -67,6 +71,11 @@ class _EditDerivedDataFormState extends StatefulFormState<_EditDerivedDataForm> 
   @override
   Widget build(BuildContext context) {
     _dataSet = Provider.of<DataSet>(context);
+    // Set the group from the element now we have a dataSet to do the lookup.
+    final elementProperty = _dataSet.sources[_inputSource]?[_inputName]?.property;
+    if (elementProperty != null && _inputSource!.usesGrouping()) {
+      _inputGroup = elementProperty.group;
+    }
     // If the spec we loaded was invalid (like the default, nullify now).
     _wipeInvalidFields();
 
@@ -116,11 +125,14 @@ class _EditDerivedDataFormState extends StatefulFormState<_EditDerivedDataForm> 
   // Clears any internal fields that are now inconsistent given the present value of
   // higher level fields.
   void _wipeInvalidFields() {
-    final inputElement = _dataSet.sources[_inputSource]?[_inputName];
-
+    var inputElement = _dataSet.sources[_inputSource]?[_inputName];
     if (inputElement == null) {
       _inputName = null;
+    } else if (_inputSource!.usesGrouping() && inputElement.property.group != _inputGroup) {
+      inputElement = null;
+      _inputName = null;
     }
+
     if (inputElement?.property == null ||
         !formattersFor(inputElement!.property.dimension).keys.contains(_inputFormat)) {
       _inputFormat = null;
@@ -148,18 +160,15 @@ class _EditDerivedDataFormState extends StatefulFormState<_EditDerivedDataForm> 
   }
 
   Widget _buildSourceField() {
-    final selectableSources = Source.values
-        .where((source) => source.selectable && source != Source.derived)
-        .toSet();
+    final sourceGroups = SourceAndGroup.set().where((sg) => sg.source != Source.derived).toSet();
     return buildDropdownBox(
       label: 'Input source',
-      items: selectableSources.map((source) {
-        return DropdownEntry(value: source, text: source.longName);
-      }).toList(),
-      initialValue: selectableSources.lookup(_inputSource),
-      onChanged: (Source? value) {
+      items: sourceGroups.map((sg) => DropdownEntry(value: sg, text: sg.text)).toList(),
+      initialValue: SourceAndGroup.lookupInSet(sourceGroups, _inputSource, _inputGroup),
+      onChanged: (SourceAndGroup? value) {
         setState(() {
-          _inputSource = value;
+          _inputSource = value?.source;
+          _inputGroup = value?.group;
           _wipeInvalidFields();
         });
       },
@@ -167,7 +176,15 @@ class _EditDerivedDataFormState extends StatefulFormState<_EditDerivedDataForm> 
   }
 
   Widget _buildElementField() {
-    final Map<String, DataElement> elements = _dataSet.sources[_inputSource] ?? {};
+    final Map<String, DataElement> elements = {};
+    final sourceElements = _dataSet.sources[_inputSource];
+    if (sourceElements != null && _inputSource!.usesGrouping()) {
+      elements.addEntries(
+        sourceElements.entries.where((e) => e.value.property.group == _inputGroup),
+      );
+    } else if (sourceElements != null) {
+      elements.addAll(sourceElements);
+    }
 
     return buildDropdownBox(
       label: 'Input element',

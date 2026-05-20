@@ -150,6 +150,47 @@ enum Source {
   static Source? fromString(String? name) {
     return Source.values.asNameMap()[name];
   }
+
+  /// Returns true if elements within the source use groups.
+  bool usesGrouping() {
+    return this == Source.network;
+  }
+}
+
+/// A data element source and optionally a group for sources that use grouping.
+class SourceAndGroup {
+  final Source source;
+  final Group? group;
+
+  SourceAndGroup(this.source, this.group);
+
+  @override
+  bool operator ==(Object other) =>
+      other is SourceAndGroup && source == other.source && group == other.group;
+
+  @override
+  int get hashCode => Object.hash(source, group);
+
+  String get text => source.longName + ((group == null) ? "" : " - ${group!.longName}");
+
+  /// Returns the set of all selectable sources and their groups.
+  static Set<SourceAndGroup> set() {
+    final Set<SourceAndGroup> ret = {};
+    for (final source in Source.values.where((source) => source.selectable)) {
+      if (source.usesGrouping()) {
+        ret.addAll(Group.values.map((group) => SourceAndGroup(source, group)));
+      } else {
+        ret.add(SourceAndGroup(source, null));
+      }
+    }
+    return ret;
+  }
+
+  /// Returns the SourceAndGroup in the supplied set or null if not found.
+  static SourceAndGroup? lookupInSet(Set<SourceAndGroup> set, Source? source, Group? group) {
+    if (source == null) return null;
+    return set.lookup(SourceAndGroup(source, group));
+  }
 }
 
 /// The various types of dimension used across data elements.

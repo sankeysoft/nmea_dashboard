@@ -50,39 +50,6 @@ class _CellTypeAndAssociatedFields {
   int get hashCode => Object.hash(type, statsInterval, historyInterval);
 }
 
-bool sourceUsesGrouping(Source? source) {
-  return source == Source.network;
-}
-
-/// A data element source and optionally a group for sources that use grouping.
-class _SourceAndGroup {
-  final Source source;
-  final Group? group;
-
-  _SourceAndGroup(this.source, this.group);
-
-  @override
-  bool operator ==(Object other) =>
-      other is _SourceAndGroup && source == other.source && group == other.group;
-
-  @override
-  int get hashCode => Object.hash(source, group);
-
-  String get text => source.longName + ((group == null) ? "" : " - ${group!.longName}");
-
-  static Set<_SourceAndGroup> set() {
-    final Set<_SourceAndGroup> ret = {};
-    for (final source in Source.values.where((source) => source.selectable)) {
-      if (sourceUsesGrouping(source)) {
-        ret.addAll(Group.values.map((group) => _SourceAndGroup(source, group)));
-      } else {
-        ret.add(_SourceAndGroup(source, null));
-      }
-    }
-    return ret;
-  }
-}
-
 class _EditCellFormState extends StatefulFormState<_EditCellForm> {
   late DataSet _dataSet;
   late PageSettings _pageSettings;
@@ -121,14 +88,22 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
     super.initState();
   }
 
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
   // Clears any internal fields that are now inconsistent given the present value of higher level
-  // fields. For format we return to the user's preffered default for the dimension.
+  // fields. For format we return to the user's prefered default for the dimension.
   void _wipeInvalidFields() {
-    // Clear the data element if its not known on this source and is in the correct group.
+    // Clear the data element if its not known on this source or is not in the correct group.
     var dataElement = _dataSet.sources[_source]?[_element];
-    if (dataElement == null) {
+    if (dataElement == null || _source == null) {
       _element = null;
-    } else if (sourceUsesGrouping(_source) && dataElement.property.group != _group) {
+    } else if (_source!.usesGrouping() && dataElement.property.group != _group) {
+      // Source being null implies dataElement is null hence the other branch but dart can't figure
+      // that out so use the explicit !. in the if statement.
       dataElement = null;
       _element = null;
     }
@@ -169,7 +144,7 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
 
     // Set the group from the element now we have a dataSet to do the lookup.
     final elementProperty = _dataSet.sources[_source]?[_element]?.property;
-    if (sourceUsesGrouping(_source) && elementProperty != null) {
+    if (elementProperty != null && _source!.usesGrouping()) {
       _group = elementProperty.group;
     }
 
@@ -222,17 +197,13 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
   }
 
   Widget _buildSourceField() {
-    Set<_SourceAndGroup> sourceGroups = _SourceAndGroup.set();
+    final sourceGroups = SourceAndGroup.set();
 
     return buildDropdownBox(
       label: 'Source',
-      items: sourceGroups.map((sourceGroup) {
-        return DropdownEntry(value: sourceGroup, text: sourceGroup.text);
-      }).toList(),
-      initialValue: (_source == null)
-          ? null
-          : sourceGroups.lookup(_SourceAndGroup(_source!, _group)),
-      onChanged: (_SourceAndGroup? value) {
+      items: sourceGroups.map((sg) => DropdownEntry(value: sg, text: sg.text)).toList(),
+      initialValue: SourceAndGroup.lookupInSet(sourceGroups, _source, _group),
+      onChanged: (SourceAndGroup? value) {
         setState(() {
           _source = value?.source;
           _group = value?.group;
@@ -245,11 +216,11 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
   Widget _buildElementField() {
     final dataSet = Provider.of<DataSet>(context);
     final Map<String, DataElement> elements = {};
-    final source = dataSet.sources[_source];
-    if (source != null && sourceUsesGrouping(_source)) {
-      elements.addEntries(source.entries.where((e) => e.value.property.group == _group));
-    } else if (source != null) {
-      elements.addAll(source);
+    final sourceElements = dataSet.sources[_source];
+    if (sourceElements != null && _source!.usesGrouping()) {
+      elements.addEntries(sourceElements.entries.where((e) => e.value.property.group == _group));
+    } else if (sourceElements != null) {
+      elements.addAll(sourceElements);
     }
 
     return buildDropdownBox(
@@ -329,18 +300,16 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
 
   Widget _buildFormatField() {
     final dimension = _dataSet.sources[_source]?[_element]?.property.dimension;
-    final Map<String, Formatter> eligibleFormatters = formattersFor(dimension);
+    final formatters = formattersFor(dimension);
 
     return buildDropdownBox(
       label: 'Format',
-      items: eligibleFormatters.entries
-          .map((entry) => DropdownEntry(value: entry.key, text: entry.value.longName))
+      items: formatters.entries
+          .map((e) => DropdownEntry(value: e.key, text: e.value.longName))
           .toList(),
-      initialValue: eligibleFormatters.keys.contains(_format) ? _format : null,
+      initialValue: formatters.keys.contains(_format) ? _format : null,
       onChanged: (String? value) {
-        setState(() {
-          _format = value;
-        });
+        setState(() => _format = value);
       },
       validator: (value) {
         if (value == null) {

@@ -73,6 +73,39 @@ void main() {
       expect(find.text('Speed over ground'), findsOneWidget);
     });
 
+    testWidgets('shows network group text for network element', (tester) async {
+      // speedOverGround has Group.general, so source shows "Network - General"
+      final spec = DerivedDataSpec(
+        'TestDerived',
+        'network',
+        'speedOverGround',
+        'knots',
+        'add',
+        1.0,
+      );
+      await pumpForm(tester, spec);
+      expect(find.text('Network - General'), findsOneWidget);
+    });
+
+    testWidgets('changing source group clears element', (tester) async {
+      final spec = DerivedDataSpec(
+        'TestDerived',
+        'network',
+        'speedOverGround',
+        'knots',
+        'add',
+        1.0,
+      );
+      await pumpForm(tester, spec);
+      expect(getDropdownByLabel('Input element:', tester).value, 'speedOverGround');
+
+      await tester.tap(find.text('Network - General'));
+      await tester.pump();
+      await tester.tap(find.text('Network - Navigation'));
+      await tester.pump();
+      expect(getDropdownByLabel('Input element:', tester).value, isNull);
+    });
+
     testWidgets('fails to save when name is empty', (tester) async {
       await pumpForm(tester, null);
       await tester.tap(find.text('SAVE'));
