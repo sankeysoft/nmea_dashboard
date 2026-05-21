@@ -179,17 +179,17 @@ class AlarmSpec {
 
   /// The data averaging interval, if null implies no averaging.
   @JsonKey(includeIfNull: false)
-  final String? statsInterval;
+  final String? averagingInterval;
 
   /// The format to use to interpret the min and max values.
   final String format;
 
-  /// The minimum value below which the alarm will trigger.
+  /// The minimum value below which the alarm will trigger, expressed in format units.
   /// At least one of min or max will be populated.
   @JsonKey(includeIfNull: false)
   final double? min;
 
-  /// The maximum value above which the alarm will trigger.
+  /// The maximum value above which the alarm will trigger, expressed in format units.
   /// At least one of min or max will be populated.
   @JsonKey(includeIfNull: false)
   final double? max;
@@ -203,7 +203,7 @@ class AlarmSpec {
     this.element,
     this.type,
     this.format, {
-    this.statsInterval,
+    this.averagingInterval,
     this.min,
     this.max,
     this.sound,

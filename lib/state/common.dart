@@ -217,8 +217,8 @@ enum Dimension {
     type: SingleValue<double>,
     nativeUnits: 'degrees',
     derivationFriendly: true,
-    minValue: SingleValue(-180.0),
-    maxValue: SingleValue(180.0),
+    minValue: SingleValue(-179.0),
+    maxValue: SingleValue(179.0),
   ),
   percentage(
     type: SingleValue<double>,

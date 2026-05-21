@@ -55,7 +55,7 @@ void main() {
     final s = AlarmSettings(p);
     int count = 0;
     s.addListener(() => count++);
-    s.setElement(AlarmSpec('network', 'depth', 'caution', 'feet', min: 10));
+    s.setAlarm(AlarmSpec('network', 'depth', 'caution', 'feet', min: 10));
     expect(s.alarmSpecs.length, 1);
     expect(s.alarmSpecs.first.element, 'depth');
     expect(p.getString('alarm_v1'), isNotNull);
@@ -65,8 +65,8 @@ void main() {
   test('setElement replaces a spec with the same key', () async {
     final s = AlarmSettings(await _prefs());
     final spec = AlarmSpec('network', 'depth', 'caution', 'feet', min: 10);
-    s.setElement(spec);
-    s.setElement(AlarmSpec('network', 'TWS', 'warning', 'knots', max: 30.0, key: spec.key));
+    s.setAlarm(spec);
+    s.setAlarm(AlarmSpec('network', 'TWS', 'warning', 'knots', max: 30.0, key: spec.key));
     expect(s.alarmSpecs.length, 1);
     expect(s.alarmSpecs.first.element, 'TWS');
   });
@@ -74,7 +74,7 @@ void main() {
   test('removeElement removes a spec, persists, and notifies', () async {
     final s = AlarmSettings(await _prefs());
     final spec = AlarmSpec('network', 'depth', 'caution', 'feet', min: 10);
-    s.setElement(spec);
+    s.setAlarm(spec);
     int count = 0;
     s.addListener(() => count++);
     s.removeElement(spec);
@@ -84,7 +84,7 @@ void main() {
 
   test('replaceElements replaces all specs, persists, and notifies', () async {
     final s = AlarmSettings(await _prefs());
-    s.setElement(AlarmSpec('network', 'depth', 'caution', 'feet', min: 10));
+    s.setAlarm(AlarmSpec('network', 'depth', 'caution', 'feet', min: 10));
     int count = 0;
     s.addListener(() => count++);
     s.replaceElements([
@@ -109,7 +109,7 @@ void main() {
 
   test('useClipboard with invalid JSON makes no changes', () async {
     final s = AlarmSettings(await _prefs());
-    s.setElement(AlarmSpec('network', 'depth', 'caution', 'feet', min: 10));
+    s.setAlarm(AlarmSpec('network', 'depth', 'caution', 'feet', min: 10));
     int count = 0;
     s.addListener(() => count++);
     expect(s.useClipboard('not json'), isFalse);
@@ -128,7 +128,7 @@ void main() {
 
   test('toJson round-trips through construction', () async {
     final s1 = AlarmSettings(await _prefs());
-    s1.setElement(AlarmSpec('network', 'depth', 'caution', 'feet', min: 10.0, max: 150.0));
+    s1.setAlarm(AlarmSpec('network', 'depth', 'caution', 'feet', min: 10.0, max: 150.0));
     final s2 = AlarmSettings(await _prefs({'alarm_v1': s1.toJson()}));
     expect(s2.alarmSpecs.first.element, 'depth');
     expect(s2.alarmSpecs.first.min, 10.0);

@@ -40,7 +40,7 @@ class AlarmSettings with ChangeNotifier {
   }
 
   /// Adds or replaces the supplied specification in the current set of alarms.
-  void setElement(AlarmSpec spec) {
+  void setAlarm(AlarmSpec spec) {
     _alarmSpecs[spec.key] = spec;
     _save();
     notifyListeners();

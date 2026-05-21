@@ -10,6 +10,7 @@ import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:nmea_dashboard/state/settings/ui.dart';
 import 'package:nmea_dashboard/ui/cells/abstract.dart';
 import 'package:nmea_dashboard/ui/cells/creation.dart';
+import 'package:nmea_dashboard/ui/forms/edit_alarms.dart';
 import 'package:nmea_dashboard/ui/forms/edit_derived_elements.dart';
 import 'package:nmea_dashboard/ui/forms/edit_page.dart';
 import 'package:nmea_dashboard/ui/forms/edit_pages.dart';
@@ -146,6 +147,14 @@ class _DrawerContent extends StatelessWidget {
             Navigator.of(
               context,
             ).push(MaterialPageRoute(builder: (context) => EditDerivedElementsPage()));
+          },
+        ),
+        ListTile(
+          leading: Icon(Icons.notifications_outlined, color: enabledColor),
+          title: Text('Alarms', style: enabledStyle),
+          onTap: () {
+            Navigator.pop(context);
+            Navigator.of(context).push(MaterialPageRoute(builder: (context) => EditAlarmsPage()));
           },
         ),
         ListTile(
