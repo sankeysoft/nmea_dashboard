@@ -128,9 +128,11 @@ void main() {
 
   test('toJson round-trips through construction', () async {
     final s1 = AlarmSettings(await _prefs());
-    s1.setAlarm(AlarmSpec('network', 'depth', 'caution', 'feet', min: 10.0, max: 150.0));
+    s1.setAlarm(AlarmSpec('network', 'depth', 'caution', 'feet',
+        averagingInterval: 'oneMinute', min: 10.0, max: 150.0));
     final s2 = AlarmSettings(await _prefs({'alarm_v1': s1.toJson()}));
     expect(s2.alarmSpecs.first.element, 'depth');
+    expect(s2.alarmSpecs.first.averagingInterval, 'oneMinute');
     expect(s2.alarmSpecs.first.min, 10.0);
     expect(s2.alarmSpecs.first.max, 150.0);
   });

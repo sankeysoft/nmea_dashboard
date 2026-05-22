@@ -29,7 +29,7 @@ abstract class Formatter<V> {
     }
   }
 
-  /// Returns the formatted string to display the supplied input.
+  /// Returns the formatted string to display the supplied value.
   String format(V? input);
 }
 
@@ -47,22 +47,31 @@ abstract class NumericFormatter<V> extends Formatter<V> {
 
   /// Returns a numeric representation of the supplied input in the units
   /// displayed by this formatter.
-  double? toNumber(V? input);
+  double? toNumber(V input);
 
   /// Returns a conversion of the supplied input in the units displayed
   /// by this formatter back to the native units for the dimension.
-  V? fromNumber(double? input);
+  V? fromNumber(double input);
+
+  /// Returns the formatted string to display the supplied double, generally returned from toNumber.
+  String formatNumber(double? number);
+
+  @override
+  String format(V? input) {
+    return formatNumber(input == null ? null : toNumber(input));
+  }
 
   /// Returns the min value of the dimension in the units displayed by this formatter,
   /// if a min value exists.
+  /// Returns the formatted string to display the supplied input.
   double? get minValue {
-    return toNumber(dimension.minValue as V?);
+    return (dimension.minValue == null) ? null : toNumber(dimension.minValue as V);
   }
 
   /// Returns the max value of the dimension in the units displayed by this formatter,
   /// if a max value exists.
   double? get maxValue {
-    return toNumber(dimension.maxValue as V?);
+    return (dimension.maxValue == null) ? null : toNumber(dimension.maxValue as V);
   }
 }
 
@@ -114,8 +123,7 @@ class SimpleSvdFormatter extends NumericFormatter<SingleValue<double>> {
   }
 
   @override
-  String format(SingleValue<double>? input) {
-    final number = toNumber(input);
+  String formatNumber(double? number) {
     return (number == null) ? invalid : number.toStringAsFixed(dp);
   }
 }
@@ -169,9 +177,10 @@ class CustomFormatter<V> extends Formatter<V> {
 
 /// A numeric formatter based on custom conversion and format functions
 class CustomNumericFormatter<V> extends NumericFormatter<V> {
-  final double? Function(V?) conversion;
-  final V? Function(double?) unconversion;
-  final String Function(V?) formatting;
+  final double? Function(V) conversion;
+  final V? Function(double) unconversion;
+  final String Function(double?) formatting;
+  final String Function(V?)? valueFormatting;
 
   CustomNumericFormatter(
     super.dimension,
@@ -182,57 +191,30 @@ class CustomNumericFormatter<V> extends NumericFormatter<V> {
     required this.conversion,
     required this.unconversion,
     required this.formatting,
+    this.valueFormatting,
   });
 
   @override
-  double? toNumber(V? input) {
+  double? toNumber(V input) {
     return conversion(input);
   }
 
   @override
-  V? fromNumber(double? input) {
+  V? fromNumber(double input) {
     return unconversion(input);
   }
 
   @override
-  String format(V? input) {
+  String formatNumber(double? input) {
     return formatting(input);
   }
-}
-
-/// A numeric formatter for `SingleValue<double>` that provides a bit more convenience than the
-/// general case.
-class CustomSvdFormatter extends NumericFormatter<SingleValue<double>> {
-  final String invalid;
-  final double Function(double) conversion;
-  final double Function(double) unconversion;
-  final String Function(double) formatting;
-
-  CustomSvdFormatter(
-    super.dimension,
-    super.longName,
-    super.units,
-    this.invalid, {
-    super.heightFraction,
-    super.isDefault,
-    required this.conversion,
-    required this.unconversion,
-    required this.formatting,
-  });
 
   @override
-  double? toNumber(SingleValue<double>? input) {
-    return (input == null) ? null : conversion(input.data);
-  }
-
-  @override
-  SingleValue<double>? fromNumber(double? input) {
-    return (input == null) ? null : SingleValue(unconversion(input));
-  }
-
-  @override
-  String format(SingleValue<double>? input) {
-    return (input == null) ? invalid : formatting(conversion(input.data));
+  String format(V? input) {
+    if (valueFormatting != null) {
+      return valueFormatting!(input);
+    }
+    return formatNumber(input == null ? null : toNumber(input));
   }
 }
 
@@ -253,23 +235,21 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
     ),
   },
   Dimension.lateralAngle: {
-    'degrees': CustomSvdFormatter(
+    'degrees': CustomNumericFormatter<SingleValue<double>>(
       Dimension.lateralAngle,
       'degrees',
       '°',
-      '---',
-      conversion: (value) => _normalizeLateralAngle(value),
-      unconversion: (number) => (_normalizeLateralAngle(number)),
-      formatting: (value) => _lateralAngleString(value, false),
+      conversion: (value) => _normalizeLateralAngle(value.data),
+      unconversion: (number) => SingleValue(_normalizeLateralAngle(number)),
+      formatting: (number) => (number == null) ? '---' : _lateralAngleString(number, false),
     ),
-    'degreesPS': CustomSvdFormatter(
+    'degreesPS': CustomNumericFormatter<SingleValue<double>>(
       Dimension.lateralAngle,
       'degrees P/S',
       '°',
-      '---',
-      conversion: (value) => _normalizeLateralAngle(value),
-      unconversion: (number) => (_normalizeLateralAngle(number)),
-      formatting: (value) => _lateralAngleString(value, true),
+      conversion: (value) => _normalizeLateralAngle(value.data),
+      unconversion: (number) => SingleValue(_normalizeLateralAngle(number)),
+      formatting: (number) => (number == null) ? '---' : _lateralAngleString(number, true),
       isDefault: true,
     ),
   },
@@ -278,20 +258,21 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
       Dimension.bearing,
       'true',
       '°T',
-      conversion: (value) => value?.bearing,
+      conversion: (value) => value.bearing,
       // Not possible to construct an augmented bearing without adding variation.
       unconversion: (number) => null,
-      formatting: (value) => (value == null) ? '---' : _bearingString(value.bearing, 'T'),
+      formatting: (number) => (number == null) ? '---' : _bearingString(number, 'T'),
     ),
     'mag': CustomNumericFormatter<AugmentedBearing>(
       Dimension.bearing,
       'magnetic',
       '°M',
       conversion: (value) =>
-          (value?.variation == null) ? null : (value!.bearing + value.variation!) % 360.0,
+          (value.variation == null) ? null : (value.bearing + value.variation!) % 360.0,
       // Not possible to construct an augmented bearing without adding variation.
       unconversion: (number) => null,
-      formatting: (value) {
+      formatting: (number) => (number == null) ? '---' : _bearingString(number, 'M'),
+      valueFormatting: (value) {
         if (value == null) {
           return '---';
         } else if (value.variation == null) {
@@ -304,23 +285,21 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
     ),
   },
   Dimension.crossTrackError: {
-    'meters': CustomSvdFormatter(
+    'meters': CustomNumericFormatter<SingleValue<double>>(
       Dimension.crossTrackError,
       'meters',
       null,
-      '---',
-      conversion: (value) => value,
-      unconversion: (value) => value,
-      formatting: (value) => _xteString(value, 'm'),
+      conversion: (value) => value.data,
+      unconversion: (number) => SingleValue(number),
+      formatting: (number) => (number == null) ? '---' : _xteString(number, 'm'),
     ),
-    'feet': CustomSvdFormatter(
+    'feet': CustomNumericFormatter<SingleValue<double>>(
       Dimension.crossTrackError,
       'feet',
       null,
-      '---',
-      conversion: (value) => value * metersToFeet,
-      unconversion: (value) => value / metersToFeet,
-      formatting: (value) => _xteString(value, 'ft'),
+      conversion: (value) => value.data * metersToFeet,
+      unconversion: (value) => SingleValue(value / metersToFeet),
+      formatting: (number) => (number == null) ? '---' : _xteString(number, 'ft'),
       isDefault: true,
     ),
   },
@@ -354,9 +333,9 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
       Dimension.integer,
       'default',
       null,
-      conversion: (value) => value?.data.toDouble(),
-      unconversion: (number) => (number == null) ? null : SingleValue(number.round()),
-      formatting: (value) => (value == null) ? '-' : value.data.toString(),
+      conversion: (value) => value.data.toDouble(),
+      unconversion: (number) => SingleValue(number.round()),
+      formatting: (value) => (value == null) ? '-' : value.round().toString(),
       isDefault: true,
     ),
   },
@@ -443,14 +422,13 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
       1,
       isDefault: true,
     ),
-    'farenheit': CustomSvdFormatter(
+    'farenheit': CustomNumericFormatter<SingleValue<double>>(
       Dimension.temperature,
       'farenheit',
       '°F',
-      '--.-',
-      conversion: (cel) => ((cel * 9.0 / 5.0) + 32.0),
-      unconversion: (far) => ((far - 32.0) / 9.0 * 5.0),
-      formatting: (far) => (far.toStringAsFixed(1)),
+      conversion: (celValue) => ((celValue.data * 9.0 / 5.0) + 32.0),
+      unconversion: (far) => SingleValue((far - 32.0) / 9.0 * 5.0),
+      formatting: (far) => (far == null) ? '--.-' : (far.toStringAsFixed(1)),
     ),
   },
   Dimension.time: {

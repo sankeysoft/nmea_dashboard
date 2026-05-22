@@ -94,17 +94,15 @@ void main() {
   });
 
   test('lateral angle fromNumber should reverse toNumber', () {
-    SingleValue<double>? fromNumber(double? number, String name) {
+    SingleValue<double>? fromNumber(double number, String name) {
       final fmt = formattersFor(Property.rudderAngle.dimension)[name]!;
       return (fmt as NumericFormatter).fromNumber(number) as SingleValue<double>?;
     }
 
-    expect(fromNumber(null, 'degrees'), null);
     expect(fromNumber(0.0, 'degrees'), ValueMatches(SingleValue(0.0)));
     expect(fromNumber(5.7, 'degrees'), ValueMatches(SingleValue(5.7)));
     expect(fromNumber(-12.4, 'degrees'), ValueMatches(SingleValue(-12.4)));
     expect(fromNumber(-179.0, 'degrees'), ValueMatches(SingleValue(-179.0)));
-    expect(fromNumber(null, 'degreesPS'), null);
     expect(fromNumber(0.0, 'degreesPS'), ValueMatches(SingleValue(0.0)));
     expect(fromNumber(5.7, 'degreesPS'), ValueMatches(SingleValue(5.7)));
     expect(fromNumber(-12.4, 'degreesPS'), ValueMatches(SingleValue(-12.4)));
@@ -138,14 +136,12 @@ void main() {
   });
 
   test('bearing numeric conversion should be correct', () {
-    double? toNumber(double? bearing, double? variation, String name) {
-      final val = (bearing == null) ? null : AugmentedBearing(bearing, variation);
+    double? toNumber(double bearing, double? variation, String name) {
+      final val = AugmentedBearing(bearing, variation);
       final fmt = formattersFor(Property.trueWindDirection.dimension)[name]!;
       return (fmt as NumericFormatter).toNumber(val);
     }
 
-    expect(toNumber(null, null, 'true'), null);
-    expect(toNumber(null, null, 'mag'), null);
     expect(toNumber(0, 10, 'true'), equals(0.0));
     expect(toNumber(123.4, 10, 'true'), equals(123.4));
     expect(toNumber(123.4, 10, 'mag'), equals(133.4));
@@ -176,7 +172,6 @@ void main() {
       return (fmt as NumericFormatter).toNumber(number == null ? null : SingleValue(number));
     }
 
-    expect(toNumber(null, 'meters'), equals(null));
     expect(toNumber(0.0, 'meters'), equals(0.0));
     expect(toNumber(0.0, 'feet'), equals(0.0));
     expect(toNumber(10.0, 'meters'), equals(10.0));
@@ -185,12 +180,11 @@ void main() {
   });
 
   test('XTE fromNumber should reverse toNumber', () {
-    SingleValue<double>? fromNumber(double? number, String name) {
+    SingleValue<double>? fromNumber(double number, String name) {
       final fmt = formattersFor(Property.crossTrackError.dimension)[name]!;
       return (fmt as NumericFormatter).fromNumber(number) as SingleValue<double>?;
     }
 
-    expect(fromNumber(null, 'meters'), null);
     expect(fromNumber(10.0, 'meters'), ValueMatches(SingleValue(10.0)));
     expect(fromNumber(-10.0, 'meters'), ValueMatches(SingleValue(-10.0)));
     expect(fromNumber(328.084, 'feet'), ValueMatches(SingleValue(100.0)));
@@ -275,7 +269,6 @@ void main() {
   test('temperature farenheit toNumber should convert correctly', () {
     final fmt =
         formattersFor(Property.waterTemperature.dimension)['farenheit']! as NumericFormatter;
-    expect(fmt.toNumber(null), null);
     expect(fmt.toNumber(SingleValue(0.0)), closeTo(32.0, 0.001));
     expect(fmt.toNumber(SingleValue(100.0)), closeTo(212.0, 0.001));
   });
@@ -283,7 +276,6 @@ void main() {
   test('temperature farenheit fromNumber should reverse conversion', () {
     final fmt =
         formattersFor(Property.waterTemperature.dimension)['farenheit']! as NumericFormatter;
-    expect(fmt.fromNumber(null), null);
     expect(fmt.fromNumber(32.0), ValueMatches(SingleValue(0.0)));
     expect(fmt.fromNumber(212.0), ValueMatches(SingleValue(100.0)));
   });

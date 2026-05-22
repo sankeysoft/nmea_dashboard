@@ -4,14 +4,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:nmea_dashboard/state/alarms.dart';
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/data_element.dart';
 import 'package:nmea_dashboard/state/data_set.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
-import 'package:nmea_dashboard/state/settings/alarm.dart';
 import 'package:nmea_dashboard/state/settings/format.dart';
 import 'package:nmea_dashboard/state/settings/specs.dart';
-import 'package:nmea_dashboard/state/values.dart';
 import 'package:nmea_dashboard/ui/forms/abstract.dart';
 import 'package:provider/provider.dart';
 
@@ -179,10 +178,6 @@ class _EditAlarmFormState extends StatefulFormState<_EditAlarmForm> {
                 key: widget._spec.key,
               );
 
-              // Record the format choice as an indication of user preference.
-              final dimension = _dataSet.sources[_source]?[_element]?.property.dimension;
-              _formatPrefs.recordUsage(dimension?.name, _format);
-
               widget._onCreate(spec);
               Navigator.pop(context);
             },
@@ -305,9 +300,14 @@ class _EditAlarmFormState extends StatefulFormState<_EditAlarmForm> {
         if (oldFormatter != null && newFormatter != null) {
           for (final c in [_minController, _maxController]) {
             final numberOldUnits = double.tryParse(c.text);
-            final numberNewUnits = newFormatter.toNumber(oldFormatter.fromNumber(numberOldUnits));
-            if (numberNewUnits != null) {
-              c.text = _numberFormat.format(numberNewUnits);
+            if (numberOldUnits != null) {
+              final valueOldUnits = oldFormatter.fromNumber(numberOldUnits);
+              if (valueOldUnits != null) {
+                final numberNewUnits = newFormatter.toNumber(valueOldUnits);
+                if (numberNewUnits != null) {
+                  c.text = _numberFormat.format(numberNewUnits);
+                }
+              }
             }
           }
         }

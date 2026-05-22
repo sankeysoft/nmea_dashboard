@@ -4,6 +4,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:nmea_dashboard/state/alarms.dart';
+import 'package:nmea_dashboard/state/data_set.dart';
 import 'package:nmea_dashboard/state/settings/alarm.dart';
 import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:nmea_dashboard/ui/forms/edit_alarm.dart';
@@ -122,12 +124,29 @@ class _EditAlarmsContent extends StatelessWidget {
     AlarmSpec spec,
     int index,
   ) {
+    final dataSet = Provider.of<DataSet>(context);
+    Alarm? alarm;
+    try {
+      alarm = Alarm.fromSpec(spec, (s, e) => dataSet.find(s, e)?.property);
+    } catch (e) {
+      alarm = null;
+    }
+
+    Icon icon;
+    if (alarm == null) {
+      icon = const Icon(Icons.question_mark);
+    } else if (alarm.type == AlarmType.warning) {
+      icon = const Icon(Icons.warning);
+    } else {
+      icon = const Icon(Icons.info_outlined);
+    }
+
     return buildMovableDeletableTile(
       key: spec.key,
       index: index,
       context: context,
-      title: spec.element,
-      icon: const Icon(Icons.data_object_outlined),
+      title: alarm?.toString() ?? "Invalid spec",
+      icon: icon,
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(
           builder: (context) =>

@@ -223,7 +223,7 @@ class DataSet with ChangeNotifier {
 
   /// Returns a tracked data element give the source and name, or null if that
   /// could not be found.
-  DataElement? find(Source source, String elementName) {
+  DataElement? find(Source source, String? elementName) {
     return sources[source]?[elementName];
   }
 }

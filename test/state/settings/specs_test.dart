@@ -198,6 +198,53 @@ void main() {
     expect(pageSpec.containsCell(updatedCell.key), false);
   });
 
+  test('should serialize AlarmSpec', () {
+    final spec = AlarmSpec('network', 'depth', 'caution', 'feet',
+        averagingInterval: 'oneMinute', min: 5.0, max: 50.0, sound: 'beep');
+    expect(spec.toJson(), {
+      'source': 'network',
+      'element': 'depth',
+      'type': 'caution',
+      'format': 'feet',
+      'averagingInterval': 'oneMinute',
+      'min': 5.0,
+      'max': 50.0,
+      'sound': 'beep',
+    });
+  });
+
+  test('should serialize AlarmSpec without optional fields', () {
+    final spec = AlarmSpec('network', 'depth', 'caution', 'feet', min: 5.0);
+    expect(spec.toJson(), {
+      'source': 'network',
+      'element': 'depth',
+      'type': 'caution',
+      'format': 'feet',
+      'min': 5.0,
+    });
+  });
+
+  test('should deserialize AlarmSpec', () {
+    final spec = AlarmSpec.fromJson({
+      'source': 'network',
+      'element': 'depth',
+      'type': 'caution',
+      'format': 'feet',
+      'averagingInterval': 'oneMinute',
+      'min': 5.0,
+      'max': 50.0,
+      'sound': 'beep',
+    });
+    expect(spec.source, 'network');
+    expect(spec.element, 'depth');
+    expect(spec.type, 'caution');
+    expect(spec.format, 'feet');
+    expect(spec.averagingInterval, 'oneMinute');
+    expect(spec.min, 5.0);
+    expect(spec.max, 50.0);
+    expect(spec.sound, 'beep');
+  });
+
   test('should notify on cell update', () {
     final pageSpec = DataPageSpec('page 1', [
       DataCellSpec('network', 'element 1', 'current', 'feet'),

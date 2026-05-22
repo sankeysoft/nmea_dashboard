@@ -167,8 +167,8 @@ class NmeaParser {
   /// Attempts to parse the supplied string as a NMEA0183 message, returning
   /// one or more bound values if parsing the message contents was successful or
   /// zero values if parsing was unsuccessful but the failure mode should not be
-  /// logged (e.g. a benign problem that has already been logged). Throws an
-  /// exception if parsing errors were encountered and the first time a new
+  /// logged (e.g. a benign problem that has already been logged). Throws a
+  /// FormatException if parsing errors were encountered and the first time a new
   /// unsupported message or a message with no data is received.
   /// If requireChecksum is true messages without a checksum are rejected.
   List<BoundValue> parseString(String string) {

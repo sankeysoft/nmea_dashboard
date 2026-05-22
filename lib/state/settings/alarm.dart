@@ -105,6 +105,3 @@ class AlarmSettings with ChangeNotifier {
     _prefs.setString(_prefKey, toJson());
   }
 }
-
-// The different levels of alarm, driving the different ways they are announced.
-enum AlarmType { caution, warning }
