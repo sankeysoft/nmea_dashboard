@@ -11,6 +11,10 @@ import 'package:logging/logging.dart';
 /// The maximum number of log entries we store.
 const int _maxEntries = 250;
 
+/// Minimum levels for the in-app log and developer log
+const Level _appLevel = Level.INFO;
+const Level _devLevel = Level.FINE;
+
 /// A single entry tracked by the logger.
 class LogEntry {
   final Level level;
@@ -35,17 +39,20 @@ class LogSet with ChangeNotifier {
 
   /// Adds a new record to the set of logs.
   void add(LogRecord record) {
-    final entry = LogEntry(record.level, record.message);
-    // Make space in the array
-    while (_entries.length >= _maxEntries) {
-      _entries.removeAt(0);
+    if (record.level >= _appLevel) {
+      final entry = LogEntry(record.level, record.message);
+      // Make space in the array
+      while (_entries.length >= _maxEntries) {
+        _entries.removeAt(0);
+      }
+      // Add the new entry
+      _entries.add(entry);
+      notifyListeners();
     }
-    // Add the new entry
-    _entries.add(entry);
-    // And write to the developer log.
-    log(record.message, level: record.level.value);
-
-    notifyListeners();
+    if (record.level >= _devLevel) {
+      // Write to the developer log for nice VS code integration.
+      log("${record.level}: ${record.message}", level: record.level.value);
+    }
   }
 
   /// Removes all records.

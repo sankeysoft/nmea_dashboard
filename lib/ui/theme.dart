@@ -3,11 +3,24 @@
 // of the MIT license. See the LICENCE.md file for details.
 
 import 'package:flutter/material.dart';
+import 'package:nmea_dashboard/state/alarms.dart';
 import 'package:nmea_dashboard/state/settings/ui.dart';
 
-/// Creates a theme based on the supplied UI settings.
-ThemeData createThemeData(UiSettings settings) {
+/// Creates a theme based on the supplied UI settings, optionally tailoring to display
+/// an element with an active alarm.
+ThemeData createThemeData(UiSettings settings, {AlarmType? alarm}) {
   final palette = _Palette(settings.darkTheme, settings.nightMode);
+
+  Color selectByAlarm(Color none, Color warning, Color caution) {
+    switch (alarm) {
+      case AlarmType.warning:
+        return warning;
+      case AlarmType.caution:
+        return caution;
+      default:
+        return none;
+    }
+  }
 
   return ThemeData(
     primarySwatch: Colors.grey,
@@ -24,7 +37,7 @@ ThemeData createThemeData(UiSettings settings) {
       error: Colors.red,
       onError: Colors.white,
       // Surface is used for the data cells, app bar, and drawer.
-      surface: palette.midBackground,
+      surface: selectByAlarm(palette.midBackground, palette.warning, palette.caution),
       onSurface: palette.primary,
       // Surface tint is used for tiles, the drawer header, and missing data
       // in graphs.
@@ -46,11 +59,14 @@ ThemeData createThemeData(UiSettings settings) {
         color: palette.midPrimary,
       ),
       // Used by the actual data.
-      headlineLarge: TextStyle(fontFamily: settings.valueFont, color: palette.primary),
+      headlineLarge: TextStyle(
+        fontFamily: settings.valueFont,
+        color: selectByAlarm(palette.primary, palette.midBackground, palette.midBackground),
+      ),
       // Used by the headings and units.
       headlineMedium: TextStyle(
         fontFamily: settings.headingFont,
-        color: palette.midPrimary,
+        color: selectByAlarm(palette.primary, palette.midBackground, palette.midBackground),
         height: 1,
       ),
     ),
@@ -67,6 +83,8 @@ class _Palette {
   late final Color weakestPrimary;
   late final Color secondary;
   late final Color tertiary;
+  late final Color warning;
+  late final Color caution;
 
   _Palette(bool darkTheme, bool nightMode) {
     if (nightMode) {
@@ -78,6 +96,8 @@ class _Palette {
       background = Colors.black;
       midBackground = const Color(0xff111111);
       weakestBackground = const Color(0xff222222);
+      warning = const Color(0xffff0000);
+      caution = const Color(0xffbb0000);
       return;
     } else if (darkTheme) {
       primary = Colors.white;
@@ -88,6 +108,8 @@ class _Palette {
       background = Colors.black;
       midBackground = Colors.grey.shade900;
       weakestBackground = Colors.grey.shade800;
+      warning = Colors.redAccent.shade400;
+      caution = Colors.yellow.shade600;
       return;
     } else {
       primary = Colors.black;
@@ -98,6 +120,8 @@ class _Palette {
       background = Colors.white;
       midBackground = Colors.grey.shade100;
       weakestBackground = Colors.grey.shade300;
+      warning = Colors.red.shade600;
+      caution = const Color(0xffb8a502);
       return;
     }
   }

@@ -5,8 +5,12 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:nmea_dashboard/state/alarms.dart';
 import 'package:nmea_dashboard/state/settings/specs.dart';
+import 'package:nmea_dashboard/state/settings/ui.dart';
 import 'package:nmea_dashboard/ui/forms/edit_cell.dart';
+import 'package:nmea_dashboard/ui/theme.dart';
+import 'package:provider/provider.dart';
 
 // A single cell used to populate one entry in some data grid.
 abstract class Cell extends StatelessWidget {
@@ -30,9 +34,18 @@ abstract class SpecCell extends Cell {
   final Widget content;
 
   // The specification used to build this cell.
-  final DataCellSpec spec;
+  final DataCellSpec _spec;
 
-  const SpecCell({required this.content, required this.spec, super.key});
+  // An alarm state to drive coloring of the cell. Defaults to a never-alarmed state.
+  final AlarmState? _alarmState;
+
+  const SpecCell({
+    required this.content,
+    required DataCellSpec spec,
+    AlarmState? alarmState,
+    super.key,
+  }) : _spec = spec,
+       _alarmState = alarmState;
 
   @override
   Widget build(BuildContext context) {
@@ -41,15 +54,34 @@ abstract class SpecCell extends Cell {
         onLongPress: () {
           Navigator.of(
             context,
-          ).push(MaterialPageRoute(builder: (context) => EditCellPage(spec: spec)));
+          ).push(MaterialPageRoute(builder: (context) => EditCellPage(spec: _spec)));
         },
-        child: Container(
-          decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface),
-          margin: const EdgeInsets.all(6.0),
-          padding: const EdgeInsets.all(10.0),
-          child: content,
-        ),
+        child: (_alarmState == null)
+            ? _makeCell(context)
+            : ListenableBuilder(
+                listenable: _alarmState,
+                builder: (context, _) {
+                  if (_alarmState.level == null) {
+                    return _makeCell(context);
+                  } else {
+                    final uiSettings = Provider.of<UiSettings>(context);
+                    return Theme(
+                      data: createThemeData(uiSettings, alarm: _alarmState.level),
+                      child: Builder(builder: _makeCell),
+                    );
+                  }
+                },
+              ),
       ),
+    );
+  }
+
+  Widget _makeCell(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface),
+      margin: const EdgeInsets.all(6.0),
+      padding: const EdgeInsets.all(10.0),
+      child: content,
     );
   }
 }
@@ -63,6 +95,7 @@ abstract class HeadingContentsCell extends SpecCell {
     required String units,
     required content,
     required super.spec,
+    super.alarmState,
     super.key,
   }) : super(
          content: CustomMultiChildLayout(

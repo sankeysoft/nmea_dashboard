@@ -6,6 +6,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:logging/logging.dart';
+import 'package:nmea_dashboard/state/alarms.dart';
 
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/data_element.dart';
@@ -14,6 +15,7 @@ import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:nmea_dashboard/state/data_element_history.dart';
 import 'package:nmea_dashboard/state/local.dart';
 import 'package:nmea_dashboard/state/network.dart';
+import 'package:nmea_dashboard/state/settings/alarm.dart';
 import 'package:nmea_dashboard/state/settings/derived_data.dart';
 import 'package:nmea_dashboard/state/settings/network.dart';
 import 'package:nmea_dashboard/state/values.dart';
@@ -31,6 +33,9 @@ class DataSet with ChangeNotifier {
   /// Settings for user-defined derived data elements.
   final DerivedDataSettings _derivedDataSettings;
 
+  /// Settings for alarms.
+  final AlarmSettings _alarmSettings;
+
   /// A manager for history persistence and progression.
   final HistoryManager _historyManager;
 
@@ -47,7 +52,12 @@ class DataSet with ChangeNotifier {
   /// This class's logger.
   static final _log = Logger('DataSet');
 
-  DataSet(this._networkSettings, this._derivedDataSettings, this._historyManager) {
+  DataSet(
+    this._networkSettings,
+    this._derivedDataSettings,
+    this._alarmSettings,
+    this._historyManager,
+  ) {
     // Create all known data for primary sources.
     for (final source in [Source.network, Source.local]) {
       sources[source] = _createPrimaryDataElements(source);
@@ -60,6 +70,14 @@ class DataSet with ChangeNotifier {
     sources[Source.derived] = _createDerivedDataElements();
     _derivedDataSettings.addListener(() {
       sources[Source.derived] = _createDerivedDataElements();
+      _createAndBindAlarms();
+      notifyListeners();
+    });
+
+    // Create all known alarms register to rebuild if the specs for these change.
+    _createAndBindAlarms();
+    _alarmSettings.addListener(() {
+      _createAndBindAlarms();
       notifyListeners();
     });
 
@@ -172,7 +190,40 @@ class DataSet with ChangeNotifier {
         element.registerManager(_historyManager);
       }
     }
+    _createAndBindAlarms();
     return elementMap;
+  }
+
+  /// Create all known alarms and notify the associated data element.
+  void _createAndBindAlarms() {
+    for (final source in sources.values) {
+      for (final element in source.values) {
+        if (element is WithAlarms) {
+          element.clearAlarms();
+        }
+      }
+    }
+    for (final spec in _alarmSettings.alarmSpecs) {
+      Alarm alarm;
+      try {
+        alarm = Alarm.fromSpec(spec, (s, e) => sources[s]?[e]?.property);
+      } on FormatException {
+        _log.warning("Ignoring invalid alarm for ${spec.element}");
+        continue;
+      }
+      final element = sources[alarm.source]?[spec.element];
+      if (element == null) {
+        _log.warning("Ignoring alarm for unknown ${alarm.source.name}/${spec.element}");
+      } else if (element is! WithAlarms) {
+        _log.warning("Ignoring alarm for non alarms element ${alarm.source.name}/${spec.element}");
+      } else {
+        try {
+          element.addAlarm(alarm);
+        } on ArgumentError catch (e) {
+          _log.severe("Error adding alarm: $e");
+        }
+      }
+    }
   }
 
   /// Collects data from the network using the current network settings,

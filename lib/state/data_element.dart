@@ -6,6 +6,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:logging/logging.dart';
+import 'package:nmea_dashboard/state/alarms.dart';
 
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/data_element_stats.dart';
@@ -185,12 +186,13 @@ mixin WithHistory<V extends Value, U extends Value> on DataElement<V, U> {
   }
 }
 
+// A DataElement that is capable of averaging its values over time.
 mixin WithStats<V extends Value, U extends Value> on DataElement<V, U> {
   late final Map<StatsInterval, OptionalStats<V>> _stats = Map.fromEntries(
     StatsInterval.values.map((i) => MapEntry(i, OptionalStats<V>(i, id))),
   );
 
-  /// Records a new value into all active stats.
+  /// Records a new value into all active stats and check for changes in alarm state.
   void addStatsValue(final V newValue) {
     for (final stats in _stats.values) {
       stats.addValue(newValue);
@@ -203,8 +205,84 @@ mixin WithStats<V extends Value, U extends Value> on DataElement<V, U> {
   }
 }
 
+// A DataElement that is capable of monitoring alarms against the current and averaging values.
+mixin WithAlarms<V extends Value, U extends Value> on DataElement<V, U> {
+  /// This class's logger.
+  static final _log = Logger('DataElementWithAlarms');
+
+  /// The list of registered alarms for this element.
+  final List<Alarm> _alarms = [];
+  final Set<Alarm> _triggeredAlarms = {};
+  final AlarmState _alarmState = AlarmState();
+
+  /// Clear all alarms on this DataElement.
+  void clearAlarms() {
+    _alarms.clear();
+    _triggeredAlarms.clear();
+    _alarmState.set(null);
+  }
+
+  /// Add a new alarm to this element. Raising an ArgumentError if the type is incompatible.
+  void addAlarm(Alarm alarm) {
+    if (alarm.property != property) {
+      throw ArgumentError("alarm property ${alarm.property} != element property $property");
+    } else if (alarm.formatter.valueType != storedType) {
+      throw ArgumentError("alarm type ${alarm.formatter.valueType} != element type $storedType");
+    }
+    _alarms.add(alarm);
+    // Sort reversed so we consider higher priority alarms first.
+    _alarms.sort((a, b) => b.compareTo(a));
+    _updateAlarms();
+  }
+
+  /// Method to be called after a change in the element value.
+  void onValueChange() {
+    _updateAlarms();
+  }
+
+  void _updateAlarms() {
+    AlarmType? highestType;
+    for (final alarm in _alarms) {
+      bool active;
+      if (alarm.averagingInterval == null) {
+        final maybeActive = (value == null) ? false : alarm.isTriggered(value!);
+        // Don't change the state of alarms we can't assess.
+        if (maybeActive == null) {
+          continue;
+        } else {
+          active = maybeActive;
+        }
+      } else {
+        // TODO(alarms): Figure out averages
+        active = false;
+        //final mean = stats(alarm.averagingInterval!).inner?.mean;
+        //active = (mean == null) ? false : alarm.isTriggered(mean);
+      }
+      if (active && !_triggeredAlarms.contains(alarm)) {
+        _triggeredAlarms.add(alarm);
+        _log.info("Setting ${alarm.type.name} on $shortName");
+        // TODO(alarms): Notify manager.
+      } else if (!active && _triggeredAlarms.contains(alarm)) {
+        _triggeredAlarms.remove(alarm);
+        _log.info("Clearing ${alarm.type.name} on $shortName");
+        // TODO(alarms): Notify manager.
+      }
+      if (active) {
+        if (highestType == null) {
+          highestType = alarm.type;
+        } else if (alarm.type > highestType) {
+          highestType = alarm.type;
+        }
+      }
+    }
+    _alarmState.set(highestType);
+  }
+
+  AlarmState get alarmState => _alarmState;
+}
+
 class SingleValueDoubleConsistentDataElement extends ConsistentDataElement<SingleValue<double>>
-    with WithHistory, WithStats {
+    with WithHistory, WithStats, WithAlarms {
   SingleValueDoubleConsistentDataElement(super.source, super.property, super.staleness);
 
   @override
@@ -213,6 +291,7 @@ class SingleValueDoubleConsistentDataElement extends ConsistentDataElement<Singl
     if (accepted) {
       addStatsValue(newValue.value);
       addHistoryValue(newValue.value);
+      onValueChange();
     }
     return accepted;
   }
@@ -220,7 +299,7 @@ class SingleValueDoubleConsistentDataElement extends ConsistentDataElement<Singl
 
 /// A special case element for displaying bearings using a reference variation
 class BearingDataElement extends DataElement<AugmentedBearing, SingleValue<double>>
-    with WithHistory, WithStats {
+    with WithHistory, WithStats, WithAlarms {
   // Only output a log warning for discarding mag heading due to missing
   // variation once each time the condition occurs.
   static bool loggedMissingVariation = false;
@@ -261,6 +340,7 @@ class BearingDataElement extends DataElement<AugmentedBearing, SingleValue<doubl
     if (accepted && _value != null) {
       addStatsValue(_value!);
       addHistoryValue(_value!);
+      onValueChange();
     }
     return accepted;
   }

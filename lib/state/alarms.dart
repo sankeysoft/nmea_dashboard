@@ -2,20 +2,51 @@
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
+import 'package:flutter/foundation.dart';
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:nmea_dashboard/state/values.dart';
 
 // The different levels of alarm, driving the different ways they are announced.
-enum AlarmType { caution, warning }
+enum AlarmType implements Comparable<AlarmType> {
+  caution,
+  warning;
+
+  @override
+  int compareTo(AlarmType other) {
+    return index.compareTo(other.index);
+  }
+}
+
+extension AlarmTypeComparison on AlarmType {
+  bool operator <(AlarmType other) => compareTo(other) < 0;
+  bool operator <=(AlarmType other) => compareTo(other) <= 0;
+  bool operator >(AlarmType other) => compareTo(other) > 0;
+  bool operator >=(AlarmType other) => compareTo(other) >= 0;
+}
+
+/// The maximum current level of a collection of zero or more alarms.
+class AlarmState with ChangeNotifier {
+  AlarmType? _level;
+
+  void set(AlarmType? level) {
+    bool changed = level != _level;
+    _level = level;
+    if (changed) {
+      notifyListeners();
+    }
+  }
+
+  AlarmType? get level => _level;
+}
 
 /// A function used to lookup property by source and element name.
 typedef PropertyFinderFunction = Property? Function(Source source, String? element);
 
 /// A representation of an alarm on a particular property, capable of testing whether values
 /// should trigger the alarm.
-class Alarm {
+class Alarm implements Comparable<Alarm> {
   final Source source;
   final Property property;
   final StatsInterval? averagingInterval;
@@ -67,13 +98,14 @@ class Alarm {
     return Alarm(source, property, averagingInterval, type, formatter, spec.min, spec.max);
   }
 
-  /// Returns true if the supplied value is outside this alarms configured bounds.
-  bool isTriggered(Value value) {
+  /// Returns true if the supplied value is outside this alarm's configured bounds. Returns null
+  /// if the value cannot be converted to a number (e.g. bearing to mag without variation).
+  bool? isTriggered(Value value) {
     double? num = formatter.toNumber(value);
     // Shouldn't be possible to get a failure if the data element is for the correct property,
     // but report an alarm anyway to be conservative.
     if (num == null) {
-      return true;
+      return null;
     }
     if (property.dimension == Dimension.bearing) {
       if (max! > min!) {
@@ -126,5 +158,42 @@ class Alarm {
         ..write(formatter.units);
     }
     return buffer.toString();
+  }
+
+  @override
+  int compareTo(Alarm other) {
+    // Warnings take priority over cautions
+    if (type == AlarmType.warning && other.type == AlarmType.caution) {
+      return 1;
+    } else if (type == AlarmType.caution && other.type == AlarmType.warning) {
+      return -1;
+    }
+    // Alarms based on a longer average are usually high confidence so take priority.
+    if (averagingInterval != other.averagingInterval) {
+      if (averagingInterval != null && other.averagingInterval == null) {
+        return 1;
+      } else if (averagingInterval == null && other.averagingInterval != null) {
+        return -1;
+      }
+      return averagingInterval!.duration.inSeconds - other.averagingInterval!.duration.inSeconds;
+    }
+    // Order somewhat arbitrarily by property, source, and format name
+    if (property != other.property) {
+      return property.longName.compareTo(other.property.longName);
+    }
+    if (source != other.source) {
+      return source.longName.compareTo(other.source.longName);
+    }
+    if (formatter.longName != other.formatter.longName) {
+      return formatter.longName.compareTo(other.formatter.longName);
+    }
+    // Then highest maximum or lowest minimum.
+    if (max != other.max) {
+      return (max ?? 0.0).compareTo(other.max ?? 0.0);
+    }
+    if (min != other.min) {
+      return -(min ?? 0.0).compareTo(other.min ?? 0.0);
+    }
+    return 0;
   }
 }

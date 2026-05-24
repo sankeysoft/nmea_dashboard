@@ -33,6 +33,7 @@ void main() {
       dataSet = DataSet(
         NetworkSettings(prefs),
         DerivedDataSettings(prefs),
+        AlarmSettings(prefs),
         HistoryManagerImpl(prefs),
       );
     });

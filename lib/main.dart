@@ -37,6 +37,7 @@ const SystemUiOverlayStyle overlayStyle = SystemUiOverlayStyle(
 
 void main() {
   final logSet = LogSet();
+  Logger.root.level = Level.FINE;
   Logger.root.onRecord.listen((record) => logSet.add(record));
   runApp(NmeaDashboardApp(logSet));
 }
@@ -76,7 +77,8 @@ class NmeaDashboardApp extends StatelessWidget {
               ChangeNotifierProvider<FormatPreferences>(create: (_) => settings.formatPreferences),
               Provider<PackageInfo>(create: (_) => settings.packageInfo),
               ChangeNotifierProvider<DataSet>(
-                create: (_) => DataSet(settings.network, settings.derived, historyManager),
+                create: (_) =>
+                    DataSet(settings.network, settings.derived, settings.alarm, historyManager),
               ),
             ],
             child: _ThemedApp(),

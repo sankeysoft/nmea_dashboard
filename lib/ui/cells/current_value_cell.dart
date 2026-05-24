@@ -21,6 +21,7 @@ class CurrentValueCell extends HeadingContentsCell {
            value: element,
            child: _Value(formatter),
          ),
+         alarmState: (element is WithAlarms) ? element.alarmState : null,
        );
 }
 
