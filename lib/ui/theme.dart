@@ -11,7 +11,7 @@ import 'package:nmea_dashboard/state/settings/ui.dart';
 ThemeData createThemeData(UiSettings settings, {AlarmLevel? alarm}) {
   final palette = _Palette(settings.darkTheme, settings.nightMode);
 
-  Color selectByAlarm(Color none, Color warning, Color caution) {
+  Color selectByAlarmLevel(Color none, Color warning, Color caution) {
     switch (alarm) {
       case AlarmLevel.warning:
         return warning;
@@ -22,14 +22,22 @@ ThemeData createThemeData(UiSettings settings, {AlarmLevel? alarm}) {
     }
   }
 
+  Color selectByAlarmActive(Color none, Color set) {
+    if (alarm != null) {
+      return set;
+    } else {
+      return none;
+    }
+  }
+
   return ThemeData(
     primarySwatch: Colors.grey,
     colorScheme: ColorScheme(
       brightness: Brightness.dark,
       // Primary and secondary are used for buttons and switches
-      primary: palette.primary,
-      primaryContainer: palette.midPrimary,
-      onPrimary: palette.background,
+      primary: selectByAlarmActive(palette.primary, palette.background),
+      primaryContainer: selectByAlarmActive(palette.midPrimary, palette.weakestBackground),
+      onPrimary: selectByAlarmLevel(palette.background, palette.warning, palette.caution),
       secondary: palette.secondary,
       onSecondary: palette.background,
       tertiary: palette.tertiary,
@@ -37,11 +45,11 @@ ThemeData createThemeData(UiSettings settings, {AlarmLevel? alarm}) {
       error: Colors.red,
       onError: Colors.white,
       // Surface is used for the data cells, app bar, and drawer.
-      surface: selectByAlarm(palette.midBackground, palette.warning, palette.caution),
+      surface: selectByAlarmLevel(palette.midBackground, palette.warning, palette.caution),
       onSurface: palette.primary,
       // Surface tint is used for tiles, the drawer header, and missing data
       // in graphs.
-      surfaceTint: palette.weakestBackground,
+      surfaceTint: selectByAlarmActive(palette.weakestBackground, palette.weakestPrimary),
     ),
     scaffoldBackgroundColor: palette.background,
     canvasColor: palette.midBackground,
@@ -56,17 +64,17 @@ ThemeData createThemeData(UiSettings settings, {AlarmLevel? alarm}) {
       labelSmall: TextStyle(
         fontSize: 14,
         fontFamily: settings.headingFont,
-        color: palette.midPrimary,
+        color: selectByAlarmActive(palette.midPrimary, palette.weakestBackground),
       ),
       // Used by the actual data.
       headlineLarge: TextStyle(
         fontFamily: settings.valueFont,
-        color: selectByAlarm(palette.primary, palette.midBackground, palette.midBackground),
+        color: selectByAlarmActive(palette.primary, palette.midBackground),
       ),
       // Used by the headings and units.
       headlineMedium: TextStyle(
         fontFamily: settings.headingFont,
-        color: selectByAlarm(palette.primary, palette.midBackground, palette.midBackground),
+        color: selectByAlarmActive(palette.primary, palette.midBackground),
         height: 1,
       ),
     ),

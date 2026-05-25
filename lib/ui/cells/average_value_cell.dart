@@ -44,6 +44,7 @@ class AverageValueCell extends HeadingContentsCell {
              ],
            ),
          ),
+         alarmState: (element is WithAlarms) ? element.alarmState : null,
        );
 }
 
@@ -177,6 +178,6 @@ class _TickPainter extends CustomPainter {
   @override
   bool shouldRepaint(_TickPainter oldDelegate) {
     calculate();
-    return changeFraction != oldDelegate.changeFraction;
+    return changeFraction != oldDelegate.changeFraction || theme != oldDelegate.theme;
   }
 }

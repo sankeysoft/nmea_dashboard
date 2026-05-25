@@ -26,6 +26,7 @@ class HistoryCell extends HeadingContentsCell {
            value: history,
            child: _Graph(formatter),
          ),
+         alarmState: (element is WithAlarms) ? element.alarmState : null,
        );
 }
 
@@ -419,6 +420,7 @@ class _GraphPainter extends CustomPainter {
   bool shouldRepaint(_GraphPainter oldDelegate) {
     return history != oldDelegate.history ||
         history.endValueTime != oldDelegate._lastPaintEvt ||
-        formatter != oldDelegate.formatter;
+        formatter != oldDelegate.formatter ||
+        theme != oldDelegate.theme;
   }
 }
