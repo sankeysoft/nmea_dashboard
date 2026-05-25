@@ -8,14 +8,14 @@ import 'package:nmea_dashboard/state/settings/ui.dart';
 
 /// Creates a theme based on the supplied UI settings, optionally tailoring to display
 /// an element with an active alarm.
-ThemeData createThemeData(UiSettings settings, {AlarmType? alarm}) {
+ThemeData createThemeData(UiSettings settings, {AlarmLevel? alarm}) {
   final palette = _Palette(settings.darkTheme, settings.nightMode);
 
   Color selectByAlarm(Color none, Color warning, Color caution) {
     switch (alarm) {
-      case AlarmType.warning:
+      case AlarmLevel.warning:
         return warning;
-      case AlarmType.caution:
+      case AlarmLevel.caution:
         return caution;
       default:
         return none;

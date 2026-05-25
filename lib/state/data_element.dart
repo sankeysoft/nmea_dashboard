@@ -241,7 +241,7 @@ mixin WithAlarms<V extends Value, U extends Value> on DataElement<V, U> {
   }
 
   void _updateAlarms() {
-    AlarmType? highestType;
+    AlarmLevel? highestLevel;
     for (final alarm in _alarms) {
       bool active;
       if (alarm.averagingInterval == null) {
@@ -260,22 +260,22 @@ mixin WithAlarms<V extends Value, U extends Value> on DataElement<V, U> {
       }
       if (active && !_triggeredAlarms.contains(alarm)) {
         _triggeredAlarms.add(alarm);
-        _log.info("Setting ${alarm.type.name} on $shortName");
+        _log.info("Setting ${alarm.level.name} on $shortName");
         // TODO(alarms): Notify manager.
       } else if (!active && _triggeredAlarms.contains(alarm)) {
         _triggeredAlarms.remove(alarm);
-        _log.info("Clearing ${alarm.type.name} on $shortName");
+        _log.info("Clearing ${alarm.level.name} on $shortName");
         // TODO(alarms): Notify manager.
       }
       if (active) {
-        if (highestType == null) {
-          highestType = alarm.type;
-        } else if (alarm.type > highestType) {
-          highestType = alarm.type;
+        if (highestLevel == null) {
+          highestLevel = alarm.level;
+        } else if (alarm.level > highestLevel) {
+          highestLevel = alarm.level;
         }
       }
     }
-    _alarmState.set(highestType);
+    _alarmState.set(highestLevel);
   }
 
   AlarmState get alarmState => _alarmState;

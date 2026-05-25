@@ -239,7 +239,7 @@ void main() {
 
       // 5 feet is below the 10 ft min, so the alarm should trigger.
       (element as DataElement).updateValue(_depthMeters(5.0 / metersToFeet));
-      expect(element.alarmState.level, AlarmType.caution);
+      expect(element.alarmState.level, AlarmLevel.caution);
 
       // Updating to a value inside the safe range clears the alarm.
       (element as DataElement).updateValue(_depthMeters(50.0 / metersToFeet));
@@ -258,7 +258,7 @@ void main() {
 
       final element = dataSet.find(Source.network, 'depthWithOffset') as WithAlarms;
       (element as DataElement).updateValue(_depthMeters(5.0 / metersToFeet));
-      expect(element.alarmState.level, AlarmType.caution);
+      expect(element.alarmState.level, AlarmLevel.caution);
     });
 
     test('alarm on a non-WithAlarms element is silently ignored', () async {
@@ -277,7 +277,7 @@ void main() {
           _makeDataSet(prefs, alarmSettings: alarms).find(Source.network, 'depthWithOffset')
               as WithAlarms;
       (element as DataElement).updateValue(_depthMeters(5.0 / metersToFeet));
-      expect(element.alarmState.level, AlarmType.caution);
+      expect(element.alarmState.level, AlarmLevel.caution);
     });
 
     test('spec that fails Alarm.fromSpec is silently ignored', () async {
@@ -291,7 +291,7 @@ void main() {
       ]);
       final element = dataSet.find(Source.network, 'depthWithOffset') as WithAlarms;
       (element as DataElement).updateValue(_depthMeters(200.0 / metersToFeet));
-      expect(element.alarmState.level, AlarmType.caution);
+      expect(element.alarmState.level, AlarmLevel.caution);
     });
 
     test('changing AlarmSettings rebinds alarms', () async {
@@ -302,7 +302,7 @@ void main() {
 
       alarms.replaceElements([depthAlarmSpec(min: 10.0)]);
       (element as DataElement).updateValue(_depthMeters(5.0 / metersToFeet));
-      expect(element.alarmState.level, AlarmType.caution);
+      expect(element.alarmState.level, AlarmLevel.caution);
 
       // Removing the spec must clear the binding (and therefore the active level).
       alarms.replaceElements([]);
@@ -318,12 +318,12 @@ void main() {
 
       final element = dataSet.find(Source.network, 'depthWithOffset') as WithAlarms;
       (element as DataElement).updateValue(_depthMeters(5.0 / metersToFeet));
-      expect(element.alarmState.level, AlarmType.caution);
+      expect(element.alarmState.level, AlarmLevel.caution);
 
       // A derived-data change triggers _createAndBindAlarms; the alarm should
       // remain bound and active afterwards.
       derived.replaceElements([_depthSpec('Offset Depth')]);
-      expect(element.alarmState.level, AlarmType.caution);
+      expect(element.alarmState.level, AlarmLevel.caution);
     });
 
     test('DataSet notifies its own listeners when alarm settings change', () async {

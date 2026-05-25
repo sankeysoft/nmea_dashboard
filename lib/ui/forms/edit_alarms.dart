@@ -135,7 +135,7 @@ class _EditAlarmsContent extends StatelessWidget {
     Icon icon;
     if (alarm == null) {
       icon = const Icon(Icons.question_mark);
-    } else if (alarm.type == AlarmType.warning) {
+    } else if (alarm.level == AlarmLevel.warning) {
       icon = const Icon(Icons.warning);
     } else {
       icon = const Icon(Icons.info_outlined);

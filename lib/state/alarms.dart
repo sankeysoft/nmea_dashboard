@@ -9,28 +9,28 @@ import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:nmea_dashboard/state/values.dart';
 
 // The different levels of alarm, driving the different ways they are announced.
-enum AlarmType implements Comparable<AlarmType> {
+enum AlarmLevel implements Comparable<AlarmLevel> {
   caution,
   warning;
 
   @override
-  int compareTo(AlarmType other) {
+  int compareTo(AlarmLevel other) {
     return index.compareTo(other.index);
   }
 }
 
-extension AlarmTypeComparison on AlarmType {
-  bool operator <(AlarmType other) => compareTo(other) < 0;
-  bool operator <=(AlarmType other) => compareTo(other) <= 0;
-  bool operator >(AlarmType other) => compareTo(other) > 0;
-  bool operator >=(AlarmType other) => compareTo(other) >= 0;
+extension AlarmLevelComparison on AlarmLevel {
+  bool operator <(AlarmLevel other) => compareTo(other) < 0;
+  bool operator <=(AlarmLevel other) => compareTo(other) <= 0;
+  bool operator >(AlarmLevel other) => compareTo(other) > 0;
+  bool operator >=(AlarmLevel other) => compareTo(other) >= 0;
 }
 
 /// The maximum current level of a collection of zero or more alarms.
 class AlarmState with ChangeNotifier {
-  AlarmType? _level;
+  AlarmLevel? _level;
 
-  void set(AlarmType? level) {
+  void set(AlarmLevel? level) {
     bool changed = level != _level;
     _level = level;
     if (changed) {
@@ -38,7 +38,7 @@ class AlarmState with ChangeNotifier {
     }
   }
 
-  AlarmType? get level => _level;
+  AlarmLevel? get level => _level;
 }
 
 /// A function used to lookup property by source and element name.
@@ -50,7 +50,7 @@ class Alarm implements Comparable<Alarm> {
   final Source source;
   final Property property;
   final StatsInterval? averagingInterval;
-  final AlarmType type;
+  final AlarmLevel level;
   final NumericFormatter formatter;
   final double? min;
   final double? max;
@@ -60,7 +60,7 @@ class Alarm implements Comparable<Alarm> {
     this.source,
     this.property,
     this.averagingInterval,
-    this.type,
+    this.level,
     this.formatter,
     this.min,
     this.max,
@@ -81,8 +81,8 @@ class Alarm implements Comparable<Alarm> {
     if (formatter == null) {
       throw FormatException("Invalid alarm format: ${spec.format}");
     }
-    final type = AlarmType.values.asNameMap()[spec.type];
-    if (type == null) {
+    final level = AlarmLevel.values.asNameMap()[spec.type];
+    if (level == null) {
       throw FormatException("Invalid alarm type: ${spec.type}");
     }
     final averagingInterval = StatsInterval.fromString(spec.averagingInterval);
@@ -95,7 +95,7 @@ class Alarm implements Comparable<Alarm> {
     if (property.dimension == Dimension.bearing && (spec.min == null || spec.max == null)) {
       throw FormatException("Bearing alarm does not include both bounds: $property");
     }
-    return Alarm(source, property, averagingInterval, type, formatter, spec.min, spec.max);
+    return Alarm(source, property, averagingInterval, level, formatter, spec.min, spec.max);
   }
 
   /// Returns true if the supplied value is outside this alarm's configured bounds. Returns null
@@ -163,9 +163,9 @@ class Alarm implements Comparable<Alarm> {
   @override
   int compareTo(Alarm other) {
     // Warnings take priority over cautions
-    if (type == AlarmType.warning && other.type == AlarmType.caution) {
+    if (level == AlarmLevel.warning && other.level == AlarmLevel.caution) {
       return 1;
-    } else if (type == AlarmType.caution && other.type == AlarmType.warning) {
+    } else if (level == AlarmLevel.caution && other.level == AlarmLevel.warning) {
       return -1;
     }
     // Alarms based on a longer average are usually high confidence so take priority.

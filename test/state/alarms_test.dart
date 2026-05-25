@@ -19,12 +19,12 @@ NumericFormatter _formatter(Dimension dimension, String name) {
   return numericFormattersFor(dimension)[name]!;
 }
 
-Alarm _testDepthAlarm({double? min, double? max, AlarmType type = AlarmType.caution}) {
+Alarm _testDepthAlarm({double? min, double? max, AlarmLevel level = AlarmLevel.caution}) {
   return Alarm(
     Source.network,
     Property.depthWithOffset,
     null,
-    type,
+    level,
     _formatter(Dimension.depth, 'feet'),
     min,
     max,
@@ -36,7 +36,7 @@ Alarm _testBearingAlarm({required double min, required double max}) {
     Source.network,
     Property.heading,
     null,
-    AlarmType.caution,
+    AlarmLevel.caution,
     _formatter(Dimension.bearing, 'true'),
     min,
     max,
@@ -44,26 +44,26 @@ Alarm _testBearingAlarm({required double min, required double max}) {
 }
 
 void main() {
-  group('AlarmType comparison', () {
+  group('AlarmLevel comparison', () {
     test('caution is less than warning', () {
-      expect(AlarmType.caution < AlarmType.warning, isTrue);
-      expect(AlarmType.caution <= AlarmType.warning, isTrue);
-      expect(AlarmType.caution > AlarmType.warning, isFalse);
-      expect(AlarmType.caution >= AlarmType.warning, isFalse);
+      expect(AlarmLevel.caution < AlarmLevel.warning, isTrue);
+      expect(AlarmLevel.caution <= AlarmLevel.warning, isTrue);
+      expect(AlarmLevel.caution > AlarmLevel.warning, isFalse);
+      expect(AlarmLevel.caution >= AlarmLevel.warning, isFalse);
     });
 
     test('warning is greater than caution', () {
-      expect(AlarmType.warning > AlarmType.caution, isTrue);
-      expect(AlarmType.warning >= AlarmType.caution, isTrue);
-      expect(AlarmType.warning < AlarmType.caution, isFalse);
-      expect(AlarmType.warning <= AlarmType.caution, isFalse);
+      expect(AlarmLevel.warning > AlarmLevel.caution, isTrue);
+      expect(AlarmLevel.warning >= AlarmLevel.caution, isTrue);
+      expect(AlarmLevel.warning < AlarmLevel.caution, isFalse);
+      expect(AlarmLevel.warning <= AlarmLevel.caution, isFalse);
     });
 
     test('equal values are <= and >= but not < or >', () {
-      expect(AlarmType.caution <= AlarmType.caution, isTrue);
-      expect(AlarmType.caution >= AlarmType.caution, isTrue);
-      expect(AlarmType.caution < AlarmType.caution, isFalse);
-      expect(AlarmType.caution > AlarmType.caution, isFalse);
+      expect(AlarmLevel.caution <= AlarmLevel.caution, isTrue);
+      expect(AlarmLevel.caution >= AlarmLevel.caution, isTrue);
+      expect(AlarmLevel.caution < AlarmLevel.caution, isFalse);
+      expect(AlarmLevel.caution > AlarmLevel.caution, isFalse);
     });
   });
 
@@ -71,24 +71,24 @@ void main() {
     test('set updates level', () {
       final state = AlarmState();
       expect(state.level, isNull);
-      state.set(AlarmType.caution);
-      expect(state.level, AlarmType.caution);
+      state.set(AlarmLevel.caution);
+      expect(state.level, AlarmLevel.caution);
     });
 
     test('set notifies listeners when level changes', () {
       final state = AlarmState();
       int count = 0;
       state.addListener(() => count++);
-      state.set(AlarmType.caution);
-      state.set(AlarmType.caution);
+      state.set(AlarmLevel.caution);
+      state.set(AlarmLevel.caution);
       expect(count, 1);
-      state.set(AlarmType.warning);
+      state.set(AlarmLevel.warning);
       expect(count, 2);
     });
 
     test('set(null) clears a previously set level and notifies', () {
       final state = AlarmState();
-      state.set(AlarmType.caution);
+      state.set(AlarmLevel.caution);
       int count = 0;
       state.addListener(() => count++);
       state.set(null);
@@ -103,7 +103,7 @@ void main() {
       final alarm = Alarm.fromSpec(spec, _propertyByName);
       expect(alarm.source, Source.network);
       expect(alarm.property, Property.depthWithOffset);
-      expect(alarm.type, AlarmType.caution);
+      expect(alarm.level, AlarmLevel.caution);
       expect(alarm.min, 10.0);
       expect(alarm.max, isNull);
       expect(alarm.averagingInterval, isNull);
@@ -112,7 +112,7 @@ void main() {
     test('max-only spec creates alarm with null min', () {
       final spec = AlarmSpec('network', 'depthWithOffset', 'warning', 'feet', max: 100.0);
       final alarm = Alarm.fromSpec(spec, _propertyByName);
-      expect(alarm.type, AlarmType.warning);
+      expect(alarm.level, AlarmLevel.warning);
       expect(alarm.min, isNull);
       expect(alarm.max, 100.0);
     });
@@ -263,7 +263,7 @@ void main() {
         Source.network,
         Property.heading,
         null,
-        AlarmType.caution,
+        AlarmLevel.caution,
         _formatter(Dimension.bearing, 'mag'),
         10.0,
         350.0,
@@ -293,7 +293,7 @@ void main() {
         Source.network,
         Property.depthWithOffset,
         StatsInterval.fiveMin,
-        AlarmType.caution,
+        AlarmLevel.caution,
         _formatter(Dimension.depth, 'feet'),
         10.0,
         null,
@@ -313,8 +313,8 @@ void main() {
 
   group('Alarm.compareTo', () {
     test('warning ranks above caution regardless of other fields', () {
-      final warning = _testDepthAlarm(min: 10.0, type: AlarmType.warning);
-      final caution = _testDepthAlarm(min: 10.0, type: AlarmType.caution);
+      final warning = _testDepthAlarm(min: 10.0, level: AlarmLevel.warning);
+      final caution = _testDepthAlarm(min: 10.0, level: AlarmLevel.caution);
       expect(warning.compareTo(caution) > 0, isTrue);
       expect(caution.compareTo(warning) < 0, isTrue);
     });
@@ -324,7 +324,7 @@ void main() {
         Source.network,
         Property.depthWithOffset,
         StatsInterval.oneMin,
-        AlarmType.caution,
+        AlarmLevel.caution,
         _formatter(Dimension.depth, 'feet'),
         10.0,
         null,
@@ -339,7 +339,7 @@ void main() {
         Source.network,
         Property.depthWithOffset,
         interval,
-        AlarmType.caution,
+        AlarmLevel.caution,
         _formatter(Dimension.depth, 'feet'),
         10.0,
         null,
@@ -350,14 +350,14 @@ void main() {
       expect(shortAvg.compareTo(longAvg) < 0, isTrue);
     });
 
-    test('equal type+interval ordered by property longName', () {
+    test('equal level+interval ordered by property longName', () {
       // 'Depth' < 'True wind speed' alphabetically.
       final depth = _testDepthAlarm(min: 10.0);
       final tws = Alarm(
         Source.network,
         Property.trueWindSpeed,
         null,
-        AlarmType.caution,
+        AlarmLevel.caution,
         _formatter(Dimension.speed, 'knots'),
         10.0,
         null,
@@ -375,7 +375,7 @@ void main() {
         Source.network,
         Property.fuelLevel,
         null,
-        AlarmType.caution,
+        AlarmLevel.caution,
         _formatter(Dimension.percentage, 'percent'),
         10.0,
         null,
@@ -384,7 +384,7 @@ void main() {
         Source.local,
         Property.fuelLevel,
         null,
-        AlarmType.caution,
+        AlarmLevel.caution,
         _formatter(Dimension.percentage, 'percent'),
         10.0,
         null,
@@ -401,7 +401,7 @@ void main() {
         Source.network,
         Property.depthWithOffset,
         null,
-        AlarmType.caution,
+        AlarmLevel.caution,
         _formatter(Dimension.depth, fmt),
         10.0,
         null,

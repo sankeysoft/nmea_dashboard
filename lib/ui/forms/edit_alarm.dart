@@ -14,11 +14,11 @@ import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:nmea_dashboard/ui/forms/abstract.dart';
 import 'package:provider/provider.dart';
 
-const _defaultType = AlarmType.warning;
+const _defaultLevel = AlarmLevel.warning;
 final _numberFormat = NumberFormat("0.##");
 
 AlarmSpec _createDefaultSpec() {
-  return AlarmSpec('network', '', AlarmType.caution.name, '');
+  return AlarmSpec('network', '', AlarmLevel.caution.name, '');
 }
 
 /// A function called on successful creation or update of an AlarmSpec.
@@ -51,7 +51,7 @@ class _EditAlarmFormState extends StatefulFormState<_EditAlarmForm> {
   Source? _source;
   Group? _group;
   String? _element;
-  AlarmType _type = _defaultType;
+  AlarmLevel _level = _defaultLevel;
   StatsInterval? _averagingInterval;
   String? _format;
   NumericFormatter? _formatter;
@@ -67,7 +67,7 @@ class _EditAlarmFormState extends StatefulFormState<_EditAlarmForm> {
     _group = null;
     // Derived elements don't have complile-time definitions, so don't sanitize element yet.
     _element = spec.element;
-    _type = AlarmType.values.asNameMap()[spec.type] ?? _defaultType;
+    _level = AlarmLevel.values.asNameMap()[spec.type] ?? _defaultLevel;
     _averagingInterval = StatsInterval.fromString(spec.averagingInterval);
     // We can't validate the format until we've get a dataSet to supply the dimension for any
     // derived data elements.
@@ -157,7 +157,7 @@ class _EditAlarmFormState extends StatefulFormState<_EditAlarmForm> {
                 ),
                 _buildMinMaxField(isMin: true),
                 _buildMinMaxField(isMin: false),
-                _buildTypeField(),
+                _buildLevelField(),
                 _buildSoundField(),
               ],
             ),
@@ -169,12 +169,12 @@ class _EditAlarmFormState extends StatefulFormState<_EditAlarmForm> {
               final spec = AlarmSpec(
                 _source?.name ?? '',
                 _element ?? '',
-                _type.name,
+                _level.name,
                 _format ?? '',
                 averagingInterval: _averagingInterval?.name,
                 min: minText.isNotEmpty ? double.tryParse(minText) : null,
                 max: maxText.isNotEmpty ? double.tryParse(maxText) : null,
-                sound: (_type == AlarmType.warning) ? _sound : null,
+                sound: (_level == AlarmLevel.warning) ? _sound : null,
                 key: widget._spec.key,
               );
 
@@ -248,15 +248,15 @@ class _EditAlarmFormState extends StatefulFormState<_EditAlarmForm> {
     );
   }
 
-  Widget _buildTypeField() {
+  Widget _buildLevelField() {
     // TODO(alarms): Build a switcher instead
     return buildDropdownBox(
       label: 'Alarm type',
-      items: AlarmType.values.map((t) => DropdownEntry(value: t, text: t.name)).toList(),
-      initialValue: _type,
-      onChanged: (AlarmType? value) {
+      items: AlarmLevel.values.map((t) => DropdownEntry(value: t, text: t.name)).toList(),
+      initialValue: _level,
+      onChanged: (AlarmLevel? value) {
         setState(() {
-          if (value != null) _type = value;
+          if (value != null) _level = value;
         });
       },
     );
