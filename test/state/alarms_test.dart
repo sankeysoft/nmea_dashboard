@@ -433,70 +433,200 @@ void main() {
     });
   });
 
-  group('AlarmManager', () {
-    late AlarmManager manager;
+  group('AlarmSet', () {
+    late AlarmSet set;
     late Alarm a;
     late Alarm b;
 
     setUp(() {
-      manager = AlarmManager();
+      set = AlarmSet();
       a = _testDepthAlarm(min: 10.0);
       b = _testDepthAlarm(max: 100.0);
     });
 
-    test('starts with no active alarms', () {
-      expect(manager.activeAlarms, isEmpty);
+    test('starts empty', () {
+      expect(set.isEmpty, isTrue);
+      expect(set.isNotEmpty, isFalse);
+      expect(set.length, 0);
+      expect(set.alarms, isEmpty);
     });
 
-    test('setAlarm adds, returns true, and notifies listeners', () {
+    test('add returns true on new alarm and notifies', () {
       int count = 0;
-      manager.addListener(() => count++);
-      expect(manager.setAlarm(a), isTrue);
-      expect(manager.activeAlarms, contains(a));
+      set.addListener(() => count++);
+      expect(set.add(a), isTrue);
+      expect(set.contains(a), isTrue);
+      expect(set.length, 1);
+      expect(set.isNotEmpty, isTrue);
       expect(count, 1);
+    });
+
+    test('add returns false on duplicate and does not notify', () {
+      set.add(a);
+      int count = 0;
+      set.addListener(() => count++);
+      expect(set.add(a), isFalse);
+      expect(set.length, 1);
+      expect(count, 0);
+    });
+
+    test('remove returns true on present alarm and notifies', () {
+      set.add(a);
+      int count = 0;
+      set.addListener(() => count++);
+      expect(set.remove(a), isTrue);
+      expect(set.contains(a), isFalse);
+      expect(set.isEmpty, isTrue);
+      expect(count, 1);
+    });
+
+    test('remove returns false on absent alarm and does not notify', () {
+      int count = 0;
+      set.addListener(() => count++);
+      expect(set.remove(a), isFalse);
+      expect(count, 0);
+    });
+
+    test('clear returns true when non-empty and notifies', () {
+      set.add(a);
+      set.add(b);
+      int count = 0;
+      set.addListener(() => count++);
+      expect(set.clear(), isTrue);
+      expect(set.isEmpty, isTrue);
+      expect(count, 1);
+    });
+
+    test('clear returns false when empty and does not notify', () {
+      int count = 0;
+      set.addListener(() => count++);
+      expect(set.clear(), isFalse);
+      expect(count, 0);
+    });
+
+    test('alarms preserves insertion order', () {
+      set.add(b);
+      set.add(a);
+      expect(set.alarms.toList(), [b, a]);
+    });
+  });
+
+  group('AlarmManager', () {
+    late AlarmManager manager;
+    late Alarm caution;
+    late Alarm otherCaution;
+    late Alarm warning;
+
+    setUp(() {
+      manager = AlarmManager();
+      caution = _testDepthAlarm(min: 10.0, level: AlarmLevel.caution);
+      otherCaution = _testDepthAlarm(max: 100.0, level: AlarmLevel.caution);
+      warning = _testDepthAlarm(min: 5.0, level: AlarmLevel.warning);
+    });
+
+    test('starts with empty active alarms and unacknowledged warnings', () {
+      expect(manager.activeAlarms.isEmpty, isTrue);
+      expect(manager.unacknowledgeWarnings.isEmpty, isTrue);
+    });
+
+    test('setAlarm adds caution to active alarms only and notifies', () {
+      int activeCount = 0;
+      int warnCount = 0;
+      manager.activeAlarms.addListener(() => activeCount++);
+      manager.unacknowledgeWarnings.addListener(() => warnCount++);
+      expect(manager.setAlarm(caution), isTrue);
+      expect(manager.activeAlarms.contains(caution), isTrue);
+      expect(manager.unacknowledgeWarnings.isEmpty, isTrue);
+      expect(activeCount, 1);
+      expect(warnCount, 0);
+    });
+
+    test('setAlarm adds warning to both active alarms and unacknowledged warnings', () {
+      int activeCount = 0;
+      int warnCount = 0;
+      manager.activeAlarms.addListener(() => activeCount++);
+      manager.unacknowledgeWarnings.addListener(() => warnCount++);
+      expect(manager.setAlarm(warning), isTrue);
+      expect(manager.activeAlarms.contains(warning), isTrue);
+      expect(manager.unacknowledgeWarnings.contains(warning), isTrue);
+      expect(activeCount, 1);
+      expect(warnCount, 1);
     });
 
     test('setAlarm on already-active alarm returns false and does not notify', () {
-      manager.setAlarm(a);
-      int count = 0;
-      manager.addListener(() => count++);
-      expect(manager.setAlarm(a), isFalse);
-      expect(count, 0);
+      manager.setAlarm(warning);
+      int activeCount = 0;
+      int warnCount = 0;
+      manager.activeAlarms.addListener(() => activeCount++);
+      manager.unacknowledgeWarnings.addListener(() => warnCount++);
+      expect(manager.setAlarm(warning), isFalse);
+      expect(activeCount, 0);
+      expect(warnCount, 0);
     });
 
-    test('clearAlarm removes, returns true, and notifies listeners', () {
-      manager.setAlarm(a);
-      int count = 0;
-      manager.addListener(() => count++);
-      expect(manager.clearAlarm(a), isTrue);
-      expect(manager.activeAlarms, isNot(contains(a)));
-      expect(count, 1);
+    test('clearAlarm removes from both sets and notifies', () {
+      manager.setAlarm(warning);
+      int activeCount = 0;
+      int warnCount = 0;
+      manager.activeAlarms.addListener(() => activeCount++);
+      manager.unacknowledgeWarnings.addListener(() => warnCount++);
+      expect(manager.clearAlarm(warning), isTrue);
+      expect(manager.activeAlarms.contains(warning), isFalse);
+      expect(manager.unacknowledgeWarnings.contains(warning), isFalse);
+      expect(activeCount, 1);
+      expect(warnCount, 1);
+    });
+
+    test('clearAlarm on previously-acknowledged warning still clears active', () {
+      manager.setAlarm(warning);
+      manager.acknowledgeWarnings();
+      expect(manager.unacknowledgeWarnings.isEmpty, isTrue);
+      expect(manager.clearAlarm(warning), isTrue);
+      expect(manager.activeAlarms.contains(warning), isFalse);
     });
 
     test('clearAlarm on inactive alarm returns false and does not notify', () {
-      int count = 0;
-      manager.addListener(() => count++);
-      expect(manager.clearAlarm(a), isFalse);
-      expect(count, 0);
+      int activeCount = 0;
+      manager.activeAlarms.addListener(() => activeCount++);
+      expect(manager.clearAlarm(caution), isFalse);
+      expect(activeCount, 0);
     });
 
-    test('clearAllAlarms empties the set when non-empty', () {
-      manager.setAlarm(a);
-      manager.setAlarm(b);
-      expect(manager.activeAlarms, hasLength(2));
+    test('clearAllAlarms empties both sets when non-empty', () {
+      manager.setAlarm(caution);
+      manager.setAlarm(warning);
+      expect(manager.activeAlarms.length, 2);
+      expect(manager.unacknowledgeWarnings.length, 1);
       manager.clearAllAlarms();
-      expect(manager.activeAlarms, isEmpty);
+      expect(manager.activeAlarms.isEmpty, isTrue);
+      expect(manager.unacknowledgeWarnings.isEmpty, isTrue);
     });
 
     test('clearAllAlarms is a no-op when empty', () {
       expect(() => manager.clearAllAlarms(), returnsNormally);
-      expect(manager.activeAlarms, isEmpty);
+      expect(manager.activeAlarms.isEmpty, isTrue);
+      expect(manager.unacknowledgeWarnings.isEmpty, isTrue);
+    });
+
+    test('acknowledgeWarnings clears unacknowledged but not active', () {
+      manager.setAlarm(caution);
+      manager.setAlarm(warning);
+      manager.acknowledgeWarnings();
+      expect(manager.unacknowledgeWarnings.isEmpty, isTrue);
+      expect(manager.activeAlarms.contains(caution), isTrue);
+      expect(manager.activeAlarms.contains(warning), isTrue);
+    });
+
+    test('acknowledgeWarnings is a no-op when no unacknowledged warnings', () {
+      manager.setAlarm(caution);
+      expect(() => manager.acknowledgeWarnings(), returnsNormally);
+      expect(manager.activeAlarms.contains(caution), isTrue);
     });
 
     test('activeAlarms preserves insertion order', () {
-      manager.setAlarm(b);
-      manager.setAlarm(a);
-      expect(manager.activeAlarms.toList(), [b, a]);
+      manager.setAlarm(otherCaution);
+      manager.setAlarm(caution);
+      expect(manager.activeAlarms.alarms.toList(), [otherCaution, caution]);
     });
   });
 }

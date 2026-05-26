@@ -1,4 +1,4 @@
-// Copyright Jody M Sankey 2023-2026
+// Copyright Jody M Sankey 2023
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
@@ -245,11 +245,7 @@ void main() {
     }
 
     BoundValue<SingleValue<double>> depthValueFt(double feet) {
-      return BoundValue(
-        Source.network,
-        Property.depthWithOffset,
-        SingleValue(feet / metersToFeet),
-      );
+      return BoundValue(Source.network, Property.depthWithOffset, SingleValue(feet / metersToFeet));
     }
 
     test('addAlarm throws ArgumentError on property mismatch', () {
@@ -287,11 +283,11 @@ void main() {
       expect(element.alarmState.level, isNull);
 
       element.updateValue(depthValueFt(5.0));
-      expect(manager.activeAlarms, contains(alarm));
+      expect(manager.activeAlarms.contains(alarm), isTrue);
       expect(element.alarmState.level, AlarmLevel.caution);
 
       element.updateValue(depthValueFt(50.0));
-      expect(manager.activeAlarms, isNot(contains(alarm)));
+      expect(manager.activeAlarms.contains(alarm), isFalse);
       expect(element.alarmState.level, isNull);
     });
 
@@ -314,12 +310,13 @@ void main() {
       element.addAlarm(warning);
 
       element.updateValue(depthValueFt(3.0));
-      expect(manager.activeAlarms, containsAll([caution, warning]));
+      expect(manager.activeAlarms.contains(caution), isTrue);
+      expect(manager.activeAlarms.contains(warning), isTrue);
       expect(element.alarmState.level, AlarmLevel.warning);
 
       element.updateValue(depthValueFt(7.0));
-      expect(manager.activeAlarms, contains(caution));
-      expect(manager.activeAlarms, isNot(contains(warning)));
+      expect(manager.activeAlarms.contains(caution), isTrue);
+      expect(manager.activeAlarms.contains(warning), isFalse);
       expect(element.alarmState.level, AlarmLevel.caution);
     });
 

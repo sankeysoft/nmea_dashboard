@@ -29,7 +29,7 @@ extension AlarmLevelComparison on AlarmLevel {
   bool operator >=(AlarmLevel other) => compareTo(other) >= 0;
 }
 
-/// The maximum current level of a collection of zero or more alarms.
+/// The maximum current level of a collection of zero or more alarms, with change notification.
 class AlarmState with ChangeNotifier {
   AlarmLevel? _level;
 
@@ -201,47 +201,110 @@ class Alarm implements Comparable<Alarm> {
   }
 }
 
+/// An ordered set of alarms, with change notication.
+class AlarmSet with ChangeNotifier {
+  final LinkedHashSet<Alarm> _set = LinkedHashSet<Alarm>();
+
+  /// Returns an iterator over the alarms.
+  Iterable<Alarm> get alarms => _set;
+
+  /// Adds an alarm to the set, returning true iff the alarm was not previously present.
+  bool add(Alarm alarm) {
+    if (_set.contains(alarm)) {
+      return false;
+    }
+    _set.add(alarm);
+    notifyListeners();
+    return true;
+  }
+
+  /// Removes an alarm from the set, returning true iff the alarm was previously present.
+  bool remove(Alarm alarm) {
+    if (!_set.contains(alarm)) {
+      return false;
+    }
+    _set.remove(alarm);
+    notifyListeners();
+    return true;
+  }
+
+  /// Remove all alarms, returning true iff any alarms were present.
+  bool clear() {
+    if (_set.isEmpty) {
+      return false;
+    }
+    _set.clear();
+    notifyListeners();
+    return true;
+  }
+
+  /// Returns true if the set contains the specified alarm.
+  bool contains(Alarm alarm) {
+    return _set.contains(alarm);
+  }
+
+  /// Returns the number of alarms in the set.
+  int get length => _set.length;
+
+  /// Returns true if the set contains no alarms.
+  bool get isEmpty => _set.isEmpty;
+
+  /// Returns true if the set contains at least one alarm.
+  bool get isNotEmpty => _set.isNotEmpty;
+}
+
 /// A manager to set and access the complete set of all active alarms across all properties.
 ///
 /// DataElements ask the manager to set and clear the alarms they maintain, and this class has
 /// no inherant knowledge of alarms outside of these calls.
-class AlarmManager with ChangeNotifier {
+class AlarmManager {
   /// This class's logger.
   static final _log = Logger('AlarmManager');
 
-  /// The set of currently active alarms, order by decreasing age.
-  final LinkedHashSet<Alarm> _activeAlarms = LinkedHashSet<Alarm>();
+  /// The set of currently active alarms, ordered by decreasing age.
+  final AlarmSet activeAlarms = AlarmSet();
 
-  /// Returns the set of all currently active alarms.
-  Set<Alarm> get activeAlarms => _activeAlarms;
+  /// The set of not-yet acknowledged warnings, ordered by decreasing age.
+  final AlarmSet unacknowledgeWarnings = AlarmSet();
 
   /// Marks an alarm as active, returning true iff the alarm was not previously active.
   bool setAlarm(Alarm alarm) {
-    if (_activeAlarms.contains(alarm)) {
-      return false;
+    final changed = activeAlarms.add(alarm);
+    if (changed) {
+      // TODO(alarms): name not property
+      _log.info("Setting ${alarm.level.name} on ${alarm.property.shortName}");
+      if (alarm.level == AlarmLevel.warning) {
+        unacknowledgeWarnings.add(alarm);
+      }
     }
-    _activeAlarms.add(alarm);
-    _log.info("Setting ${alarm.level.name} on ${alarm.property.shortName}");
-    notifyListeners();
-    return true;
+    return changed;
   }
 
-  /// Marks an alarm as inactive, returning true iff the alarm was not previously inactive.
+  /// Marks an alarm as inactive, returning true iff the alarm was previously active.
   bool clearAlarm(Alarm alarm) {
-    if (!_activeAlarms.contains(alarm)) {
-      return false;
+    final changed = activeAlarms.remove(alarm);
+    if (changed) {
+      // TODO(alarms): name not property
+      _log.info("Clearing ${alarm.level.name} on ${alarm.property.shortName}");
+      unacknowledgeWarnings.remove(alarm);
     }
-    _activeAlarms.remove(alarm);
-    _log.info("Clearing ${alarm.level.name} on ${alarm.property.shortName}");
-    notifyListeners();
-    return true;
+    return changed;
   }
 
   /// Clears all active alarms, for example before recreating from settings.
   void clearAllAlarms() {
-    if (_activeAlarms.isNotEmpty) {
-      _log.info("Clearing ${_activeAlarms.length} active alarms");
-      _activeAlarms.clear();
+    if (activeAlarms.isNotEmpty) {
+      _log.info("Clearing ${activeAlarms.length} active alarms");
+    }
+    activeAlarms.clear();
+    unacknowledgeWarnings.clear();
+  }
+
+  /// Acknowledges all previously unacknowledged warnings.
+  void acknowledgeWarnings() {
+    if (unacknowledgeWarnings.isNotEmpty) {
+      _log.info("Acknowledging ${unacknowledgeWarnings.length} warnings");
+      unacknowledgeWarnings.clear();
     }
   }
 }

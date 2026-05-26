@@ -77,7 +77,7 @@ class NmeaDashboardApp extends StatelessWidget {
               ChangeNotifierProvider<PageSettings>(create: (_) => settings.pages),
               ChangeNotifierProvider<DerivedDataSettings>(create: (_) => settings.derived),
               ChangeNotifierProvider<FormatPreferences>(create: (_) => settings.formatPreferences),
-              ChangeNotifierProvider<AlarmManager>(create: (_) => alarmManager),
+              Provider<AlarmManager>(create: (_) => alarmManager),
               Provider<PackageInfo>(create: (_) => settings.packageInfo),
               ChangeNotifierProvider<DataSet>(
                 create: (_) => DataSet(
