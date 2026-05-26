@@ -39,6 +39,9 @@ class DataSet with ChangeNotifier {
   /// A manager for history persistence and progression.
   final HistoryManager _historyManager;
 
+  /// A manager to track active alarms.
+  final AlarmManager _alarmManager;
+
   /// The currently active subscription to network events.
   StreamSubscription? _networkSubscription;
 
@@ -57,6 +60,7 @@ class DataSet with ChangeNotifier {
     this._derivedDataSettings,
     this._alarmSettings,
     this._historyManager,
+    this._alarmManager,
   ) {
     // Create all known data for primary sources.
     for (final source in [Source.network, Source.local]) {
@@ -119,9 +123,12 @@ class DataSet with ChangeNotifier {
         } else {
           element = ConsistentDataElement.newForProperty(source, property, staleness);
         }
-        // Some elements support history and should be told about the manager.
+        // Some elements support history and/or alarms and should be told about the managers.
         if (element is WithHistory) {
-          element.registerManager(_historyManager);
+          element.registerHistoryManager(_historyManager);
+        }
+        if (element is WithAlarms) {
+          element.registerAlarmManager(_alarmManager);
         }
         elementMap[property.name] = element;
       }
@@ -172,7 +179,7 @@ class DataSet with ChangeNotifier {
           operation,
           spec.operand,
         );
-        element.registerManager(_historyManager);
+        element.registerHistoryManager(_historyManager);
         elementMap[spec.name] = element;
       }
     }
@@ -187,7 +194,7 @@ class DataSet with ChangeNotifier {
     elementMap[Property.vmgWaypoint.name] = VmgWptCalculatedDataElement(networkElements);
     for (final element in elementMap.values) {
       if (element is WithHistory) {
-        element.registerManager(_historyManager);
+        element.registerHistoryManager(_historyManager);
       }
     }
     _createAndBindAlarms();
@@ -196,6 +203,7 @@ class DataSet with ChangeNotifier {
 
   /// Create all known alarms and notify the associated data element.
   void _createAndBindAlarms() {
+    _alarmManager.clearAllAlarms();
     for (final source in sources.values) {
       for (final element in source.values) {
         if (element is WithAlarms) {

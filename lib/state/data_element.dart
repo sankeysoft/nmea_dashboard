@@ -174,7 +174,8 @@ mixin WithHistory<V extends Value, U extends Value> on DataElement<V, U> {
   }
 
   /// Notifies all histories of the supplied manager.
-  void registerManager(HistoryManager manager) {
+  /// Guaranteed to be called before histories are used.
+  void registerHistoryManager(HistoryManager manager) {
     for (final history in _histories.values) {
       history.registerManager(manager);
     }
@@ -205,20 +206,38 @@ mixin WithStats<V extends Value, U extends Value> on DataElement<V, U> {
   }
 }
 
+enum _AlarmUpdateType { all, currentValue, singleStatistic }
+
 // A DataElement that is capable of monitoring alarms against the current and averaging values.
 mixin WithAlarms<V extends Value, U extends Value> on DataElement<V, U> {
-  /// This class's logger.
-  static final _log = Logger('DataElementWithAlarms');
-
   /// The list of registered alarms for this element.
   final List<Alarm> _alarms = [];
-  final Set<Alarm> _triggeredAlarms = {};
+
+  /// The map of currently registered statistics callbacks.
+  final Map<OptionalStats, VoidCallback> _statsCallbacks = {};
+
+  /// The most critical alarm state for this element.
   final AlarmState _alarmState = AlarmState();
+
+  /// A manager that we notify of
+  late AlarmManager _alarmManager;
+
+  /// Registers a manager that will be used to persist and communicate alarms.
+  /// Guaranteed to be called before any alarms are added.
+  void registerAlarmManager(AlarmManager manager) {
+    _alarmManager = manager;
+  }
 
   /// Clear all alarms on this DataElement.
   void clearAlarms() {
+    for (final entry in _statsCallbacks.entries) {
+      entry.key.removeListener(entry.value);
+    }
+    _statsCallbacks.clear();
+    for (final alarm in _alarms) {
+      _alarmManager.clearAlarm(alarm);
+    }
     _alarms.clear();
-    _triggeredAlarms.clear();
     _alarmState.set(null);
   }
 
@@ -229,45 +248,63 @@ mixin WithAlarms<V extends Value, U extends Value> on DataElement<V, U> {
     } else if (alarm.formatter.valueType != storedType) {
       throw ArgumentError("alarm type ${alarm.formatter.valueType} != element type $storedType");
     }
+    if (alarm.averagingInterval != null) {
+      if (this is! WithStats) {
+        throw ArgumentError("averaging alarm set on element without stats: $longName");
+      }
+      // Register to be informed about changes in this statistic (unless we did before).
+      final stats = (this as WithStats).stats(alarm.averagingInterval!);
+      if (!_statsCallbacks.keys.contains(stats)) {
+        void callback() => _updateAlarms(
+          _AlarmUpdateType.singleStatistic,
+          statisticInterval: alarm.averagingInterval,
+        );
+        _statsCallbacks[stats] = callback;
+        stats.addListener(callback);
+      }
+    }
     _alarms.add(alarm);
     // Sort reversed so we consider higher priority alarms first.
     _alarms.sort((a, b) => b.compareTo(a));
-    _updateAlarms();
+    _updateAlarms(_AlarmUpdateType.all);
   }
 
   /// Method to be called after a change in the element value.
   void onValueChange() {
-    _updateAlarms();
+    _updateAlarms(_AlarmUpdateType.currentValue);
   }
 
-  void _updateAlarms() {
+  void _updateAlarms(_AlarmUpdateType updateType, {StatsInterval? statisticInterval}) {
     AlarmLevel? highestLevel;
     for (final alarm in _alarms) {
-      bool active;
+      bool? active;
       if (alarm.averagingInterval == null) {
-        final maybeActive = (value == null) ? false : alarm.isTriggered(value!);
-        // Don't change the state of alarms we can't assess.
-        if (maybeActive == null) {
-          continue;
-        } else {
-          active = maybeActive;
+        // Alarm is based on current value. Try to set active based on current state if
+        // included in the update request.
+        if ({_AlarmUpdateType.currentValue, _AlarmUpdateType.all}.contains(updateType)) {
+          // Assess activeness based on the value.
+          active = (value == null) ? null : alarm.isTriggered(value!);
         }
       } else {
-        // TODO(alarms): Figure out averages
-        active = false;
-        //final mean = stats(alarm.averagingInterval!).inner?.mean;
-        //active = (mean == null) ? false : alarm.isTriggered(mean);
+        // Alarm is based on an average over some statistics interval. Try to set active based
+        // on stats if included in the update request.
+        if (updateType == _AlarmUpdateType.all ||
+            (updateType == _AlarmUpdateType.singleStatistic &&
+                statisticInterval == alarm.averagingInterval)) {
+          final stats = (this as WithStats).stats(alarm.averagingInterval!);
+          final mean = stats.inner?.mean;
+          active = (mean == null) ? null : alarm.isTriggered(mean);
+        }
       }
-      if (active && !_triggeredAlarms.contains(alarm)) {
-        _triggeredAlarms.add(alarm);
-        _log.info("Setting ${alarm.level.name} on $shortName");
-        // TODO(alarms): Notify manager.
-      } else if (!active && _triggeredAlarms.contains(alarm)) {
-        _triggeredAlarms.remove(alarm);
-        _log.info("Clearing ${alarm.level.name} on $shortName");
-        // TODO(alarms): Notify manager.
+      // Inform our manager about the potentially new state.
+      if (active == true) {
+        _alarmManager.setAlarm(alarm);
+      } else if (active == false) {
+        _alarmManager.clearAlarm(alarm);
       }
-      if (active) {
+      // If we determined the alarm is currently active or didn't update but the alarm was
+      // previously active, include it in the highest level determination.
+      if (active == true || (active == null && _alarmManager.activeAlarms.contains(alarm))) {
         if (highestLevel == null) {
           highestLevel = alarm.level;
         } else if (alarm.level > highestLevel) {

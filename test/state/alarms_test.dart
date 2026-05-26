@@ -432,4 +432,71 @@ void main() {
       expect(a.compareTo(b), 0);
     });
   });
+
+  group('AlarmManager', () {
+    late AlarmManager manager;
+    late Alarm a;
+    late Alarm b;
+
+    setUp(() {
+      manager = AlarmManager();
+      a = _testDepthAlarm(min: 10.0);
+      b = _testDepthAlarm(max: 100.0);
+    });
+
+    test('starts with no active alarms', () {
+      expect(manager.activeAlarms, isEmpty);
+    });
+
+    test('setAlarm adds, returns true, and notifies listeners', () {
+      int count = 0;
+      manager.addListener(() => count++);
+      expect(manager.setAlarm(a), isTrue);
+      expect(manager.activeAlarms, contains(a));
+      expect(count, 1);
+    });
+
+    test('setAlarm on already-active alarm returns false and does not notify', () {
+      manager.setAlarm(a);
+      int count = 0;
+      manager.addListener(() => count++);
+      expect(manager.setAlarm(a), isFalse);
+      expect(count, 0);
+    });
+
+    test('clearAlarm removes, returns true, and notifies listeners', () {
+      manager.setAlarm(a);
+      int count = 0;
+      manager.addListener(() => count++);
+      expect(manager.clearAlarm(a), isTrue);
+      expect(manager.activeAlarms, isNot(contains(a)));
+      expect(count, 1);
+    });
+
+    test('clearAlarm on inactive alarm returns false and does not notify', () {
+      int count = 0;
+      manager.addListener(() => count++);
+      expect(manager.clearAlarm(a), isFalse);
+      expect(count, 0);
+    });
+
+    test('clearAllAlarms empties the set when non-empty', () {
+      manager.setAlarm(a);
+      manager.setAlarm(b);
+      expect(manager.activeAlarms, hasLength(2));
+      manager.clearAllAlarms();
+      expect(manager.activeAlarms, isEmpty);
+    });
+
+    test('clearAllAlarms is a no-op when empty', () {
+      expect(() => manager.clearAllAlarms(), returnsNormally);
+      expect(manager.activeAlarms, isEmpty);
+    });
+
+    test('activeAlarms preserves insertion order', () {
+      manager.setAlarm(b);
+      manager.setAlarm(a);
+      expect(manager.activeAlarms.toList(), [b, a]);
+    });
+  });
 }

@@ -2,7 +2,10 @@
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
+import 'dart:collection';
+
 import 'package:flutter/foundation.dart';
+import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:nmea_dashboard/state/settings/specs.dart';
@@ -195,5 +198,50 @@ class Alarm implements Comparable<Alarm> {
       return -(min ?? 0.0).compareTo(other.min ?? 0.0);
     }
     return 0;
+  }
+}
+
+/// A manager to set and access the complete set of all active alarms across all properties.
+///
+/// DataElements ask the manager to set and clear the alarms they maintain, and this class has
+/// no inherant knowledge of alarms outside of these calls.
+class AlarmManager with ChangeNotifier {
+  /// This class's logger.
+  static final _log = Logger('AlarmManager');
+
+  /// The set of currently active alarms, order by decreasing age.
+  final LinkedHashSet<Alarm> _activeAlarms = LinkedHashSet<Alarm>();
+
+  /// Returns the set of all currently active alarms.
+  Set<Alarm> get activeAlarms => _activeAlarms;
+
+  /// Marks an alarm as active, returning true iff the alarm was not previously active.
+  bool setAlarm(Alarm alarm) {
+    if (_activeAlarms.contains(alarm)) {
+      return false;
+    }
+    _activeAlarms.add(alarm);
+    _log.info("Setting ${alarm.level.name} on ${alarm.property.shortName}");
+    notifyListeners();
+    return true;
+  }
+
+  /// Marks an alarm as inactive, returning true iff the alarm was not previously inactive.
+  bool clearAlarm(Alarm alarm) {
+    if (!_activeAlarms.contains(alarm)) {
+      return false;
+    }
+    _activeAlarms.remove(alarm);
+    _log.info("Clearing ${alarm.level.name} on ${alarm.property.shortName}");
+    notifyListeners();
+    return true;
+  }
+
+  /// Clears all active alarms, for example before recreating from settings.
+  void clearAllAlarms() {
+    if (_activeAlarms.isNotEmpty) {
+      _log.info("Clearing ${_activeAlarms.length} active alarms");
+      _activeAlarms.clear();
+    }
   }
 }

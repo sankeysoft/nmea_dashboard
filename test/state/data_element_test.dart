@@ -2,8 +2,10 @@
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
+import 'package:nmea_dashboard/state/alarms.dart';
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/data_element.dart';
+import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:nmea_dashboard/state/values.dart';
 import 'package:test/test.dart';
 
@@ -207,5 +209,132 @@ void main() {
         ValueAccumulator.forType(element.storedType);
       }
     }
+  });
+
+  group('WithAlarms', () {
+    late AlarmManager manager;
+    late SingleValueDoubleConsistentDataElement element;
+
+    setUp(() {
+      manager = AlarmManager();
+      element =
+          ConsistentDataElement.newForProperty(
+                Source.network,
+                Property.depthWithOffset,
+                Staleness(const Duration(seconds: 10)),
+              )
+              as SingleValueDoubleConsistentDataElement;
+      element.registerAlarmManager(manager);
+    });
+
+    Alarm depthAlarm({
+      double? min,
+      double? max,
+      AlarmLevel level = AlarmLevel.caution,
+      StatsInterval? averagingInterval,
+    }) {
+      return Alarm(
+        Source.network,
+        Property.depthWithOffset,
+        averagingInterval,
+        level,
+        numericFormattersFor(Dimension.depth)['feet']!,
+        min,
+        max,
+      );
+    }
+
+    BoundValue<SingleValue<double>> depthValueFt(double feet) {
+      return BoundValue(
+        Source.network,
+        Property.depthWithOffset,
+        SingleValue(feet / metersToFeet),
+      );
+    }
+
+    test('addAlarm throws ArgumentError on property mismatch', () {
+      final wrongProperty = Alarm(
+        Source.network,
+        Property.trueWindSpeed,
+        null,
+        AlarmLevel.caution,
+        numericFormattersFor(Dimension.speed)['knots']!,
+        10.0,
+        null,
+      );
+      expect(() => element.addAlarm(wrongProperty), throwsArgumentError);
+    });
+
+    test('addAlarm throws ArgumentError on formatter type mismatch', () {
+      // Property matches the element but the formatter's valueType
+      // (AugmentedBearing) does not match the element's stored type.
+      final wrongType = Alarm(
+        Source.network,
+        Property.depthWithOffset,
+        null,
+        AlarmLevel.caution,
+        numericFormattersFor(Dimension.bearing)['true']!,
+        10.0,
+        null,
+      );
+      expect(() => element.addAlarm(wrongType), throwsArgumentError);
+    });
+
+    test('current-value alarm sets and clears as value crosses bounds', () {
+      final alarm = depthAlarm(min: 10.0, max: 100.0);
+      element.addAlarm(alarm);
+      expect(manager.activeAlarms, isEmpty);
+      expect(element.alarmState.level, isNull);
+
+      element.updateValue(depthValueFt(5.0));
+      expect(manager.activeAlarms, contains(alarm));
+      expect(element.alarmState.level, AlarmLevel.caution);
+
+      element.updateValue(depthValueFt(50.0));
+      expect(manager.activeAlarms, isNot(contains(alarm)));
+      expect(element.alarmState.level, isNull);
+    });
+
+    test('clearAlarms removes all alarms from manager and resets alarmState', () {
+      final alarm = depthAlarm(min: 10.0, max: 100.0);
+      element.addAlarm(alarm);
+      element.updateValue(depthValueFt(5.0));
+      expect(manager.activeAlarms, isNotEmpty);
+      expect(element.alarmState.level, isNotNull);
+
+      element.clearAlarms();
+      expect(manager.activeAlarms, isEmpty);
+      expect(element.alarmState.level, isNull);
+    });
+
+    test('alarmState reflects highest level among multiple active alarms', () {
+      final caution = depthAlarm(min: 10.0, level: AlarmLevel.caution);
+      final warning = depthAlarm(min: 5.0, level: AlarmLevel.warning);
+      element.addAlarm(caution);
+      element.addAlarm(warning);
+
+      element.updateValue(depthValueFt(3.0));
+      expect(manager.activeAlarms, containsAll([caution, warning]));
+      expect(element.alarmState.level, AlarmLevel.warning);
+
+      element.updateValue(depthValueFt(7.0));
+      expect(manager.activeAlarms, contains(caution));
+      expect(manager.activeAlarms, isNot(contains(warning)));
+      expect(element.alarmState.level, AlarmLevel.caution);
+    });
+
+    test('regression: clearAlarms then re-add averaging alarm still receives stats updates', () {
+      // Regression for a bug where _statsCallbacks was not cleared in clearAlarms,
+      // causing addAlarm to skip re-registering the stats listener.
+      Alarm makeAlarm() => depthAlarm(max: 100.0, averagingInterval: StatsInterval.fifteenSec);
+
+      element.addAlarm(makeAlarm());
+      element.clearAlarms();
+      element.addAlarm(makeAlarm());
+
+      element.updateValue(depthValueFt(200.0));
+      expect(manager.activeAlarms, hasLength(1));
+      expect(element.alarmState.level, AlarmLevel.caution);
+    });
   });
 }

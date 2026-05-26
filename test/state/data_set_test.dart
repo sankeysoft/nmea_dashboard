@@ -33,6 +33,7 @@ DataSet _makeDataSet(
     derivedSettings ?? DerivedDataSettings(prefs),
     alarmSettings ?? AlarmSettings(prefs),
     HistoryManagerImpl(prefs),
+    AlarmManager(),
   );
 }
 
