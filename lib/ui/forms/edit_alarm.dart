@@ -257,16 +257,38 @@ class _EditAlarmFormState extends StatefulFormState<_EditAlarmForm> {
   }
 
   Widget _buildLevelField() {
-    // TODO(alarms): Build a switcher instead
-    return buildDropdownBox(
-      label: 'Alarm type',
-      items: AlarmLevel.values.map((t) => DropdownEntry(value: t, text: t.name)).toList(),
-      initialValue: _level,
-      onChanged: (AlarmLevel? value) {
-        setState(() {
-          if (value != null) _level = value;
-        });
-      },
+    final theme = Theme.of(context);
+    final textStyle = theme.textTheme.labelMedium!;
+    final headingColor = theme.colorScheme.primaryContainer;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          icon: Text('Alarm type:', style: textStyle.copyWith(color: headingColor)),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.all(4.0),
+        ),
+        child: SegmentedButton<AlarmLevel>(
+          showSelectedIcon: false,
+          segments: const [
+            ButtonSegment<AlarmLevel>(
+              value: AlarmLevel.caution,
+              label: Text('caution'),
+              icon: Icon(Icons.info_outlined),
+            ),
+            ButtonSegment<AlarmLevel>(
+              value: AlarmLevel.warning,
+              label: Text('warning'),
+              icon: Icon(Icons.warning),
+            ),
+          ],
+          selected: {_level},
+          onSelectionChanged: (Set<AlarmLevel> values) {
+            setState(() => _level = values.first);
+          },
+        ),
+      ),
     );
   }
 

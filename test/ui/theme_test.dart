@@ -16,10 +16,10 @@ Future<UiSettings> _settings({
   String? headingFont,
 }) async {
   SharedPreferences.setMockInitialValues({
-    if (nightMode != null) 'ui_night_mode': nightMode,
-    if (darkTheme != null) 'ui_dark_theme': darkTheme,
-    if (valueFont != null) 'ui_value_font': valueFont,
-    if (headingFont != null) 'ui_heading_font': headingFont,
+    'ui_night_mode': ?nightMode,
+    'ui_dark_theme': ?darkTheme,
+    'ui_value_font': ?valueFont,
+    'ui_heading_font': ?headingFont,
   });
   return UiSettings(await SharedPreferences.getInstance());
 }
@@ -57,20 +57,14 @@ void main() {
     });
 
     test('caution alarm: surface/onPrimary use caution and primary flips to background', () async {
-      final theme = createThemeData(
-        await _settings(darkTheme: true),
-        alarm: AlarmLevel.caution,
-      );
+      final theme = createThemeData(await _settings(darkTheme: true), alarm: AlarmLevel.caution);
       expect(theme.colorScheme.surface, Colors.yellow.shade600);
       expect(theme.colorScheme.onPrimary, Colors.yellow.shade600);
       expect(theme.colorScheme.primary, Colors.black);
     });
 
     test('warning alarm: surface/onPrimary use warning', () async {
-      final theme = createThemeData(
-        await _settings(darkTheme: true),
-        alarm: AlarmLevel.warning,
-      );
+      final theme = createThemeData(await _settings(darkTheme: true), alarm: AlarmLevel.warning);
       expect(theme.colorScheme.surface, Colors.redAccent.shade400);
       expect(theme.colorScheme.onPrimary, Colors.redAccent.shade400);
     });
@@ -78,9 +72,7 @@ void main() {
 
   group('font wiring', () {
     test('value and heading fonts propagate from settings to text theme', () async {
-      final theme = createThemeData(
-        await _settings(valueFont: 'AAA', headingFont: 'BBB'),
-      );
+      final theme = createThemeData(await _settings(valueFont: 'AAA', headingFont: 'BBB'));
       expect(theme.textTheme.headlineLarge!.fontFamily, 'AAA');
       expect(theme.textTheme.headlineMedium!.fontFamily, 'BBB');
       expect(theme.textTheme.labelSmall!.fontFamily, 'BBB');
