@@ -11,6 +11,7 @@ import 'package:nmea_dashboard/state/data_set.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:nmea_dashboard/state/settings/format.dart';
 import 'package:nmea_dashboard/state/settings/specs.dart';
+import 'package:nmea_dashboard/state/values.dart';
 import 'package:nmea_dashboard/ui/forms/abstract.dart';
 import 'package:provider/provider.dart';
 
@@ -188,11 +189,16 @@ class _EditAlarmFormState extends StatefulFormState<_EditAlarmForm> {
   }
 
   Widget _buildSourceField() {
+    final dataSet = Provider.of<DataSet>(context);
+
     Set<SourceAndGroup> sourceGroups = SourceAndGroup.set();
 
     return buildDropdownBox(
       label: 'Source',
-      items: sourceGroups.map((sg) => DropdownEntry(value: sg, text: sg.text)).toList(),
+      items: sourceGroups
+          .where((sg) => _suitableElements(dataSet, sg.source, sg.group).isNotEmpty)
+          .map((sg) => DropdownEntry(value: sg, text: sg.text))
+          .toList(),
       initialValue: SourceAndGroup.lookupInSet(sourceGroups, _source, _group),
       onChanged: (SourceAndGroup? value) {
         setState(() {
@@ -208,24 +214,7 @@ class _EditAlarmFormState extends StatefulFormState<_EditAlarmForm> {
     final dataSet = Provider.of<DataSet>(context);
 
     final Map<String, DataElement> elements = {};
-    final sourceElements = dataSet.sources[_source];
-
-    // Limit to elements in the selected group and with at least one numeric formatter.
-    if (sourceElements != null && _source!.usesGrouping()) {
-      elements.addEntries(
-        sourceElements.entries.where(
-          (e) =>
-              e.value.property.group == _group &&
-              numericFormattersFor(e.value.property.dimension).isNotEmpty,
-        ),
-      );
-    } else if (sourceElements != null) {
-      elements.addEntries(
-        sourceElements.entries.where(
-          (e) => numericFormattersFor(e.value.property.dimension).isNotEmpty,
-        ),
-      );
-    }
+    elements.addEntries(_suitableElements(dataSet, _source, _group));
 
     return buildDropdownBox(
       label: 'Element',
@@ -246,6 +235,25 @@ class _EditAlarmFormState extends StatefulFormState<_EditAlarmForm> {
         return null;
       },
     );
+  }
+
+  /// Returns entries for alarm suitable elements in the selected source and group, i.e those
+  /// that implement the WithAlarms mixin.
+  Iterable<MapEntry<String, DataElement<Value, Value>>> _suitableElements(
+    DataSet dataSet,
+    Source? source,
+    Group? group,
+  ) {
+    final sourceElements = dataSet.sources[source];
+    if (sourceElements == null) {
+      return {};
+    }
+    if (source!.usesGrouping()) {
+      return sourceElements.entries.where(
+        (e) => e.value.property.group == group && e.value is WithAlarms,
+      );
+    }
+    return sourceElements.entries.where((e) => e.value is WithAlarms);
   }
 
   Widget _buildLevelField() {

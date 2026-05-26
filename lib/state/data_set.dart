@@ -180,6 +180,7 @@ class DataSet with ChangeNotifier {
           spec.operand,
         );
         element.registerHistoryManager(_historyManager);
+        element.registerAlarmManager(_alarmManager);
         elementMap[spec.name] = element;
       }
     }
@@ -196,8 +197,10 @@ class DataSet with ChangeNotifier {
       if (element is WithHistory) {
         element.registerHistoryManager(_historyManager);
       }
+      if (element is WithAlarms) {
+        element.registerAlarmManager(_alarmManager);
+      }
     }
-    _createAndBindAlarms();
     return elementMap;
   }
 

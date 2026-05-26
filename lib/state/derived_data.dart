@@ -54,7 +54,7 @@ enum Operation {
 /// A DataElement whose value is derived from some other value via a user-specified operation
 /// and operand.
 class DerivedDataElement extends DataElement<SingleValue<double>, SingleValue<double>>
-    with WithHistory, WithStats {
+    with WithHistory, WithStats, WithAlarms {
   final String _name;
   final DataElement<SingleValue<double>, Value> _sourceElement;
   final NumericFormatter _formatter;
@@ -100,6 +100,7 @@ class DerivedDataElement extends DataElement<SingleValue<double>, SingleValue<do
     if (accepted && value != null) {
       addStatsValue(value!);
       addHistoryValue(value!);
+      onValueChange();
     }
     return accepted;
   }

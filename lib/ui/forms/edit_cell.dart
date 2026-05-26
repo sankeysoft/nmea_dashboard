@@ -322,7 +322,7 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
 
   Widget _buildOverrideNameField() {
     return buildSwitch(
-      label: 'Set manual name:',
+      label: 'Set manual name',
       initialValue: _isNameOverridden,
       onChanged: (value) {
         setState(() {
