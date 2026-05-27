@@ -234,13 +234,14 @@ void main() {
       StatsInterval? averagingInterval,
     }) {
       return Alarm(
-        Source.network,
-        Property.depthWithOffset,
-        averagingInterval,
-        level,
-        numericFormattersFor(Dimension.depth)['feet']!,
-        min,
-        max,
+        source: Source.network,
+        elementName: "test depth",
+        property: Property.depthWithOffset,
+        averagingInterval: averagingInterval,
+        level: level,
+        formatter: numericFormattersFor(Dimension.depth)['feet']!,
+        min: min,
+        max: max,
       );
     }
 
@@ -250,13 +251,12 @@ void main() {
 
     test('addAlarm throws ArgumentError on property mismatch', () {
       final wrongProperty = Alarm(
-        Source.network,
-        Property.trueWindSpeed,
-        null,
-        AlarmLevel.caution,
-        numericFormattersFor(Dimension.speed)['knots']!,
-        10.0,
-        null,
+        source: Source.network,
+        elementName: "test TWS",
+        property: Property.trueWindSpeed,
+        level: AlarmLevel.caution,
+        formatter: numericFormattersFor(Dimension.speed)['knots']!,
+        min: 10.0,
       );
       expect(() => element.addAlarm(wrongProperty), throwsArgumentError);
     });
@@ -265,13 +265,12 @@ void main() {
       // Property matches the element but the formatter's valueType
       // (AugmentedBearing) does not match the element's stored type.
       final wrongType = Alarm(
-        Source.network,
-        Property.depthWithOffset,
-        null,
-        AlarmLevel.caution,
-        numericFormattersFor(Dimension.bearing)['true']!,
-        10.0,
-        null,
+        source: Source.network,
+        elementName: "test depth",
+        property: Property.depthWithOffset,
+        level: AlarmLevel.caution,
+        formatter: numericFormattersFor(Dimension.bearing)['true']!,
+        min: 10.0,
       );
       expect(() => element.addAlarm(wrongType), throwsArgumentError);
     });

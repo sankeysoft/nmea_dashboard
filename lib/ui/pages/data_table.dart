@@ -3,6 +3,7 @@
 // of the MIT license. See the LICENCE.md file for details.
 
 import 'package:flutter/material.dart';
+import 'package:nmea_dashboard/state/alarms.dart';
 import 'package:nmea_dashboard/state/data_set.dart';
 import 'package:nmea_dashboard/state/settings/network.dart';
 import 'package:nmea_dashboard/state/settings/page.dart';
@@ -18,14 +19,60 @@ import 'package:nmea_dashboard/ui/forms/ui_settings.dart';
 import 'package:nmea_dashboard/ui/forms/network_settings.dart';
 import 'package:nmea_dashboard/ui/forms/view_help.dart';
 import 'package:nmea_dashboard/ui/forms/view_log.dart';
+import 'package:nmea_dashboard/ui/theme.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 /// A page that fills the available space with a table of
 /// displayable data created from the supplied specs.
-class DataTablePage extends StatelessWidget {
+class DataTablePage extends StatefulWidget {
   const DataTablePage({super.key});
+
+  @override
+  State<DataTablePage> createState() => _DataTablePageState();
+}
+
+class _DataTablePageState extends State<DataTablePage> {
+  AlarmManager? _alarmManager;
+  UiSettings? _uiSettings;
+  bool _isWarningDialogOpen = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _uiSettings ??= Provider.of<UiSettings>(context, listen: false);
+    if (_alarmManager == null) {
+      _alarmManager = Provider.of<AlarmManager>(context, listen: false);
+      _alarmManager!.unacknowledgedWarnings.addListener(_handleWarningsChanged);
+      // Surface any warnings that were already present before this page mounted.
+      WidgetsBinding.instance.addPostFrameCallback((_) => _handleWarningsChanged());
+    }
+  }
+
+  @override
+  void dispose() {
+    _alarmManager?.unacknowledgedWarnings.removeListener(_handleWarningsChanged);
+    super.dispose();
+  }
+
+  void _handleWarningsChanged() {
+    if (mounted && !_isWarningDialogOpen && _alarmManager!.unacknowledgedWarnings.isNotEmpty) {
+      _showWarningDialog();
+    }
+  }
+
+  void _showWarningDialog() {
+    if (_isWarningDialogOpen) {
+      return;
+    }
+    _isWarningDialogOpen = true;
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _WarningDialog(alarmManager: _alarmManager!, uiSettings: _uiSettings!),
+    ).whenComplete(() => _isWarningDialogOpen = false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,6 +101,86 @@ class DataTablePage extends StatelessWidget {
           },
         ),
       ),
+    );
+  }
+}
+
+/// A modal popup listing currently unacknowledged warnings.
+class _WarningDialog extends StatefulWidget {
+  final AlarmManager alarmManager;
+  final UiSettings uiSettings;
+
+  const _WarningDialog({required this.alarmManager, required this.uiSettings});
+
+  @override
+  State<_WarningDialog> createState() => _WarningDialogState();
+}
+
+class _WarningDialogState extends State<_WarningDialog> {
+  bool _popped = false;
+
+  void _popOnce() {
+    if (_popped || !mounted) {
+      return;
+    }
+    _popped = true;
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final basicTheme = Theme.of(context);
+    final warningTheme = createThemeData(widget.uiSettings, alarm: AlarmLevel.warning);
+
+    return ListenableBuilder(
+      listenable: widget.alarmManager.unacknowledgedWarnings,
+      builder: (context, _) {
+        final warningSet = widget.alarmManager.unacknowledgedWarnings;
+
+        // If the set is emptied and we've not already requested a pop, dismiss after this frame.
+        if (warningSet.isEmpty && !_popped) {
+          WidgetsBinding.instance.addPostFrameCallback((_) => _popOnce());
+        }
+        return AlertDialog(
+          backgroundColor: basicTheme.colorScheme.surfaceTint,
+          title: const Text('Warning', textAlign: TextAlign.center),
+          titleTextStyle: TextStyle(fontSize: 24, color: basicTheme.colorScheme.primary),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: warningSet.alarms
+                .map(
+                  (a) => Container(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: warningTheme.colorScheme.onPrimary,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(a.toString()),
+                  ),
+                )
+                .toList(),
+          ),
+          contentTextStyle: TextStyle(fontSize: 36, color: warningTheme.colorScheme.primary),
+          actionsPadding: const EdgeInsets.all(20),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: basicTheme.colorScheme.primary,
+                foregroundColor: basicTheme.colorScheme.onPrimary,
+                padding: const EdgeInsets.all(20),
+              ),
+              onPressed: () {
+                widget.alarmManager.acknowledgeWarnings();
+                _popOnce();
+              },
+              child: const Text('Silence'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

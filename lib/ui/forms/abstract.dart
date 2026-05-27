@@ -359,7 +359,7 @@ abstract class StatefulFormState<T extends StatefulWidget> extends State<T> {
         enabled: enabled,
         expands: expands,
         maxLines: expands ? null : 1,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
+        autovalidateMode: AutovalidateMode.always,
         textCapitalization: TextCapitalization.sentences,
         decoration: InputDecoration(
           icon: labelWidget,
@@ -418,7 +418,7 @@ abstract class StatefulFormState<T extends StatefulWidget> extends State<T> {
         ),
         iconEnabledColor: theme.colorScheme.tertiary,
         initialValue: initialValue,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
+        autovalidateMode: AutovalidateMode.always,
         onChanged: onChanged,
         validator: validator,
         isExpanded: true,

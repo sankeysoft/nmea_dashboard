@@ -4,15 +4,18 @@
 
 import 'package:nmea_dashboard/state/alarms.dart';
 import 'package:nmea_dashboard/state/common.dart';
+import 'package:nmea_dashboard/state/data_element.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:nmea_dashboard/state/values.dart';
 import 'package:test/test.dart';
 
-// Finder that just maps (source, element) directly to a Property by name. Used by Alarm.fromSpec.
-Property? _propertyByName(Source source, String? element) {
+// Finder that maps (source, element name) to a DataElement by looking up the property by name.
+DataElement? _elementByName(Source source, String? element) {
   if (element == null) return null;
-  return Property.values.asNameMap()[element];
+  final property = Property.values.asNameMap()[element];
+  if (property == null) return null;
+  return ConsistentDataElement<SingleValue<double>>(source, property, null);
 }
 
 NumericFormatter _formatter(Dimension dimension, String name) {
@@ -21,25 +24,25 @@ NumericFormatter _formatter(Dimension dimension, String name) {
 
 Alarm _testDepthAlarm({double? min, double? max, AlarmLevel level = AlarmLevel.caution}) {
   return Alarm(
-    Source.network,
-    Property.depthWithOffset,
-    null,
-    level,
-    _formatter(Dimension.depth, 'feet'),
-    min,
-    max,
+    source: Source.network,
+    elementName: Property.depthWithOffset.shortName,
+    property: Property.depthWithOffset,
+    level: level,
+    formatter: _formatter(Dimension.depth, 'feet'),
+    min: min,
+    max: max,
   );
 }
 
 Alarm _testBearingAlarm({required double min, required double max}) {
   return Alarm(
-    Source.network,
-    Property.heading,
-    null,
-    AlarmLevel.caution,
-    _formatter(Dimension.bearing, 'true'),
-    min,
-    max,
+    source: Source.network,
+    elementName: Property.heading.shortName,
+    property: Property.heading,
+    level: AlarmLevel.caution,
+    formatter: _formatter(Dimension.bearing, 'true'),
+    min: min,
+    max: max,
   );
 }
 
@@ -100,7 +103,7 @@ void main() {
   group('Alarm.fromSpec valid', () {
     test('min-only spec creates alarm with null max', () {
       final spec = AlarmSpec('network', 'depthWithOffset', 'caution', 'feet', min: 10.0);
-      final alarm = Alarm.fromSpec(spec, _propertyByName);
+      final alarm = Alarm.fromSpec(spec, _elementByName);
       expect(alarm.source, Source.network);
       expect(alarm.property, Property.depthWithOffset);
       expect(alarm.level, AlarmLevel.caution);
@@ -111,7 +114,7 @@ void main() {
 
     test('max-only spec creates alarm with null min', () {
       final spec = AlarmSpec('network', 'depthWithOffset', 'warning', 'feet', max: 100.0);
-      final alarm = Alarm.fromSpec(spec, _propertyByName);
+      final alarm = Alarm.fromSpec(spec, _elementByName);
       expect(alarm.level, AlarmLevel.warning);
       expect(alarm.min, isNull);
       expect(alarm.max, 100.0);
@@ -119,7 +122,7 @@ void main() {
 
     test('spec with both min and max creates alarm with both', () {
       final spec = AlarmSpec('network', 'trueWindSpeed', 'caution', 'knots', min: 5.0, max: 30.0);
-      final alarm = Alarm.fromSpec(spec, _propertyByName);
+      final alarm = Alarm.fromSpec(spec, _elementByName);
       expect(alarm.min, 5.0);
       expect(alarm.max, 30.0);
     });
@@ -133,13 +136,13 @@ void main() {
         averagingInterval: 'fiveMin',
         min: 10.0,
       );
-      final alarm = Alarm.fromSpec(spec, _propertyByName);
+      final alarm = Alarm.fromSpec(spec, _elementByName);
       expect(alarm.averagingInterval, StatsInterval.fiveMin);
     });
 
     test('bearing property with both bounds is accepted', () {
       final spec = AlarmSpec('network', 'heading', 'caution', 'true', min: 340.0, max: 20.0);
-      final alarm = Alarm.fromSpec(spec, _propertyByName);
+      final alarm = Alarm.fromSpec(spec, _elementByName);
       expect(alarm.property, Property.heading);
       expect(alarm.min, 340.0);
       expect(alarm.max, 020.0);
@@ -149,22 +152,22 @@ void main() {
   group('Alarm.fromSpec invalid', () {
     test('throws on invalid source string', () {
       final spec = AlarmSpec('notASource', 'depthWithOffset', 'caution', 'feet', min: 10.0);
-      expect(() => Alarm.fromSpec(spec, _propertyByName), throwsFormatException);
+      expect(() => Alarm.fromSpec(spec, _elementByName), throwsFormatException);
     });
 
     test('throws when finder returns null', () {
       final spec = AlarmSpec('network', 'noSuchElement', 'caution', 'feet', min: 10.0);
-      expect(() => Alarm.fromSpec(spec, _propertyByName), throwsFormatException);
+      expect(() => Alarm.fromSpec(spec, _elementByName), throwsFormatException);
     });
 
     test('throws on format that is not valid for the dimension', () {
       final spec = AlarmSpec('network', 'depthWithOffset', 'caution', 'knots', min: 10.0);
-      expect(() => Alarm.fromSpec(spec, _propertyByName), throwsFormatException);
+      expect(() => Alarm.fromSpec(spec, _elementByName), throwsFormatException);
     });
 
     test('throws on invalid type string', () {
       final spec = AlarmSpec('network', 'depthWithOffset', 'urgent', 'feet', min: 10.0);
-      expect(() => Alarm.fromSpec(spec, _propertyByName), throwsFormatException);
+      expect(() => Alarm.fromSpec(spec, _elementByName), throwsFormatException);
     });
 
     test('throws on invalid averagingInterval string', () {
@@ -176,22 +179,22 @@ void main() {
         averagingInterval: 'nope',
         min: 10.0,
       );
-      expect(() => Alarm.fromSpec(spec, _propertyByName), throwsFormatException);
+      expect(() => Alarm.fromSpec(spec, _elementByName), throwsFormatException);
     });
 
     test('throws when neither min nor max is provided', () {
       final spec = AlarmSpec('network', 'depthWithOffset', 'caution', 'feet');
-      expect(() => Alarm.fromSpec(spec, _propertyByName), throwsFormatException);
+      expect(() => Alarm.fromSpec(spec, _elementByName), throwsFormatException);
     });
 
     test('throws on bearing dimension with only min', () {
       final spec = AlarmSpec('network', 'heading', 'caution', 'true', min: 10.0);
-      expect(() => Alarm.fromSpec(spec, _propertyByName), throwsFormatException);
+      expect(() => Alarm.fromSpec(spec, _elementByName), throwsFormatException);
     });
 
     test('throws on bearing dimension with only max', () {
       final spec = AlarmSpec('network', 'heading', 'caution', 'true', max: 350.0);
-      expect(() => Alarm.fromSpec(spec, _propertyByName), throwsFormatException);
+      expect(() => Alarm.fromSpec(spec, _elementByName), throwsFormatException);
     });
   });
 
@@ -260,13 +263,13 @@ void main() {
       // The 'mag' formatter returns null when variation is null, so the alarm
       // should claim is it either set or clear.
       final alarm = Alarm(
-        Source.network,
-        Property.heading,
-        null,
-        AlarmLevel.caution,
-        _formatter(Dimension.bearing, 'mag'),
-        10.0,
-        350.0,
+        source: Source.network,
+        elementName: Property.heading.shortName,
+        property: Property.heading,
+        level: AlarmLevel.caution,
+        formatter: _formatter(Dimension.bearing, 'mag'),
+        min: 10.0,
+        max: 350.0,
       );
       expect(alarm.isTriggered(const AugmentedBearing(180.0, null)), isNull);
     });
@@ -288,17 +291,17 @@ void main() {
       expect(alarm.toString(), 'Depth not 10.0-100.0 ft');
     });
 
-    test('averagingInterval is prefixed with its short name', () {
+    test('averagingInterval is shown in parentheses after the element name', () {
       final alarm = Alarm(
-        Source.network,
-        Property.depthWithOffset,
-        StatsInterval.fiveMin,
-        AlarmLevel.caution,
-        _formatter(Dimension.depth, 'feet'),
-        10.0,
-        null,
+        source: Source.network,
+        elementName: Property.depthWithOffset.shortName,
+        property: Property.depthWithOffset,
+        averagingInterval: StatsInterval.fiveMin,
+        level: AlarmLevel.caution,
+        formatter: _formatter(Dimension.depth, 'feet'),
+        min: 10.0,
       );
-      expect(alarm.toString(), '5min Depth <10.0 ft');
+      expect(alarm.toString(), 'Depth (5m) <10.0 ft');
     });
 
     test('bearing dimension omits trailing units', () {
@@ -321,13 +324,13 @@ void main() {
 
     test('alarm with averagingInterval ranks above alarm without', () {
       final withAvg = Alarm(
-        Source.network,
-        Property.depthWithOffset,
-        StatsInterval.oneMin,
-        AlarmLevel.caution,
-        _formatter(Dimension.depth, 'feet'),
-        10.0,
-        null,
+        source: Source.network,
+        elementName: Property.depthWithOffset.shortName,
+        property: Property.depthWithOffset,
+        averagingInterval: StatsInterval.oneMin,
+        level: AlarmLevel.caution,
+        formatter: _formatter(Dimension.depth, 'feet'),
+        min: 10.0,
       );
       final without = _testDepthAlarm(min: 10.0);
       expect(withAvg.compareTo(without) > 0, isTrue);
@@ -336,13 +339,13 @@ void main() {
 
     test('longer averaging duration ranks above shorter', () {
       Alarm make(StatsInterval interval) => Alarm(
-        Source.network,
-        Property.depthWithOffset,
-        interval,
-        AlarmLevel.caution,
-        _formatter(Dimension.depth, 'feet'),
-        10.0,
-        null,
+        source: Source.network,
+        elementName: Property.depthWithOffset.shortName,
+        property: Property.depthWithOffset,
+        averagingInterval: interval,
+        level: AlarmLevel.caution,
+        formatter: _formatter(Dimension.depth, 'feet'),
+        min: 10.0,
       );
       final shortAvg = make(StatsInterval.oneMin);
       final longAvg = make(StatsInterval.fiveMin);
@@ -354,13 +357,12 @@ void main() {
       // 'Depth' < 'True wind speed' alphabetically.
       final depth = _testDepthAlarm(min: 10.0);
       final tws = Alarm(
-        Source.network,
-        Property.trueWindSpeed,
-        null,
-        AlarmLevel.caution,
-        _formatter(Dimension.speed, 'knots'),
-        10.0,
-        null,
+        source: Source.network,
+        elementName: Property.trueWindSpeed.shortName,
+        property: Property.trueWindSpeed,
+        level: AlarmLevel.caution,
+        formatter: _formatter(Dimension.speed, 'knots'),
+        min: 10.0,
       );
       expect(depth.compareTo(tws) < 0, isTrue);
       expect(tws.compareTo(depth) > 0, isTrue);
@@ -372,22 +374,20 @@ void main() {
       // But utcTime is in Dimension.time which has no numeric formatters; instead
       // use a percentage property and construct alarms directly.
       final networkAlarm = Alarm(
-        Source.network,
-        Property.fuelLevel,
-        null,
-        AlarmLevel.caution,
-        _formatter(Dimension.percentage, 'percent'),
-        10.0,
-        null,
+        source: Source.network,
+        elementName: Property.fuelLevel.shortName,
+        property: Property.fuelLevel,
+        level: AlarmLevel.caution,
+        formatter: _formatter(Dimension.percentage, 'percent'),
+        min: 10.0,
       );
       final localAlarm = Alarm(
-        Source.local,
-        Property.fuelLevel,
-        null,
-        AlarmLevel.caution,
-        _formatter(Dimension.percentage, 'percent'),
-        10.0,
-        null,
+        source: Source.local,
+        elementName: Property.fuelLevel.shortName,
+        property: Property.fuelLevel,
+        level: AlarmLevel.caution,
+        formatter: _formatter(Dimension.percentage, 'percent'),
+        min: 10.0,
       );
       // 'Local device' < 'Network' alphabetically.
       expect(localAlarm.compareTo(networkAlarm) < 0, isTrue);
@@ -398,13 +398,12 @@ void main() {
       // depth has formatters 'meters', 'feet', 'fathoms' with longNames matching the keys.
       // Alphabetical: 'fathoms' < 'feet' < 'meters'.
       Alarm make(String fmt) => Alarm(
-        Source.network,
-        Property.depthWithOffset,
-        null,
-        AlarmLevel.caution,
-        _formatter(Dimension.depth, fmt),
-        10.0,
-        null,
+        source: Source.network,
+        elementName: Property.depthWithOffset.shortName,
+        property: Property.depthWithOffset,
+        level: AlarmLevel.caution,
+        formatter: _formatter(Dimension.depth, fmt),
+        min: 10.0,
       );
       final fathoms = make('fathoms');
       final feet = make('feet');
@@ -526,17 +525,17 @@ void main() {
 
     test('starts with empty active alarms and unacknowledged warnings', () {
       expect(manager.activeAlarms.isEmpty, isTrue);
-      expect(manager.unacknowledgeWarnings.isEmpty, isTrue);
+      expect(manager.unacknowledgedWarnings.isEmpty, isTrue);
     });
 
     test('setAlarm adds caution to active alarms only and notifies', () {
       int activeCount = 0;
       int warnCount = 0;
       manager.activeAlarms.addListener(() => activeCount++);
-      manager.unacknowledgeWarnings.addListener(() => warnCount++);
+      manager.unacknowledgedWarnings.addListener(() => warnCount++);
       expect(manager.setAlarm(caution), isTrue);
       expect(manager.activeAlarms.contains(caution), isTrue);
-      expect(manager.unacknowledgeWarnings.isEmpty, isTrue);
+      expect(manager.unacknowledgedWarnings.isEmpty, isTrue);
       expect(activeCount, 1);
       expect(warnCount, 0);
     });
@@ -545,10 +544,10 @@ void main() {
       int activeCount = 0;
       int warnCount = 0;
       manager.activeAlarms.addListener(() => activeCount++);
-      manager.unacknowledgeWarnings.addListener(() => warnCount++);
+      manager.unacknowledgedWarnings.addListener(() => warnCount++);
       expect(manager.setAlarm(warning), isTrue);
       expect(manager.activeAlarms.contains(warning), isTrue);
-      expect(manager.unacknowledgeWarnings.contains(warning), isTrue);
+      expect(manager.unacknowledgedWarnings.contains(warning), isTrue);
       expect(activeCount, 1);
       expect(warnCount, 1);
     });
@@ -558,7 +557,7 @@ void main() {
       int activeCount = 0;
       int warnCount = 0;
       manager.activeAlarms.addListener(() => activeCount++);
-      manager.unacknowledgeWarnings.addListener(() => warnCount++);
+      manager.unacknowledgedWarnings.addListener(() => warnCount++);
       expect(manager.setAlarm(warning), isFalse);
       expect(activeCount, 0);
       expect(warnCount, 0);
@@ -569,10 +568,10 @@ void main() {
       int activeCount = 0;
       int warnCount = 0;
       manager.activeAlarms.addListener(() => activeCount++);
-      manager.unacknowledgeWarnings.addListener(() => warnCount++);
+      manager.unacknowledgedWarnings.addListener(() => warnCount++);
       expect(manager.clearAlarm(warning), isTrue);
       expect(manager.activeAlarms.contains(warning), isFalse);
-      expect(manager.unacknowledgeWarnings.contains(warning), isFalse);
+      expect(manager.unacknowledgedWarnings.contains(warning), isFalse);
       expect(activeCount, 1);
       expect(warnCount, 1);
     });
@@ -580,7 +579,7 @@ void main() {
     test('clearAlarm on previously-acknowledged warning still clears active', () {
       manager.setAlarm(warning);
       manager.acknowledgeWarnings();
-      expect(manager.unacknowledgeWarnings.isEmpty, isTrue);
+      expect(manager.unacknowledgedWarnings.isEmpty, isTrue);
       expect(manager.clearAlarm(warning), isTrue);
       expect(manager.activeAlarms.contains(warning), isFalse);
     });
@@ -596,23 +595,23 @@ void main() {
       manager.setAlarm(caution);
       manager.setAlarm(warning);
       expect(manager.activeAlarms.length, 2);
-      expect(manager.unacknowledgeWarnings.length, 1);
+      expect(manager.unacknowledgedWarnings.length, 1);
       manager.clearAllAlarms();
       expect(manager.activeAlarms.isEmpty, isTrue);
-      expect(manager.unacknowledgeWarnings.isEmpty, isTrue);
+      expect(manager.unacknowledgedWarnings.isEmpty, isTrue);
     });
 
     test('clearAllAlarms is a no-op when empty', () {
       expect(() => manager.clearAllAlarms(), returnsNormally);
       expect(manager.activeAlarms.isEmpty, isTrue);
-      expect(manager.unacknowledgeWarnings.isEmpty, isTrue);
+      expect(manager.unacknowledgedWarnings.isEmpty, isTrue);
     });
 
     test('acknowledgeWarnings clears unacknowledged but not active', () {
       manager.setAlarm(caution);
       manager.setAlarm(warning);
       manager.acknowledgeWarnings();
-      expect(manager.unacknowledgeWarnings.isEmpty, isTrue);
+      expect(manager.unacknowledgedWarnings.isEmpty, isTrue);
       expect(manager.activeAlarms.contains(caution), isTrue);
       expect(manager.activeAlarms.contains(warning), isTrue);
     });

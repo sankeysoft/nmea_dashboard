@@ -127,7 +127,7 @@ class _EditAlarmsContent extends StatelessWidget {
     final dataSet = Provider.of<DataSet>(context);
     Alarm? alarm;
     try {
-      alarm = Alarm.fromSpec(spec, (s, e) => dataSet.find(s, e)?.property);
+      alarm = Alarm.fromSpec(spec, (s, e) => dataSet.find(s, e));
     } catch (e) {
       alarm = null;
     }

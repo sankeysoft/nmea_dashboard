@@ -7,6 +7,7 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/state/common.dart';
+import 'package:nmea_dashboard/state/data_element.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:nmea_dashboard/state/values.dart';
@@ -44,14 +45,15 @@ class AlarmState with ChangeNotifier {
   AlarmLevel? get level => _level;
 }
 
-/// A function used to lookup property by source and element name.
-typedef PropertyFinderFunction = Property? Function(Source source, String? element);
+/// A function used to lookup data element by source and element name.
+typedef ElementFinderFunction = DataElement? Function(Source source, String? element);
 
 /// A representation of an alarm on a particular property, capable of testing whether values
 /// should trigger the alarm.
 class Alarm implements Comparable<Alarm> {
   final Source source;
   final Property property;
+  final String elementName;
   final StatsInterval? averagingInterval;
   final AlarmLevel level;
   final NumericFormatter formatter;
@@ -59,28 +61,29 @@ class Alarm implements Comparable<Alarm> {
   final double? max;
   // TODO(alarms): Add sound asset
 
-  Alarm(
-    this.source,
-    this.property,
+  Alarm({
+    required this.source,
+    required this.elementName,
+    required this.property,
+    required this.level,
+    required this.formatter,
     this.averagingInterval,
-    this.level,
-    this.formatter,
     this.min,
     this.max,
-  );
+  });
 
   /// Creates a new alarm from the supplied spec, using the supplied function to find the property.
   /// Throws a format exception if the spec is not valid.
-  static Alarm fromSpec(AlarmSpec spec, PropertyFinderFunction finder) {
+  static Alarm fromSpec(AlarmSpec spec, ElementFinderFunction finder) {
     final source = Source.fromString(spec.source);
     if (source == null) {
       throw FormatException("Invalid alarm source: ${spec.source}");
     }
-    final property = finder(source, spec.element);
-    if (property == null) {
+    final element = finder(source, spec.element);
+    if (element == null) {
       throw FormatException("Invalid alarm element: ${spec.element}");
     }
-    final formatter = numericFormattersFor(property.dimension)[spec.format];
+    final formatter = numericFormattersFor(element.property.dimension)[spec.format];
     if (formatter == null) {
       throw FormatException("Invalid alarm format: ${spec.format}");
     }
@@ -93,12 +96,21 @@ class Alarm implements Comparable<Alarm> {
       throw FormatException("Invalid averaging interval: ${spec.averagingInterval}");
     }
     if (spec.min == null && spec.max == null) {
-      throw FormatException("Alarm does not include bound: $property");
+      throw FormatException("Alarm does not include bound: ${spec.element}");
     }
-    if (property.dimension == Dimension.bearing && (spec.min == null || spec.max == null)) {
-      throw FormatException("Bearing alarm does not include both bounds: $property");
+    if (element.property.dimension == Dimension.bearing && (spec.min == null || spec.max == null)) {
+      throw FormatException("Bearing alarm does not include both bounds: ${spec.element}");
     }
-    return Alarm(source, property, averagingInterval, level, formatter, spec.min, spec.max);
+    return Alarm(
+      source: source,
+      elementName: element.shortName,
+      property: element.property,
+      averagingInterval: averagingInterval,
+      level: level,
+      formatter: formatter,
+      min: spec.min,
+      max: spec.max,
+    );
   }
 
   /// Returns true if the supplied value is outside this alarm's configured bounds. Returns null
@@ -131,14 +143,15 @@ class Alarm implements Comparable<Alarm> {
   @override
   String toString() {
     final buffer = StringBuffer();
+    buffer
+      ..write(elementName)
+      ..write(" ");
     if (averagingInterval != null) {
       buffer
+        ..write("(")
         ..write(averagingInterval!.short)
-        ..write(" ");
+        ..write(") ");
     }
-    buffer
-      ..write(property.shortName)
-      ..write(" ");
     if (min != null && max != null) {
       buffer
         ..write("not ")
@@ -265,7 +278,7 @@ class AlarmManager {
   final AlarmSet activeAlarms = AlarmSet();
 
   /// The set of not-yet acknowledged warnings, ordered by decreasing age.
-  final AlarmSet unacknowledgeWarnings = AlarmSet();
+  final AlarmSet unacknowledgedWarnings = AlarmSet();
 
   /// Marks an alarm as active, returning true iff the alarm was not previously active.
   bool setAlarm(Alarm alarm) {
@@ -274,7 +287,7 @@ class AlarmManager {
       // TODO(alarms): name not property
       _log.info("Setting ${alarm.level.name} on ${alarm.property.shortName}");
       if (alarm.level == AlarmLevel.warning) {
-        unacknowledgeWarnings.add(alarm);
+        unacknowledgedWarnings.add(alarm);
       }
     }
     return changed;
@@ -286,7 +299,7 @@ class AlarmManager {
     if (changed) {
       // TODO(alarms): name not property
       _log.info("Clearing ${alarm.level.name} on ${alarm.property.shortName}");
-      unacknowledgeWarnings.remove(alarm);
+      unacknowledgedWarnings.remove(alarm);
     }
     return changed;
   }
@@ -297,14 +310,14 @@ class AlarmManager {
       _log.info("Clearing ${activeAlarms.length} active alarms");
     }
     activeAlarms.clear();
-    unacknowledgeWarnings.clear();
+    unacknowledgedWarnings.clear();
   }
 
   /// Acknowledges all previously unacknowledged warnings.
   void acknowledgeWarnings() {
-    if (unacknowledgeWarnings.isNotEmpty) {
-      _log.info("Acknowledging ${unacknowledgeWarnings.length} warnings");
-      unacknowledgeWarnings.clear();
+    if (unacknowledgedWarnings.isNotEmpty) {
+      _log.info("Acknowledging ${unacknowledgedWarnings.length} warnings");
+      unacknowledgedWarnings.clear();
     }
   }
 }

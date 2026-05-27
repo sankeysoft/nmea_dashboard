@@ -217,7 +217,7 @@ class DataSet with ChangeNotifier {
     for (final spec in _alarmSettings.alarmSpecs) {
       Alarm alarm;
       try {
-        alarm = Alarm.fromSpec(spec, (s, e) => sources[s]?[e]?.property);
+        alarm = Alarm.fromSpec(spec, (s, e) => sources[s]?[e]);
       } on FormatException {
         _log.warning("Ignoring invalid alarm for ${spec.element}");
         continue;

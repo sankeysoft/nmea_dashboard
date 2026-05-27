@@ -356,9 +356,9 @@ enum HistoryInterval {
 
 /// A time interval over which statistics data may be calculated.
 enum StatsInterval {
-  fifteenSec('15 seconds', '15sec', Duration(seconds: 15)),
-  oneMin('1 minute', '1min', Duration(minutes: 1)),
-  fiveMin('5 minutes', '5min', Duration(minutes: 5));
+  fifteenSec('15 seconds', '15s', Duration(seconds: 15)),
+  oneMin('1 minute', '1m', Duration(minutes: 1)),
+  fiveMin('5 minutes', '5m', Duration(minutes: 5));
 
   /// The string to display.
   final String display;
