@@ -49,7 +49,11 @@ ThemeData createThemeData(UiSettings settings, {AlarmLevel? alarm}) {
       onSurface: palette.primary,
       // Surface tint is used for tiles, the drawer header, and missing data
       // in graphs.
-      surfaceTint: selectByAlarmActive(palette.weakestBackground, palette.weakestPrimary),
+      surfaceTint: selectByAlarmLevel(
+        palette.weakestBackground,
+        palette.midWarning,
+        palette.midCaution,
+      ),
     ),
     scaffoldBackgroundColor: palette.background,
     canvasColor: palette.midBackground,
@@ -92,7 +96,9 @@ class _Palette {
   late final Color secondary;
   late final Color tertiary;
   late final Color warning;
+  late final Color midWarning;
   late final Color caution;
+  late final Color midCaution;
 
   _Palette(bool darkTheme, bool nightMode) {
     if (nightMode) {
@@ -105,7 +111,9 @@ class _Palette {
       midBackground = const Color(0xff111111);
       weakestBackground = const Color(0xff222222);
       warning = const Color(0xffff0000);
+      midWarning = const Color(0xffbb0000);
       caution = const Color(0xffbb0000);
+      midCaution = const Color(0xff880000);
       return;
     } else if (darkTheme) {
       primary = Colors.white;
@@ -117,7 +125,9 @@ class _Palette {
       midBackground = Colors.grey.shade900;
       weakestBackground = Colors.grey.shade800;
       warning = Colors.redAccent.shade400;
+      midWarning = const Color(0xffb02220);
       caution = Colors.yellow.shade600;
+      midCaution = const Color(0xffb8a502);
       return;
     } else {
       primary = Colors.black;
@@ -129,7 +139,9 @@ class _Palette {
       midBackground = Colors.grey.shade100;
       weakestBackground = Colors.grey.shade300;
       warning = Colors.red.shade600;
+      midWarning = Colors.red.shade900;
       caution = const Color(0xffb8a502);
+      midCaution = const Color(0xff8b8124);
       return;
     }
   }
