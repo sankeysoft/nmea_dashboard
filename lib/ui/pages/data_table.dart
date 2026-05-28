@@ -2,6 +2,7 @@
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:nmea_dashboard/state/alarms.dart';
 import 'package:nmea_dashboard/state/data_set.dart';
@@ -118,6 +119,22 @@ class _WarningDialog extends StatefulWidget {
 
 class _WarningDialogState extends State<_WarningDialog> {
   bool _popped = false;
+  AlarmSound? _activeSound;
+  late final AudioPlayer _audioPlayer;
+
+  @override
+  void initState() {
+    super.initState();
+    _audioPlayer = AudioPlayer();
+    _audioPlayer.setReleaseMode(ReleaseMode.loop);
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer.stop();
+    _audioPlayer.dispose();
+    super.dispose();
+  }
 
   void _popOnce() {
     if (_popped || !mounted) {
@@ -137,9 +154,25 @@ class _WarningDialogState extends State<_WarningDialog> {
       builder: (context, _) {
         final warningSet = widget.alarmManager.unacknowledgedWarnings;
 
-        // If the set is emptied and we've not already requested a pop, dismiss after this frame.
+        // If no unacknowledged warnings are present and we've not already requested a pop, dismiss
+        // after this frame.
         if (warningSet.isEmpty && !_popped) {
           WidgetsBinding.instance.addPostFrameCallback((_) => _popOnce());
+        }
+        // If the first warning with a sound no longer matches the active sound play the new sound.
+        AlarmSound? firstSound;
+        for (final a in warningSet.alarms) {
+          if (a.sound != null) {
+            firstSound = a.sound;
+            break;
+          }
+        }
+        if (firstSound != _activeSound) {
+          _audioPlayer.stop();
+          if (firstSound != null) {
+            _audioPlayer.play(firstSound.asset);
+          }
+          _activeSound = firstSound;
         }
         return AlertDialog(
           backgroundColor: basicTheme.colorScheme.surfaceTint,

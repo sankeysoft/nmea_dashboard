@@ -2,6 +2,7 @@
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
+import 'package:audioplayers/audioplayers.dart' hide Source;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:nmea_dashboard/state/alarms.dart';
@@ -16,6 +17,7 @@ import 'package:nmea_dashboard/ui/forms/abstract.dart';
 import 'package:provider/provider.dart';
 
 const _defaultLevel = AlarmLevel.warning;
+const _defaultSound = AlarmSound.gnat;
 final _numberFormat = NumberFormat("0.##");
 
 AlarmSpec _createDefaultSpec() {
@@ -56,9 +58,10 @@ class _EditAlarmFormState extends StatefulFormState<_EditAlarmForm> {
   StatsInterval? _averagingInterval;
   String? _format;
   NumericFormatter? _formatter;
-  String? _sound;
+  AlarmSound? _sound;
   final _minController = TextEditingController();
   final _maxController = TextEditingController();
+  late final AudioPlayer _audioPlayer;
 
   @override
   void initState() {
@@ -74,12 +77,13 @@ class _EditAlarmFormState extends StatefulFormState<_EditAlarmForm> {
     // derived data elements.
     _format = spec.format;
     _formatter = null;
+    _sound = AlarmSound.values.asNameMap()[spec.sound] ?? _defaultSound;
     // The spec was stored in the same units as formatter so set the text boxes now even though
     // we haven't validated the format.
     _minController.text = spec.min == null ? '' : _numberFormat.format(spec.min);
     _maxController.text = spec.max == null ? '' : _numberFormat.format(spec.max);
-    // TODO(alarms): Validate the sound string.
-    _sound = widget._spec.sound;
+    _audioPlayer = AudioPlayer();
+    _audioPlayer.setReleaseMode(ReleaseMode.release);
     super.initState();
   }
 
@@ -87,6 +91,7 @@ class _EditAlarmFormState extends StatefulFormState<_EditAlarmForm> {
   void dispose() {
     _minController.dispose();
     _maxController.dispose();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -175,12 +180,12 @@ class _EditAlarmFormState extends StatefulFormState<_EditAlarmForm> {
                 averagingInterval: _averagingInterval?.name,
                 min: minText.isNotEmpty ? double.tryParse(minText) : null,
                 max: maxText.isNotEmpty ? double.tryParse(maxText) : null,
-                sound: (_level == AlarmLevel.warning) ? _sound : null,
+                sound: (_level == AlarmLevel.warning) ? _sound?.name : null,
                 key: widget._spec.key,
               );
 
-              widget._onCreate(spec);
               Navigator.pop(context);
+              widget._onCreate(spec);
             },
           ),
         ],
@@ -410,15 +415,41 @@ class _EditAlarmFormState extends StatefulFormState<_EditAlarmForm> {
     return null;
   }
 
+  Future<void> _previewSound() async {
+    await _audioPlayer.play(_sound!.asset);
+  }
+
   Widget _buildSoundField() {
-    return buildTextField(
-      label: 'Sound',
-      initialValue: _sound ?? '',
-      alphabet: Alphabet.any,
-      maxLength: 40,
-      onSaved: (value) {
-        _sound = (value != null && value.isNotEmpty) ? value : null;
-      },
+    // Include all valid sounds and a "None" that maps to null.
+    final entries = AlarmSound.values
+        .map((s) => DropdownEntry<AlarmSound?>(value: s, text: s.longName))
+        .toList();
+    entries.insert(0, DropdownEntry(value: null, text: "None"));
+
+    final enabled = _level == AlarmLevel.warning;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: buildDropdownBox<AlarmSound?>(
+            label: 'Sound',
+            items: entries,
+            enabled: enabled,
+            initialValue: enabled ? _sound : null,
+            onChanged: (AlarmSound? value) {
+              setState(() {
+                _sound = value;
+                _wipeInvalidFields();
+              });
+            },
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.volume_up),
+          onPressed: (enabled && _sound != null) ? _previewSound : null,
+        ),
+      ],
     );
   }
 }

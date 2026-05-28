@@ -211,7 +211,7 @@ void main() {
         'caution',
         'knots',
         max: 30.0,
-        sound: 'alarm.mp3',
+        sound: 'twoTone',
       );
       AlarmSpec? createdSpec;
       await pumpForm(tester, spec, onCreate: (s) => createdSpec = s);
@@ -228,14 +228,14 @@ void main() {
         'warning',
         'knots',
         max: 30.0,
-        sound: 'alarm.mp3',
+        sound: 'twoTone',
       );
       AlarmSpec? createdSpec;
       await pumpForm(tester, spec, onCreate: (s) => createdSpec = s);
 
       await tester.tap(find.text('SAVE'));
       await tester.pump();
-      expect(createdSpec?.sound, 'alarm.mp3');
+      expect(createdSpec?.sound, 'twoTone');
     });
   });
 }

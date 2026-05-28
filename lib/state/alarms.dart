@@ -4,6 +4,7 @@
 
 import 'dart:collection';
 
+import 'package:audioplayers/audioplayers.dart' hide Source;
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/state/common.dart';
@@ -48,6 +49,22 @@ class AlarmState with ChangeNotifier {
 /// A function used to lookup data element by source and element name.
 typedef ElementFinderFunction = DataElement? Function(Source source, String? element);
 
+/// The differen audio tones that may be associated with an alarm.
+enum AlarmSound {
+  din("DIN", "alarms/din.wav"),
+  gnat("Gnat", "alarms/gnat.wav"),
+  twoTone("2 Tone", "alarms/twoTone.wav"),
+  smoke("Smoke", "alarms/smoke.wav"),
+  low("Low Horn", "alarms/low.wav");
+
+  final String longName;
+  final String _assetFile;
+
+  const AlarmSound(this.longName, String assetFile) : _assetFile = assetFile;
+
+  AssetSource get asset => AssetSource(_assetFile);
+}
+
 /// A representation of an alarm on a particular property, capable of testing whether values
 /// should trigger the alarm.
 class Alarm implements Comparable<Alarm> {
@@ -59,7 +76,7 @@ class Alarm implements Comparable<Alarm> {
   final NumericFormatter formatter;
   final double? min;
   final double? max;
-  // TODO(alarms): Add sound asset
+  final AlarmSound? sound;
 
   Alarm({
     required this.source,
@@ -70,7 +87,34 @@ class Alarm implements Comparable<Alarm> {
     this.averagingInterval,
     this.min,
     this.max,
+    this.sound,
   });
+
+  @override
+  bool operator ==(Object other) =>
+      other is Alarm &&
+      source == other.source &&
+      property == other.property &&
+      elementName == other.elementName &&
+      averagingInterval == other.averagingInterval &&
+      level == other.level &&
+      formatter.longName == other.formatter.longName &&
+      min == other.min &&
+      max == other.max &&
+      sound == other.sound;
+
+  @override
+  int get hashCode => Object.hash(
+    source,
+    property,
+    elementName,
+    averagingInterval,
+    level,
+    formatter.longName,
+    min,
+    max,
+    sound,
+  );
 
   /// Creates a new alarm from the supplied spec, using the supplied function to find the property.
   /// Throws a format exception if the spec is not valid.
@@ -95,6 +139,10 @@ class Alarm implements Comparable<Alarm> {
     if (spec.averagingInterval != null && averagingInterval == null) {
       throw FormatException("Invalid averaging interval: ${spec.averagingInterval}");
     }
+    final sound = AlarmSound.values.asNameMap()[spec.sound];
+    if ((spec.sound != null && spec.sound!.isNotEmpty) && sound == null) {
+      throw FormatException("Invalid alarm sound: ${spec.sound}");
+    }
     if (spec.min == null && spec.max == null) {
       throw FormatException("Alarm does not include bound: ${spec.element}");
     }
@@ -110,6 +158,7 @@ class Alarm implements Comparable<Alarm> {
       formatter: formatter,
       min: spec.min,
       max: spec.max,
+      sound: sound,
     );
   }
 
@@ -284,8 +333,7 @@ class AlarmManager {
   bool setAlarm(Alarm alarm) {
     final changed = activeAlarms.add(alarm);
     if (changed) {
-      // TODO(alarms): name not property
-      _log.info("Setting ${alarm.level.name} on ${alarm.property.shortName}");
+      _log.info("Setting ${alarm.level.name} on ${alarm.elementName}");
       if (alarm.level == AlarmLevel.warning) {
         unacknowledgedWarnings.add(alarm);
       }
@@ -297,8 +345,7 @@ class AlarmManager {
   bool clearAlarm(Alarm alarm) {
     final changed = activeAlarms.remove(alarm);
     if (changed) {
-      // TODO(alarms): name not property
-      _log.info("Clearing ${alarm.level.name} on ${alarm.property.shortName}");
+      _log.info("Clearing ${alarm.level.name} on ${alarm.elementName}");
       unacknowledgedWarnings.remove(alarm);
     }
     return changed;

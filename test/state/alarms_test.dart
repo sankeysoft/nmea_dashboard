@@ -22,7 +22,12 @@ NumericFormatter _formatter(Dimension dimension, String name) {
   return numericFormattersFor(dimension)[name]!;
 }
 
-Alarm _testDepthAlarm({double? min, double? max, AlarmLevel level = AlarmLevel.caution}) {
+Alarm _testDepthAlarm({
+  double? min,
+  double? max,
+  AlarmLevel level = AlarmLevel.caution,
+  AlarmSound? sound,
+}) {
   return Alarm(
     source: Source.network,
     elementName: Property.depthWithOffset.shortName,
@@ -31,6 +36,7 @@ Alarm _testDepthAlarm({double? min, double? max, AlarmLevel level = AlarmLevel.c
     formatter: _formatter(Dimension.depth, 'feet'),
     min: min,
     max: max,
+    sound: sound,
   );
 }
 
@@ -147,6 +153,31 @@ void main() {
       expect(alarm.min, 340.0);
       expect(alarm.max, 020.0);
     });
+
+    test('spec with valid sound creates alarm with that sound', () {
+      final spec = AlarmSpec(
+        'network',
+        'depthWithOffset',
+        'warning',
+        'feet',
+        max: 100.0,
+        sound: 'twoTone',
+      );
+      final alarm = Alarm.fromSpec(spec, _elementByName);
+      expect(alarm.sound, AlarmSound.twoTone);
+    });
+
+    test('spec without sound creates alarm with null sound', () {
+      final spec = AlarmSpec('network', 'depthWithOffset', 'caution', 'feet', min: 10.0);
+      final alarm = Alarm.fromSpec(spec, _elementByName);
+      expect(alarm.sound, isNull);
+    });
+
+    test('spec with empty sound string creates alarm with null sound', () {
+      final spec = AlarmSpec('network', 'depthWithOffset', 'caution', 'feet', min: 10.0, sound: '');
+      final alarm = Alarm.fromSpec(spec, _elementByName);
+      expect(alarm.sound, isNull);
+    });
   });
 
   group('Alarm.fromSpec invalid', () {
@@ -194,6 +225,18 @@ void main() {
 
     test('throws on bearing dimension with only max', () {
       final spec = AlarmSpec('network', 'heading', 'caution', 'true', max: 350.0);
+      expect(() => Alarm.fromSpec(spec, _elementByName), throwsFormatException);
+    });
+
+    test('throws on invalid sound string', () {
+      final spec = AlarmSpec(
+        'network',
+        'depthWithOffset',
+        'warning',
+        'feet',
+        max: 100.0,
+        sound: 'notASound',
+      );
       expect(() => Alarm.fromSpec(spec, _elementByName), throwsFormatException);
     });
   });
@@ -432,6 +475,112 @@ void main() {
     });
   });
 
+  group('Alarm ==', () {
+    test('same fields different objects are equal', () {
+      final a = _testDepthAlarm(min: 10.0, max: 100.0);
+      final b = _testDepthAlarm(min: 10.0, max: 100.0);
+      expect(a == b, isTrue);
+    });
+
+    test('equal alarms have the same hashCode', () {
+      final a = _testDepthAlarm(min: 10.0, max: 100.0);
+      final b = _testDepthAlarm(min: 10.0, max: 100.0);
+      expect(a.hashCode, b.hashCode);
+    });
+
+    test('different source is not equal', () {
+      final a = _testDepthAlarm(min: 10.0);
+      final b = Alarm(
+        source: Source.local,
+        elementName: Property.depthWithOffset.shortName,
+        property: Property.depthWithOffset,
+        level: AlarmLevel.caution,
+        formatter: _formatter(Dimension.depth, 'feet'),
+        min: 10.0,
+      );
+      expect(a == b, isFalse);
+    });
+
+    test('different property is not equal', () {
+      final a = _testDepthAlarm(min: 10.0);
+      final b = Alarm(
+        source: Source.network,
+        elementName: Property.depthWithOffset.shortName,
+        property: Property.trueWindSpeed,
+        level: AlarmLevel.caution,
+        formatter: _formatter(Dimension.depth, 'feet'),
+        min: 10.0,
+      );
+      expect(a == b, isFalse);
+    });
+
+    test('different elementName is not equal', () {
+      final a = _testDepthAlarm(min: 10.0);
+      final b = Alarm(
+        source: Source.network,
+        elementName: 'otherName',
+        property: Property.depthWithOffset,
+        level: AlarmLevel.caution,
+        formatter: _formatter(Dimension.depth, 'feet'),
+        min: 10.0,
+      );
+      expect(a == b, isFalse);
+    });
+
+    test('different averagingInterval is not equal', () {
+      final a = _testDepthAlarm(min: 10.0);
+      final b = Alarm(
+        source: Source.network,
+        elementName: Property.depthWithOffset.shortName,
+        property: Property.depthWithOffset,
+        averagingInterval: StatsInterval.fiveMin,
+        level: AlarmLevel.caution,
+        formatter: _formatter(Dimension.depth, 'feet'),
+        min: 10.0,
+      );
+      expect(a == b, isFalse);
+    });
+
+    test('different level is not equal', () {
+      final a = _testDepthAlarm(min: 10.0, level: AlarmLevel.caution);
+      final b = _testDepthAlarm(min: 10.0, level: AlarmLevel.warning);
+      expect(a == b, isFalse);
+    });
+
+    test('different formatter is not equal', () {
+      final a = _testDepthAlarm(min: 10.0);
+      final b = Alarm(
+        source: Source.network,
+        elementName: Property.depthWithOffset.shortName,
+        property: Property.depthWithOffset,
+        level: AlarmLevel.caution,
+        formatter: _formatter(Dimension.depth, 'meters'),
+        min: 10.0,
+      );
+      expect(a == b, isFalse);
+    });
+
+    test('different min is not equal', () {
+      expect(_testDepthAlarm(min: 10.0) == _testDepthAlarm(min: 20.0), isFalse);
+    });
+
+    test('different max is not equal', () {
+      expect(_testDepthAlarm(max: 100.0) == _testDepthAlarm(max: 200.0), isFalse);
+    });
+
+    test('different sound is not equal', () {
+      final a = _testDepthAlarm(min: 10.0, level: AlarmLevel.warning, sound: AlarmSound.gnat);
+      final b = _testDepthAlarm(min: 10.0, level: AlarmLevel.warning, sound: AlarmSound.din);
+      expect(a == b, isFalse);
+    });
+
+    test('null sound vs non-null sound is not equal', () {
+      final a = _testDepthAlarm(min: 10.0);
+      final b = _testDepthAlarm(min: 10.0, sound: AlarmSound.gnat);
+      expect(a == b, isFalse);
+    });
+  });
+
   group('AlarmSet', () {
     late AlarmSet set;
     late Alarm a;
@@ -465,6 +614,15 @@ void main() {
       int count = 0;
       set.addListener(() => count++);
       expect(set.add(a), isFalse);
+      expect(set.length, 1);
+      expect(count, 0);
+    });
+
+    test('add returns false for equal-but-distinct alarm and does not notify', () {
+      set.add(a);
+      int count = 0;
+      set.addListener(() => count++);
+      expect(set.add(_testDepthAlarm(min: 10.0)), isFalse);
       expect(set.length, 1);
       expect(count, 0);
     });
@@ -559,6 +717,17 @@ void main() {
       manager.activeAlarms.addListener(() => activeCount++);
       manager.unacknowledgedWarnings.addListener(() => warnCount++);
       expect(manager.setAlarm(warning), isFalse);
+      expect(activeCount, 0);
+      expect(warnCount, 0);
+    });
+
+    test('setAlarm on equal-but-distinct alarm returns false and does not notify', () {
+      manager.setAlarm(warning);
+      int activeCount = 0;
+      int warnCount = 0;
+      manager.activeAlarms.addListener(() => activeCount++);
+      manager.unacknowledgedWarnings.addListener(() => warnCount++);
+      expect(manager.setAlarm(_testDepthAlarm(min: 5.0, level: AlarmLevel.warning)), isFalse);
       expect(activeCount, 0);
       expect(warnCount, 0);
     });

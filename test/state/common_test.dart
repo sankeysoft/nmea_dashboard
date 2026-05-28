@@ -41,12 +41,18 @@ void main() {
   test('Dimension min and max values must match storageType', () {
     for (final dim in Dimension.values) {
       if (dim.minValue != null) {
-        expect(dim.minValue.runtimeType, dim.storageType,
-            reason: '${dim.name}.minValue type does not match storageType');
+        expect(
+          dim.minValue.runtimeType,
+          dim.storageType,
+          reason: '${dim.name}.minValue type does not match storageType',
+        );
       }
       if (dim.maxValue != null) {
-        expect(dim.maxValue.runtimeType, dim.storageType,
-            reason: '${dim.name}.maxValue type does not match storageType');
+        expect(
+          dim.maxValue.runtimeType,
+          dim.storageType,
+          reason: '${dim.name}.maxValue type does not match storageType',
+        );
       }
     }
   });
@@ -82,6 +88,6 @@ void main() {
       Property.speedOverGround,
       Staleness(const Duration(minutes: 1)),
     );
-    expect(StatsInterval.oneMin.shortCellName(element), 'SOG (1min)');
+    expect(StatsInterval.oneMin.shortCellName(element), 'SOG (1m)');
   });
 }

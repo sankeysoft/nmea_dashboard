@@ -72,12 +72,14 @@ class StatelessFormPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text(title), actions: actions),
       body: SafeArea(
-        child: Container(
-          padding: const EdgeInsets.all(_defaultPad),
-          margin: const EdgeInsets.all(_defaultPad),
-          constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
-          decoration: BoxDecoration(color: theme.colorScheme.surface),
-          child: content,
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.all(_defaultPad),
+            margin: const EdgeInsets.all(_defaultPad),
+            constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
+            decoration: BoxDecoration(color: theme.colorScheme.surface),
+            child: content,
+          ),
         ),
       ),
     );
@@ -386,10 +388,15 @@ abstract class StatefulFormState<T extends StatefulWidget> extends State<T> {
     required V? initialValue,
     ValueChanged<V?>? onChanged,
     FormFieldValidator<V>? validator,
+    bool enabled = true,
   }) {
     final theme = Theme.of(context);
-    final textStyle = theme.textTheme.labelMedium!;
+    final textColor = theme.colorScheme.primary;
+    final disabledColor = theme.disabledColor;
     final headingColor = theme.colorScheme.primaryContainer;
+    final textStyle = theme.textTheme.labelMedium!.copyWith(
+      color: enabled ? textColor : disabledColor,
+    );
     final dropdownItems = items.map((item) {
       final itemStyle = (item.font == null) ? textStyle : textStyle.copyWith(fontFamily: item.font);
       return DropdownMenuItem(
@@ -419,7 +426,7 @@ abstract class StatefulFormState<T extends StatefulWidget> extends State<T> {
         iconEnabledColor: theme.colorScheme.tertiary,
         initialValue: initialValue,
         autovalidateMode: AutovalidateMode.always,
-        onChanged: onChanged,
+        onChanged: (enabled ? onChanged : null),
         validator: validator,
         isExpanded: true,
       ),
