@@ -204,16 +204,11 @@ class DataSet with ChangeNotifier {
     return elementMap;
   }
 
-  /// Create all known alarms and notify the associated data element.
+  /// Create all known alarms and notify the associated data element. This will be called after
+  /// every edit alarm interaction and it can be quite disruptive to logs and to active alarms to
+  /// clear and reset things that haven't changed so minimize the state change.
   void _createAndBindAlarms() {
-    _alarmManager.clearAllAlarms();
-    for (final source in sources.values) {
-      for (final element in source.values) {
-        if (element is WithAlarms) {
-          element.clearAlarms();
-        }
-      }
-    }
+    final Map<DataElement, Set<Alarm>> validAlarms = {};
     for (final spec in _alarmSettings.alarmSpecs) {
       Alarm alarm;
       try {
@@ -228,10 +223,21 @@ class DataSet with ChangeNotifier {
       } else if (element is! WithAlarms) {
         _log.warning("Ignoring alarm for non alarms element ${alarm.source.name}/${spec.element}");
       } else {
-        try {
-          element.addAlarm(alarm);
-        } on ArgumentError catch (e) {
-          _log.severe("Error adding alarm: $e");
+        if (!validAlarms.keys.contains(element)) {
+          validAlarms[element] = {};
+        }
+        validAlarms[element]!.add(alarm);
+      }
+    }
+
+    for (final source in sources.values) {
+      for (final element in source.values) {
+        if (element is WithAlarms) {
+          try {
+            element.replaceAlarms(validAlarms[element] ?? {});
+          } on ArgumentError catch (e) {
+            _log.severe("Error adding alarm: $e");
+          }
         }
       }
     }

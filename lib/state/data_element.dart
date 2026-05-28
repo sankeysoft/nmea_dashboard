@@ -210,6 +210,9 @@ enum _AlarmUpdateType { all, currentValue, singleStatistic }
 
 // A DataElement that is capable of monitoring alarms against the current and averaging values.
 mixin WithAlarms<V extends Value, U extends Value> on DataElement<V, U> {
+  /// This class's logger.
+  static final _log = Logger('DataElementWithAlarms');
+
   /// The list of registered alarms for this element.
   final List<Alarm> _alarms = [];
 
@@ -228,21 +231,35 @@ mixin WithAlarms<V extends Value, U extends Value> on DataElement<V, U> {
     _alarmManager = manager;
   }
 
-  /// Clear all alarms on this DataElement.
-  void clearAlarms() {
-    for (final entry in _statsCallbacks.entries) {
-      entry.key.removeListener(entry.value);
+  /// Replaces all alarms on this DataElement with the supplied set. Logging and dropping any
+  /// that are incompatible.
+  void replaceAlarms(Set<Alarm> newAlarms) {
+    /// Go through the existing alarms, removing any that are not in the new set and
+    /// recording those we already have as no longer new.
+    for (final existingAlarm in [..._alarms]) {
+      if (newAlarms.contains(existingAlarm)) {
+        newAlarms.remove(existingAlarm);
+      } else {
+        // Note we don't actually unsubscibe from the stats in case another alarm was using it.
+        _alarms.remove(existingAlarm);
+        _alarmManager.clearAlarm(existingAlarm);
+      }
     }
-    _statsCallbacks.clear();
-    for (final alarm in _alarms) {
-      _alarmManager.clearAlarm(alarm);
+    // Now add the new alarms.
+    for (final newAlarm in newAlarms) {
+      try {
+        _addAlarm(newAlarm);
+      } on ArgumentError catch (e) {
+        _log.severe("Error adding alarm: $e");
+      }
     }
-    _alarms.clear();
-    _alarmState.set(null);
+    // Sort reversed so we consider higher priority alarms first.
+    _alarms.sort((a, b) => b.compareTo(a));
+    _updateAlarms(_AlarmUpdateType.all);
   }
 
   /// Add a new alarm to this element. Raising an ArgumentError if the type is incompatible.
-  void addAlarm(Alarm alarm) {
+  void _addAlarm(Alarm alarm) {
     if (alarm.property != property) {
       throw ArgumentError("alarm property ${alarm.property} != element property $property");
     } else if (alarm.formatter.valueType != storedType) {
@@ -252,7 +269,7 @@ mixin WithAlarms<V extends Value, U extends Value> on DataElement<V, U> {
       if (this is! WithStats) {
         throw ArgumentError("averaging alarm set on element without stats: $longName");
       }
-      // Register to be informed about changes in this statistic (unless we did before).
+      // Register to be informed about changes in this statistic (unless we already did).
       final stats = (this as WithStats).stats(alarm.averagingInterval!);
       if (!_statsCallbacks.keys.contains(stats)) {
         void callback() => _updateAlarms(
@@ -264,9 +281,6 @@ mixin WithAlarms<V extends Value, U extends Value> on DataElement<V, U> {
       }
     }
     _alarms.add(alarm);
-    // Sort reversed so we consider higher priority alarms first.
-    _alarms.sort((a, b) => b.compareTo(a));
-    _updateAlarms(_AlarmUpdateType.all);
   }
 
   /// Method to be called after a change in the element value.

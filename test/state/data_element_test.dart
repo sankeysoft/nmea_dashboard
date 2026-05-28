@@ -249,7 +249,7 @@ void main() {
       return BoundValue(Source.network, Property.depthWithOffset, SingleValue(feet / metersToFeet));
     }
 
-    test('addAlarm throws ArgumentError on property mismatch', () {
+    test('replaceAlarms silently drops alarm on property mismatch', () {
       final wrongProperty = Alarm(
         source: Source.network,
         elementName: "test TWS",
@@ -258,10 +258,12 @@ void main() {
         formatter: numericFormattersFor(Dimension.speed)['knots']!,
         min: 10.0,
       );
-      expect(() => element.addAlarm(wrongProperty), throwsArgumentError);
+      element.replaceAlarms({wrongProperty});
+      element.updateValue(depthValueFt(5.0));
+      expect(manager.activeAlarms, isEmpty);
     });
 
-    test('addAlarm throws ArgumentError on formatter type mismatch', () {
+    test('replaceAlarms silently drops alarm on formatter type mismatch', () {
       // Property matches the element but the formatter's valueType
       // (AugmentedBearing) does not match the element's stored type.
       final wrongType = Alarm(
@@ -272,12 +274,14 @@ void main() {
         formatter: numericFormattersFor(Dimension.bearing)['true']!,
         min: 10.0,
       );
-      expect(() => element.addAlarm(wrongType), throwsArgumentError);
+      element.replaceAlarms({wrongType});
+      element.updateValue(depthValueFt(5.0));
+      expect(manager.activeAlarms, isEmpty);
     });
 
     test('current-value alarm sets and clears as value crosses bounds', () {
       final alarm = depthAlarm(min: 10.0, max: 100.0);
-      element.addAlarm(alarm);
+      element.replaceAlarms({alarm});
       expect(manager.activeAlarms, isEmpty);
       expect(element.alarmState.level, isNull);
 
@@ -290,14 +294,14 @@ void main() {
       expect(element.alarmState.level, isNull);
     });
 
-    test('clearAlarms removes all alarms from manager and resets alarmState', () {
+    test('replaceAlarms with empty set removes all alarms from manager and resets alarmState', () {
       final alarm = depthAlarm(min: 10.0, max: 100.0);
-      element.addAlarm(alarm);
+      element.replaceAlarms({alarm});
       element.updateValue(depthValueFt(5.0));
       expect(manager.activeAlarms, isNotEmpty);
       expect(element.alarmState.level, isNotNull);
 
-      element.clearAlarms();
+      element.replaceAlarms({});
       expect(manager.activeAlarms, isEmpty);
       expect(element.alarmState.level, isNull);
     });
@@ -305,8 +309,7 @@ void main() {
     test('alarmState reflects highest level among multiple active alarms', () {
       final caution = depthAlarm(min: 10.0, level: AlarmLevel.caution);
       final warning = depthAlarm(min: 5.0, level: AlarmLevel.warning);
-      element.addAlarm(caution);
-      element.addAlarm(warning);
+      element.replaceAlarms({caution, warning});
 
       element.updateValue(depthValueFt(3.0));
       expect(manager.activeAlarms.contains(caution), isTrue);
@@ -319,14 +322,14 @@ void main() {
       expect(element.alarmState.level, AlarmLevel.caution);
     });
 
-    test('regression: clearAlarms then re-add averaging alarm still receives stats updates', () {
-      // Regression for a bug where _statsCallbacks was not cleared in clearAlarms,
-      // causing addAlarm to skip re-registering the stats listener.
+    test('replaceAlarms with same alarm keeps stats listener active', () {
+      // Verifies that re-supplying an existing alarm via replaceAlarms preserves the stats
+      // subscription so the alarm still fires on averaging-interval updates.
       Alarm makeAlarm() => depthAlarm(max: 100.0, averagingInterval: StatsInterval.fifteenSec);
+      final alarm = makeAlarm();
 
-      element.addAlarm(makeAlarm());
-      element.clearAlarms();
-      element.addAlarm(makeAlarm());
+      element.replaceAlarms({alarm});
+      element.replaceAlarms({alarm});
 
       element.updateValue(depthValueFt(200.0));
       expect(manager.activeAlarms, hasLength(1));
