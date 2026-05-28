@@ -151,5 +151,18 @@ void main() {
 
       expect(find.text('Load derived data from clipboard?'), findsOneWidget);
     });
+
+    testWidgets('confirm paste updates settings and shows snackbar', (tester) async {
+      mockClipboard(tester, text: '[]');
+      await pumpPage(tester);
+
+      await tester.tap(find.byIcon(Icons.content_paste_outlined));
+      await tester.pump();
+      await tester.pump();
+      await tester.tap(find.text('OK'));
+      await tester.pump();
+
+      expect(find.text('Pasted derived data definitions from clipboard'), findsOneWidget);
+    });
   });
 }

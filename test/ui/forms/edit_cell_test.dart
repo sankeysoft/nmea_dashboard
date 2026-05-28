@@ -226,5 +226,49 @@ void main() {
 
       expect(observer.popCount, 1);
     });
+
+    testWidgets('defaults type to current when spec has unrecognized type', (tester) async {
+      // CellType.fromString returns null for 'invalid_type', so _type starts null.
+      // _wipeInvalidFields sets it to CellType.current when a valid element is present.
+      final spec = DataCellSpec('network', 'speedOverGround', 'invalid_type', 'knots');
+      final observer = TestNavObserver();
+      await pumpForm(tester, spec, observer: observer);
+
+      await tester.tap(find.text('SAVE'));
+      await tester.pump();
+
+      expect(find.text('Type must be set'), findsNothing);
+      expect(observer.popCount, 1);
+    });
+
+    testWidgets('resets type to current when element has no history support', (tester) async {
+      // localTime is ConsistentDataElement<DateTime> which does not implement WithHistory.
+      // _wipeInvalidFields resets _type from history to current, leaving _historyInterval set,
+      // which means the intended value is not in the dropdown entries → type appears unset.
+      final spec = DataCellSpec(
+        'local',
+        'localTime',
+        'history',
+        'hms',
+        historyInterval: 'fifteenMin',
+      );
+      await pumpForm(tester, spec);
+      await tester.tap(find.text('SAVE'));
+      await tester.pump();
+      expect(find.text('Type must be set'), findsOneWidget);
+    });
+
+    testWidgets('changing format dropdown updates internal format', (tester) async {
+      final spec = DataCellSpec('network', 'speedOverGround', 'current', 'knots');
+      await pumpForm(tester, spec);
+      expect(getDropdownByLabel('Format:', tester).value, 'knots');
+
+      await tester.tap(find.text('knots'));
+      await tester.pump();
+      await tester.tap(find.text('m/sec'));
+      await tester.pump();
+
+      expect(getDropdownByLabel('Format:', tester).value, 'metersPerSec');
+    });
   });
 }

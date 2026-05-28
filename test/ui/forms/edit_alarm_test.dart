@@ -237,5 +237,21 @@ void main() {
       await tester.pump();
       expect(createdSpec?.sound, 'twoTone');
     });
+
+    testWidgets('changing format converts existing bounds', (tester) async {
+      final spec = AlarmSpec('network', 'speedOverGround', 'caution', 'knots', min: 5.0, max: 15.0);
+      await pumpForm(tester, spec);
+      expect(find.text('5'), findsWidgets);
+
+      // Switch from knots to m/sec; the bound values should be converted.
+      await tester.tap(find.text('knots'));
+      await tester.pump();
+      await tester.tap(find.text('m/sec'));
+      await tester.pump();
+
+      expect(find.text('m/sec'), findsWidgets);
+      // The original bound value "5" (knots) should have been converted to a different number.
+      expect(find.widgetWithText(EditableText, '5'), findsNothing);
+    });
   });
 }

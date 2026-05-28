@@ -173,5 +173,29 @@ void main() {
 
       expect(find.text('Load pages from clipboard?'), findsOneWidget);
     });
+
+    testWidgets('confirm paste updates settings and shows snackbar', (tester) async {
+      mockClipboard(tester, text: _validPagesJson);
+      await pumpPage(tester);
+
+      await tester.tap(find.byIcon(Icons.content_paste_outlined));
+      await tester.pump();
+      await tester.pump();
+      await tester.tap(find.text('OK'));
+      await tester.pump();
+
+      expect(find.text('Pasted page definitions from clipboard'), findsOneWidget);
+      expect(pageSettings.dataPageSpecs.length, 1);
+    });
+
+    testWidgets('help button navigates to help page', (tester) async {
+      final observer = TestNavObserver();
+      await pumpPage(tester, observer: observer);
+
+      await tester.tap(find.byIcon(Icons.help_outlined));
+      await tester.pump();
+
+      expect(observer.pushCount, greaterThan(0));
+    });
   });
 }

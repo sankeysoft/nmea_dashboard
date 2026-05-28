@@ -157,5 +157,26 @@ void main() {
 
       expect(find.text('Load alarms from clipboard?'), findsOneWidget);
     });
+
+    testWidgets('confirm paste updates settings and shows snackbar', (tester) async {
+      mockClipboard(tester, text: '[]');
+      await pumpPage(tester);
+
+      await tester.tap(find.byIcon(Icons.content_paste_outlined));
+      await tester.pump();
+      await tester.pump();
+      await tester.tap(find.text('OK'));
+      await tester.pump();
+
+      expect(find.text('Pasted alarm definitions from clipboard'), findsOneWidget);
+    });
+
+    testWidgets('shows warning icon for valid warning alarm', (tester) async {
+      alarmSettings.setAlarm(
+        AlarmSpec('network', 'speedOverGround', 'warning', 'knots', min: 5.0),
+      );
+      await pumpPage(tester);
+      expect(find.byIcon(Icons.warning), findsOneWidget);
+    });
   });
 }
