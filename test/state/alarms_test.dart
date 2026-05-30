@@ -2,6 +2,7 @@
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
+import 'package:fake_async/fake_async.dart';
 import 'package:nmea_dashboard/state/alarms.dart';
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/data_element.dart';
@@ -682,17 +683,17 @@ void main() {
     });
 
     test('starts with empty active alarms and unacknowledged warnings', () {
-      expect(manager.activeAlarms.isEmpty, isTrue);
+      expect(manager.latchedAlarms.isEmpty, isTrue);
       expect(manager.unacknowledgedWarnings.isEmpty, isTrue);
     });
 
     test('setAlarm adds caution to active alarms only and notifies', () {
       int activeCount = 0;
       int warnCount = 0;
-      manager.activeAlarms.addListener(() => activeCount++);
+      manager.latchedAlarms.addListener(() => activeCount++);
       manager.unacknowledgedWarnings.addListener(() => warnCount++);
-      expect(manager.setAlarm(caution), isTrue);
-      expect(manager.activeAlarms.contains(caution), isTrue);
+      manager.setAlarm(caution);
+      expect(manager.latchedAlarms.contains(caution), isTrue);
       expect(manager.unacknowledgedWarnings.isEmpty, isTrue);
       expect(activeCount, 1);
       expect(warnCount, 0);
@@ -701,79 +702,69 @@ void main() {
     test('setAlarm adds warning to both active alarms and unacknowledged warnings', () {
       int activeCount = 0;
       int warnCount = 0;
-      manager.activeAlarms.addListener(() => activeCount++);
+      manager.latchedAlarms.addListener(() => activeCount++);
       manager.unacknowledgedWarnings.addListener(() => warnCount++);
-      expect(manager.setAlarm(warning), isTrue);
-      expect(manager.activeAlarms.contains(warning), isTrue);
+      manager.setAlarm(warning);
+      expect(manager.latchedAlarms.contains(warning), isTrue);
       expect(manager.unacknowledgedWarnings.contains(warning), isTrue);
       expect(activeCount, 1);
       expect(warnCount, 1);
     });
 
-    test('setAlarm on already-active alarm returns false and does not notify', () {
+    test('setAlarm on already-active alarm does not notify', () {
       manager.setAlarm(warning);
       int activeCount = 0;
       int warnCount = 0;
-      manager.activeAlarms.addListener(() => activeCount++);
+      manager.latchedAlarms.addListener(() => activeCount++);
       manager.unacknowledgedWarnings.addListener(() => warnCount++);
-      expect(manager.setAlarm(warning), isFalse);
+      manager.setAlarm(warning);
       expect(activeCount, 0);
       expect(warnCount, 0);
     });
 
-    test('setAlarm on equal-but-distinct alarm returns false and does not notify', () {
+    test('setAlarm on equal-but-distinct alarm does not notify', () {
       manager.setAlarm(warning);
       int activeCount = 0;
       int warnCount = 0;
-      manager.activeAlarms.addListener(() => activeCount++);
+      manager.latchedAlarms.addListener(() => activeCount++);
       manager.unacknowledgedWarnings.addListener(() => warnCount++);
-      expect(manager.setAlarm(_testDepthAlarm(min: 5.0, level: AlarmLevel.warning)), isFalse);
+      manager.setAlarm(_testDepthAlarm(min: 5.0, level: AlarmLevel.warning));
       expect(activeCount, 0);
       expect(warnCount, 0);
     });
 
     test('clearAlarm removes from both sets and notifies', () {
-      manager.setAlarm(warning);
-      int activeCount = 0;
-      int warnCount = 0;
-      manager.activeAlarms.addListener(() => activeCount++);
-      manager.unacknowledgedWarnings.addListener(() => warnCount++);
-      expect(manager.clearAlarm(warning), isTrue);
-      expect(manager.activeAlarms.contains(warning), isFalse);
-      expect(manager.unacknowledgedWarnings.contains(warning), isFalse);
-      expect(activeCount, 1);
-      expect(warnCount, 1);
+      fakeAsync((fake) {
+        manager.setAlarm(warning);
+        fake.elapse(const Duration(seconds: 6));
+        int activeCount = 0;
+        int warnCount = 0;
+        manager.latchedAlarms.addListener(() => activeCount++);
+        manager.unacknowledgedWarnings.addListener(() => warnCount++);
+        manager.clearAlarm(warning);
+        expect(manager.latchedAlarms.contains(warning), isFalse);
+        expect(manager.unacknowledgedWarnings.contains(warning), isFalse);
+        expect(activeCount, 1);
+        expect(warnCount, 1);
+      });
     });
 
     test('clearAlarm on previously-acknowledged warning still clears active', () {
-      manager.setAlarm(warning);
-      manager.acknowledgeWarnings();
-      expect(manager.unacknowledgedWarnings.isEmpty, isTrue);
-      expect(manager.clearAlarm(warning), isTrue);
-      expect(manager.activeAlarms.contains(warning), isFalse);
+      fakeAsync((fake) {
+        manager.setAlarm(warning);
+        manager.acknowledgeWarnings();
+        fake.elapse(const Duration(seconds: 6));
+        expect(manager.unacknowledgedWarnings.isEmpty, isTrue);
+        manager.clearAlarm(warning);
+        expect(manager.latchedAlarms.contains(warning), isFalse);
+      });
     });
 
-    test('clearAlarm on inactive alarm returns false and does not notify', () {
+    test('clearAlarm on inactive alarm does not notify', () {
       int activeCount = 0;
-      manager.activeAlarms.addListener(() => activeCount++);
-      expect(manager.clearAlarm(caution), isFalse);
+      manager.latchedAlarms.addListener(() => activeCount++);
+      manager.clearAlarm(caution);
       expect(activeCount, 0);
-    });
-
-    test('clearAllAlarms empties both sets when non-empty', () {
-      manager.setAlarm(caution);
-      manager.setAlarm(warning);
-      expect(manager.activeAlarms.length, 2);
-      expect(manager.unacknowledgedWarnings.length, 1);
-      manager.clearAllAlarms();
-      expect(manager.activeAlarms.isEmpty, isTrue);
-      expect(manager.unacknowledgedWarnings.isEmpty, isTrue);
-    });
-
-    test('clearAllAlarms is a no-op when empty', () {
-      expect(() => manager.clearAllAlarms(), returnsNormally);
-      expect(manager.activeAlarms.isEmpty, isTrue);
-      expect(manager.unacknowledgedWarnings.isEmpty, isTrue);
     });
 
     test('acknowledgeWarnings clears unacknowledged but not active', () {
@@ -781,20 +772,82 @@ void main() {
       manager.setAlarm(warning);
       manager.acknowledgeWarnings();
       expect(manager.unacknowledgedWarnings.isEmpty, isTrue);
-      expect(manager.activeAlarms.contains(caution), isTrue);
-      expect(manager.activeAlarms.contains(warning), isTrue);
+      expect(manager.latchedAlarms.contains(caution), isTrue);
+      expect(manager.latchedAlarms.contains(warning), isTrue);
     });
 
     test('acknowledgeWarnings is a no-op when no unacknowledged warnings', () {
       manager.setAlarm(caution);
       expect(() => manager.acknowledgeWarnings(), returnsNormally);
-      expect(manager.activeAlarms.contains(caution), isTrue);
+      expect(manager.latchedAlarms.contains(caution), isTrue);
     });
 
     test('activeAlarms preserves insertion order', () {
       manager.setAlarm(otherCaution);
       manager.setAlarm(caution);
-      expect(manager.activeAlarms.alarms.toList(), [otherCaution, caution]);
+      expect(manager.latchedAlarms.alarms.toList(), [otherCaution, caution]);
     });
+
+    test('clearAlarm within 5s does not immediately remove from active alarms', () {
+      manager.setAlarm(caution);
+      manager.clearAlarm(caution);
+      expect(manager.latchedAlarms.contains(caution), isTrue);
+    });
+
+    test('clearAlarm within 5s removes alarm after 5s elapses', () {
+      fakeAsync((fake) {
+        manager.setAlarm(warning);
+        manager.clearAlarm(warning);
+        expect(manager.latchedAlarms.contains(warning), isTrue);
+        fake.elapse(const Duration(seconds: 5));
+        expect(manager.latchedAlarms.contains(warning), isFalse);
+        expect(manager.unacknowledgedWarnings.contains(warning), isFalse);
+      });
+    });
+
+    test('setAlarm during hysteresis window cancels pending clear', () {
+      fakeAsync((fake) {
+        manager.setAlarm(caution);
+        manager.clearAlarm(caution);
+        fake.elapse(const Duration(seconds: 3));
+        manager.setAlarm(caution);
+        fake.elapse(const Duration(seconds: 3));
+        // Only 3s have passed since the second setAlarm, so caution is still active.
+        expect(manager.latchedAlarms.contains(caution), isTrue);
+      });
+    });
+
+    test('setAlarm during hysteresis does not extend the delay past original trigger', () {
+      fakeAsync((fake) {
+        manager.setAlarm(caution); // T=0, trigger recorded at T=0
+        fake.elapse(const Duration(seconds: 1));
+        manager.clearAlarm(caution); // T=1, schedules timer to fire at T=5
+        fake.elapse(const Duration(seconds: 2));
+        manager.setAlarm(caution); // T=3, cancels timer; trigger time stays T=0
+        fake.elapse(const Duration(seconds: 1));
+        manager.clearAlarm(caution); // T=4, only 1s until T=5; schedules short timer
+        expect(manager.latchedAlarms.contains(caution), isTrue);
+        fake.elapse(const Duration(seconds: 1));
+        // T=5: 5s since original trigger, alarm should now be cleared.
+        expect(manager.latchedAlarms.contains(caution), isFalse);
+      });
+    });
+
+    test(
+      'second clearAlarm while clear is already pending does not re-notify',
+      () {
+        fakeAsync((fake) {
+          manager.setAlarm(caution);
+          manager.clearAlarm(caution);
+          int activeCount = 0;
+          manager.latchedAlarms.addListener(() => activeCount++);
+          manager.clearAlarm(caution);
+          fake.elapse(const Duration(seconds: 5));
+          // Alarm was removed exactly once.
+          expect(manager.latchedAlarms.contains(caution), isFalse);
+          expect(activeCount, 1);
+        });
+      },
+    );
   });
 }

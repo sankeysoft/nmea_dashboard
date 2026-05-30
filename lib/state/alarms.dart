@@ -2,9 +2,11 @@
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
+import 'dart:async';
 import 'dart:collection';
 
 import 'package:audioplayers/audioplayers.dart' hide Source;
+import 'package:clock/clock.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/state/common.dart';
@@ -323,41 +325,57 @@ class AlarmManager {
   /// This class's logger.
   static final _log = Logger('AlarmManager');
 
+  static const Duration _latchDelay = Duration(seconds: 5);
+
   /// The set of currently active alarms, ordered by decreasing age.
   final AlarmSet activeAlarms = AlarmSet();
+
+  /// The set of active alarms, latched so each remains set for a minimum of _latchDelay.
+  final AlarmSet latchedAlarms = AlarmSet();
 
   /// The set of not-yet acknowledged warnings, ordered by decreasing age.
   final AlarmSet unacknowledgedWarnings = AlarmSet();
 
-  /// Marks an alarm as active, returning true iff the alarm was not previously active.
-  bool setAlarm(Alarm alarm) {
-    final changed = activeAlarms.add(alarm);
-    if (changed) {
+  final Map<Alarm, DateTime> _lastActivationTime = {};
+  final Map<Alarm, Timer> _clearTimers = {};
+
+  /// Marks an alarm as active.
+  void setAlarm(Alarm alarm) {
+    activeAlarms.add(alarm);
+    _clearTimers.remove(alarm)?.cancel();
+    final latchChanged = latchedAlarms.add(alarm);
+    if (latchChanged) {
+      _lastActivationTime[alarm] = clock.now();
       _log.info("Setting ${alarm.level.name} on ${alarm.elementName}");
       if (alarm.level == AlarmLevel.warning) {
         unacknowledgedWarnings.add(alarm);
       }
     }
-    return changed;
   }
 
-  /// Marks an alarm as inactive, returning true iff the alarm was previously active.
-  bool clearAlarm(Alarm alarm) {
-    final changed = activeAlarms.remove(alarm);
-    if (changed) {
-      _log.info("Clearing ${alarm.level.name} on ${alarm.elementName}");
-      unacknowledgedWarnings.remove(alarm);
+  /// Marks an alarm as inactive.
+  void clearAlarm(Alarm alarm) {
+    activeAlarms.remove(alarm);
+    // No work to do if it wasn't latched or deletion was already scheduled
+    if (!latchedAlarms.contains(alarm) || _clearTimers.containsKey(alarm)) {
+      return;
     }
-    return changed;
+    final lastActivated = _lastActivationTime[alarm] ?? clock.now();
+    final remainingDuration = _latchDelay - clock.now().difference(lastActivated);
+    if (remainingDuration <= Duration.zero) {
+      _doRemoveAlarm(alarm);
+    } else {
+      _clearTimers[alarm] = Timer(remainingDuration, () => _doRemoveAlarm(alarm));
+    }
+    return;
   }
 
-  /// Clears all active alarms, for example before recreating from settings.
-  void clearAllAlarms() {
-    if (activeAlarms.isNotEmpty) {
-      _log.info("Clearing ${activeAlarms.length} active alarms");
-    }
-    activeAlarms.clear();
-    unacknowledgedWarnings.clear();
+  void _doRemoveAlarm(Alarm alarm) {
+    _clearTimers.remove(alarm);
+    _lastActivationTime.remove(alarm);
+    _log.info("Clearing ${alarm.level.name} on ${alarm.elementName}");
+    latchedAlarms.remove(alarm);
+    unacknowledgedWarnings.remove(alarm);
   }
 
   /// Acknowledges all previously unacknowledged warnings.

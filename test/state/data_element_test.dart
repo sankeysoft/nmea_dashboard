@@ -2,6 +2,7 @@
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
+import 'package:fake_async/fake_async.dart';
 import 'package:nmea_dashboard/state/alarms.dart';
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/data_element.dart';
@@ -260,7 +261,7 @@ void main() {
       );
       element.replaceAlarms({wrongProperty});
       element.updateValue(depthValueFt(5.0));
-      expect(manager.activeAlarms, isEmpty);
+      expect(manager.latchedAlarms, isEmpty);
     });
 
     test('replaceAlarms silently drops alarm on formatter type mismatch', () {
@@ -276,50 +277,62 @@ void main() {
       );
       element.replaceAlarms({wrongType});
       element.updateValue(depthValueFt(5.0));
-      expect(manager.activeAlarms, isEmpty);
+      expect(manager.latchedAlarms, isEmpty);
     });
 
     test('current-value alarm sets and clears as value crosses bounds', () {
-      final alarm = depthAlarm(min: 10.0, max: 100.0);
-      element.replaceAlarms({alarm});
-      expect(manager.activeAlarms, isEmpty);
-      expect(element.alarmState.level, isNull);
+      fakeAsync((fake) {
+        final alarm = depthAlarm(min: 10.0, max: 100.0);
+        element.replaceAlarms({alarm});
+        expect(manager.latchedAlarms, isEmpty);
+        expect(element.alarmState.level, isNull);
 
-      element.updateValue(depthValueFt(5.0));
-      expect(manager.activeAlarms.contains(alarm), isTrue);
-      expect(element.alarmState.level, AlarmLevel.caution);
+        element.updateValue(depthValueFt(5.0));
+        expect(manager.latchedAlarms.contains(alarm), isTrue);
+        expect(element.alarmState.level, AlarmLevel.caution);
 
-      element.updateValue(depthValueFt(50.0));
-      expect(manager.activeAlarms.contains(alarm), isFalse);
-      expect(element.alarmState.level, isNull);
+        fake.elapse(const Duration(seconds: 6));
+        element.updateValue(depthValueFt(50.0));
+        fake.elapse(const Duration(seconds: 6));
+        expect(manager.latchedAlarms.contains(alarm), isFalse);
+        expect(element.alarmState.level, isNull);
+      });
     });
 
     test('replaceAlarms with empty set removes all alarms from manager and resets alarmState', () {
-      final alarm = depthAlarm(min: 10.0, max: 100.0);
-      element.replaceAlarms({alarm});
-      element.updateValue(depthValueFt(5.0));
-      expect(manager.activeAlarms, isNotEmpty);
-      expect(element.alarmState.level, isNotNull);
+      fakeAsync((fake) {
+        final alarm = depthAlarm(min: 10.0, max: 100.0);
+        element.replaceAlarms({alarm});
+        element.updateValue(depthValueFt(5.0));
+        expect(manager.latchedAlarms, isNotEmpty);
+        expect(element.alarmState.level, isNotNull);
 
-      element.replaceAlarms({});
-      expect(manager.activeAlarms, isEmpty);
-      expect(element.alarmState.level, isNull);
+        fake.elapse(const Duration(seconds: 6));
+        element.replaceAlarms({});
+        fake.elapse(const Duration(seconds: 6));
+        expect(manager.latchedAlarms, isEmpty);
+        expect(element.alarmState.level, isNull);
+      });
     });
 
     test('alarmState reflects highest level among multiple active alarms', () {
-      final caution = depthAlarm(min: 10.0, level: AlarmLevel.caution);
-      final warning = depthAlarm(min: 5.0, level: AlarmLevel.warning);
-      element.replaceAlarms({caution, warning});
+      fakeAsync((fake) {
+        final caution = depthAlarm(min: 10.0, level: AlarmLevel.caution);
+        final warning = depthAlarm(min: 5.0, level: AlarmLevel.warning);
+        element.replaceAlarms({caution, warning});
 
-      element.updateValue(depthValueFt(3.0));
-      expect(manager.activeAlarms.contains(caution), isTrue);
-      expect(manager.activeAlarms.contains(warning), isTrue);
-      expect(element.alarmState.level, AlarmLevel.warning);
+        element.updateValue(depthValueFt(3.0));
+        expect(manager.latchedAlarms.contains(caution), isTrue);
+        expect(manager.latchedAlarms.contains(warning), isTrue);
+        expect(element.alarmState.level, AlarmLevel.warning);
 
-      element.updateValue(depthValueFt(7.0));
-      expect(manager.activeAlarms.contains(caution), isTrue);
-      expect(manager.activeAlarms.contains(warning), isFalse);
-      expect(element.alarmState.level, AlarmLevel.caution);
+        fake.elapse(const Duration(seconds: 6));
+        element.updateValue(depthValueFt(7.0));
+        fake.elapse(const Duration(seconds: 6));
+        expect(manager.latchedAlarms.contains(caution), isTrue);
+        expect(manager.latchedAlarms.contains(warning), isFalse);
+        expect(element.alarmState.level, AlarmLevel.caution);
+      });
     });
 
     test('replaceAlarms with same alarm keeps stats listener active', () {
@@ -332,7 +345,7 @@ void main() {
       element.replaceAlarms({alarm});
 
       element.updateValue(depthValueFt(200.0));
-      expect(manager.activeAlarms, hasLength(1));
+      expect(manager.latchedAlarms, hasLength(1));
       expect(element.alarmState.level, AlarmLevel.caution);
     });
   });
