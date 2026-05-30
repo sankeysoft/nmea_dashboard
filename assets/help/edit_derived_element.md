@@ -3,7 +3,7 @@ This form lets you define a new data element that is derived from existing data.
 For example, you could:
 1.  Define a "depth below waterline" element that is equal to "depth at sensor"
     plus the depth of the fathometer on your boat.
-2.  Correct for a anemometer that reads 5% slow by multiplying the raw wind
+2.  Correct for an anemometer that reads 5% slow by multiplying the raw wind
     speed by a factor of 1.05.
 
 *IT WOULD BE VERY EASY TO MAKE MISTAKES AND DEFINE MISLEADING DATA - PLEASE USE

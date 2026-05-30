@@ -21,7 +21,7 @@ At the top right there are four buttons:
     up, or share them with others.
 2.  **Paste from clipboard**. Tapping this replaces the current pages and their
     data with those in the clipboard. The contents of the clipboard must have
-    been been created using the "copy to clipboard" button.
+    been created using the "copy to clipboard" button.
 3.  **Reset to default**. Tapping this replaces the current pages and their data
     with the default settings.
 4.  **Help**. Displays this text.

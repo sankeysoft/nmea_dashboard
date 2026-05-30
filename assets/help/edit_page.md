@@ -9,7 +9,7 @@ change the data, long hold a cell while the page is being displayed.
    screen whenever the page is displayed.
 
 *  **Cell count**: The number of cells to display on the page. All the cells on
-   a page are the same size are arranged in a grid to fit the screen; increasing
+   a page are the same size and are arranged in a grid to fit the screen; increasing
    the cell count will make each cell smaller and reducing it will make each
    cell larger.
 

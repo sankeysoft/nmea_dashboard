@@ -23,7 +23,7 @@ device sending the NMEA data.
   doing so will potentially allow corrupted data.
 
 * **Staleness**: The time to wait before removing old data from the display and
-  replacing it with dashes. For example, if a depth has not been recieved for
+  replacing it with dashes. For example, if a depth has not been received for
   longer than this time then everywhere depth is displayed will be replaced with
   dashes. Different boats send different data at different rates so you may need
   to change this value. It should be large enough that you don't see dashes

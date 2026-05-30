@@ -10,6 +10,10 @@ Each cell can hold either the current value of some property or a plot of the
 property over time. Swipe left or right to move between pages (or use the number
 keys if you have a keyboard).
 
+You can also set alarms when data is above or below some value (e.g. depth
+below 10ft) and define new data based on existing network data (e.g. depth from
+surface based on depth from transducer).
+
 Every form also has its own help page. Please read this by tapping the question
 mark at the top right of the screen to find out more about what the form does
 and why.
@@ -28,6 +32,7 @@ the following:
 * **Network**: Configure the connection to your NMEA hardware.
 * **Pages**: Add, delete, edit, or reorder data pages.
 * **Derived Data**: Define and edit new elements derived from network data.
+* **Alarms**: Define and edit alarms based on data values.
 * **User Interface**: Configure fonts, theme, and screen timeout.
 * **Debug Log**: Display a log of information useful for debugging.
 * **Help & License**: Display this help text.

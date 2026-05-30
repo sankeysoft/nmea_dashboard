@@ -13,7 +13,7 @@ The middle of the form lists the derived elements that are currently defined:
 * Tap an element to edit it
 * Long hold an element then drag to change its position
 * Tap the trash can next to an element to delete it.
-* Tap "Add new page" to add a new derived element.
+* Tap "Add new element" to add a new derived element.
 
 **Close**: This button closes the form.
 
@@ -27,5 +27,5 @@ At the top right there are three buttons:
     them with others.
 2.  **Paste from clipboard**. Tapping this replaces the current derived elements 
     with those in the clipboard. The contents of the clipboard must have
-    been been created using the "copy to clipboard" button.
+    been created using the "copy to clipboard" button.
 3.  **Help**. Displays this text.
