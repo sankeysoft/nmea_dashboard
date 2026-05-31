@@ -60,30 +60,31 @@ class _FormattedHistory {
   final bool validData;
   final double? min;
   final double? max;
-  final List<double?> values;
+  final List<double?> numbers;
 
-  _FormattedHistory(this.validData, this.min, this.max, this.values);
+  _FormattedHistory(this.validData, this.min, this.max, this.numbers);
 
   static _FormattedHistory calculate(History history, NumericFormatter formatter) {
     bool validData = false;
     double? min;
     double? max;
-    List<double?> values = List.filled(history.values.length, null);
+    List<double?> numbers = List.filled(history.values.length, null);
 
     for (int i = 0; i < history.values.length; i++) {
-      final d = formatter.toNumber(history.values[i]);
-      if (d != null) {
-        if (min == null || d <= min) {
-          min = d;
+      final val = history.values[i];
+      final num = (val == null) ? null : formatter.toNumber(val);
+      if (num != null) {
+        if (min == null || num <= min) {
+          min = num;
         }
-        if (max == null || d >= max) {
-          max = d;
+        if (max == null || num >= max) {
+          max = num;
         }
         validData = true;
       }
-      values[i] = d;
+      numbers[i] = num;
     }
-    return _FormattedHistory(validData, min, max, values);
+    return _FormattedHistory(validData, min, max, numbers);
   }
 }
 
@@ -209,7 +210,7 @@ class _GraphPainter extends CustomPainter {
     // The components we paint depend on if we've got valid data and a grid.
     paintBackground(canvas, plotSize, plotOffset);
     if (formattedHistory.validData) {
-      paintPlot(canvas, plotSize, plotOffset, yAxis, formattedHistory.values);
+      paintPlot(canvas, plotSize, plotOffset, yAxis, formattedHistory.numbers);
       if (drawGrid) {
         paintXGrid(canvas, plotSize, plotOffset, xAxis);
         paintYGrid(canvas, plotSize, plotOffset, yAxis);
