@@ -121,6 +121,7 @@ class _WarningDialogState extends State<_WarningDialog> {
   bool _popped = false;
   AlarmSound? _activeSound;
   late final AudioPlayer _audioPlayer;
+  List<Alarm> _shownAlarms = const [];
 
   @override
   void initState() {
@@ -152,27 +153,30 @@ class _WarningDialogState extends State<_WarningDialog> {
     return ListenableBuilder(
       listenable: widget.alarmManager.unacknowledgedWarnings,
       builder: (context, _) {
-        final warningSet = widget.alarmManager.unacknowledgedWarnings;
+        // Once a pop has been requested, freeze the displayed contents so the user does
+        // not see the list change before the dialog dismisses.
+        if (!_popped) {
+          _shownAlarms = widget.alarmManager.unacknowledgedWarnings.alarms.toList();
 
-        // If no unacknowledged warnings are present and we've not already requested a pop, dismiss
-        // after this frame.
-        if (warningSet.isEmpty && !_popped) {
-          WidgetsBinding.instance.addPostFrameCallback((_) => _popOnce());
-        }
-        // If the first warning with a sound no longer matches the active sound play the new sound.
-        AlarmSound? firstSound;
-        for (final a in warningSet.alarms) {
-          if (a.sound != null) {
-            firstSound = a.sound;
-            break;
+          // If no unacknowledged warnings are present, dismiss after this frame.
+          if (_shownAlarms.isEmpty) {
+            WidgetsBinding.instance.addPostFrameCallback((_) => _popOnce());
           }
-        }
-        if (firstSound != _activeSound) {
-          _audioPlayer.stop();
-          if (firstSound != null) {
-            _audioPlayer.play(firstSound.asset);
+          // If the first warning with a sound no longer matches the active sound play the new sound.
+          AlarmSound? firstSound;
+          for (final a in _shownAlarms) {
+            if (a.sound != null) {
+              firstSound = a.sound;
+              break;
+            }
           }
-          _activeSound = firstSound;
+          if (firstSound != _activeSound) {
+            _audioPlayer.stop();
+            if (firstSound != null) {
+              _audioPlayer.play(firstSound.asset);
+            }
+            _activeSound = firstSound;
+          }
         }
         return AlertDialog(
           backgroundColor: basicTheme.colorScheme.surfaceTint,
@@ -181,7 +185,7 @@ class _WarningDialogState extends State<_WarningDialog> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
-            children: warningSet.alarms
+            children: _shownAlarms
                 .map(
                   (a) => Container(
                     margin: const EdgeInsets.symmetric(vertical: 4),
@@ -206,8 +210,8 @@ class _WarningDialogState extends State<_WarningDialog> {
                 padding: const EdgeInsets.all(20),
               ),
               onPressed: () {
-                widget.alarmManager.acknowledgeWarnings();
                 _popOnce();
+                widget.alarmManager.acknowledgeWarnings();
               },
               child: const Text('Silence'),
             ),

@@ -325,12 +325,12 @@ class AlarmManager {
   /// This class's logger.
   static final _log = Logger('AlarmManager');
 
-  static const Duration _latchDelay = Duration(seconds: 5);
+  static const Duration latchDelay = Duration(seconds: 10);
 
   /// The set of currently active alarms, ordered by decreasing age.
   final AlarmSet activeAlarms = AlarmSet();
 
-  /// The set of active alarms, latched so each remains set for a minimum of _latchDelay.
+  /// The set of active alarms, latched so each remains set for a minimum of latchDelay.
   final AlarmSet latchedAlarms = AlarmSet();
 
   /// The set of not-yet acknowledged warnings, ordered by decreasing age.
@@ -361,7 +361,7 @@ class AlarmManager {
       return;
     }
     final lastActivated = _lastActivationTime[alarm] ?? clock.now();
-    final remainingDuration = _latchDelay - clock.now().difference(lastActivated);
+    final remainingDuration = latchDelay - clock.now().difference(lastActivated);
     if (remainingDuration <= Duration.zero) {
       _doRemoveAlarm(alarm);
     } else {

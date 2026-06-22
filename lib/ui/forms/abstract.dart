@@ -10,7 +10,7 @@ import 'package:nmea_dashboard/ui/forms/view_help.dart';
 typedef FormPostSaver = void Function();
 
 // The standard padding
-const double _elementPadding = 8;
+const double _elementPadding = 6;
 // Default width, height, and padding
 const double _defaultWidth = 400;
 const double _defaultHeight = 500;

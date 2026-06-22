@@ -335,6 +335,38 @@ void main() {
       });
     });
 
+    test('current-value alarm clears when value is explicitly invalidated', () {
+      fakeAsync((fake) {
+        final alarm = depthAlarm(min: 10.0, max: 100.0);
+        element.replaceAlarms({alarm});
+        element.updateValue(depthValueFt(5.0));
+        expect(manager.latchedAlarms.contains(alarm), isTrue);
+        expect(element.alarmState.level, AlarmLevel.caution);
+
+        fake.elapse(AlarmManager.latchDelay + const Duration(seconds: 1));
+        element.invalidateValue();
+        expect(element.value, isNull);
+        expect(manager.latchedAlarms.contains(alarm), isFalse);
+        expect(element.alarmState.level, isNull);
+      });
+    });
+
+    test('current-value alarm clears when value goes stale', () {
+      fakeAsync((fake) {
+        final alarm = depthAlarm(min: 10.0, max: 100.0);
+        element.replaceAlarms({alarm});
+        element.updateValue(depthValueFt(5.0));
+        expect(manager.latchedAlarms.contains(alarm), isTrue);
+        expect(element.alarmState.level, AlarmLevel.caution);
+
+        // Element staleness is 10s; elapse past both staleness and latch.
+        fake.elapse(AlarmManager.latchDelay + const Duration(seconds: 1));
+        expect(element.value, isNull);
+        expect(manager.latchedAlarms.contains(alarm), isFalse);
+        expect(element.alarmState.level, isNull);
+      });
+    });
+
     test('replaceAlarms with same alarm keeps stats listener active', () {
       // Verifies that re-supplying an existing alarm via replaceAlarms preserves the stats
       // subscription so the alarm still fires on averaging-interval updates.

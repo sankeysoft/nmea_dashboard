@@ -272,10 +272,11 @@ class _EditAlarmFormState extends StatefulFormState<_EditAlarmForm> {
         decoration: InputDecoration(
           icon: Text('Alarm type:', style: textStyle.copyWith(color: headingColor)),
           border: InputBorder.none,
-          contentPadding: EdgeInsets.all(4.0),
+          isDense: true,
         ),
         child: SegmentedButton<AlarmLevel>(
           showSelectedIcon: false,
+          style: SegmentedButton.styleFrom(textStyle: textStyle),
           segments: const [
             ButtonSegment<AlarmLevel>(
               value: AlarmLevel.caution,

@@ -736,7 +736,7 @@ void main() {
     test('clearAlarm removes from both sets and notifies', () {
       fakeAsync((fake) {
         manager.setAlarm(warning);
-        fake.elapse(const Duration(seconds: 6));
+        fake.elapse(AlarmManager.latchDelay + const Duration(seconds: 1));
         int activeCount = 0;
         int warnCount = 0;
         manager.latchedAlarms.addListener(() => activeCount++);
@@ -753,7 +753,7 @@ void main() {
       fakeAsync((fake) {
         manager.setAlarm(warning);
         manager.acknowledgeWarnings();
-        fake.elapse(const Duration(seconds: 6));
+        fake.elapse(AlarmManager.latchDelay + const Duration(seconds: 1));
         expect(manager.unacknowledgedWarnings.isEmpty, isTrue);
         manager.clearAlarm(warning);
         expect(manager.latchedAlarms.contains(warning), isFalse);
@@ -788,18 +788,18 @@ void main() {
       expect(manager.latchedAlarms.alarms.toList(), [otherCaution, caution]);
     });
 
-    test('clearAlarm within 5s does not immediately remove from active alarms', () {
+    test('clearAlarm within latchDelay does not immediately remove from active alarms', () {
       manager.setAlarm(caution);
       manager.clearAlarm(caution);
       expect(manager.latchedAlarms.contains(caution), isTrue);
     });
 
-    test('clearAlarm within 5s removes alarm after 5s elapses', () {
+    test('clearAlarm within latchDelay removes alarm after latchDelay elapses', () {
       fakeAsync((fake) {
         manager.setAlarm(warning);
         manager.clearAlarm(warning);
         expect(manager.latchedAlarms.contains(warning), isTrue);
-        fake.elapse(const Duration(seconds: 5));
+        fake.elapse(AlarmManager.latchDelay);
         expect(manager.latchedAlarms.contains(warning), isFalse);
         expect(manager.unacknowledgedWarnings.contains(warning), isFalse);
       });
@@ -809,10 +809,10 @@ void main() {
       fakeAsync((fake) {
         manager.setAlarm(caution);
         manager.clearAlarm(caution);
-        fake.elapse(const Duration(seconds: 3));
+        fake.elapse(AlarmManager.latchDelay ~/ 2);
         manager.setAlarm(caution);
-        fake.elapse(const Duration(seconds: 3));
-        // Only 3s have passed since the second setAlarm, so caution is still active.
+        fake.elapse(AlarmManager.latchDelay ~/ 2);
+        // Only latchDelay/2 has passed since the second setAlarm, so caution is still active.
         expect(manager.latchedAlarms.contains(caution), isTrue);
       });
     });
@@ -820,15 +820,13 @@ void main() {
     test('setAlarm during hysteresis does not extend the delay past original trigger', () {
       fakeAsync((fake) {
         manager.setAlarm(caution); // T=0, trigger recorded at T=0
-        fake.elapse(const Duration(seconds: 1));
-        manager.clearAlarm(caution); // T=1, schedules timer to fire at T=5
-        fake.elapse(const Duration(seconds: 2));
-        manager.setAlarm(caution); // T=3, cancels timer; trigger time stays T=0
-        fake.elapse(const Duration(seconds: 1));
-        manager.clearAlarm(caution); // T=4, only 1s until T=5; schedules short timer
+        manager.clearAlarm(caution); // T=0, schedules timer to fire at T=latchDelay
+        fake.elapse(AlarmManager.latchDelay ~/ 2);
+        manager.setAlarm(caution); // cancels timer; trigger time stays T=0
+        manager.clearAlarm(caution); // schedules timer for latchDelay/2 remaining
         expect(manager.latchedAlarms.contains(caution), isTrue);
-        fake.elapse(const Duration(seconds: 1));
-        // T=5: 5s since original trigger, alarm should now be cleared.
+        fake.elapse(AlarmManager.latchDelay ~/ 2);
+        // T=latchDelay since original trigger, alarm should now be cleared.
         expect(manager.latchedAlarms.contains(caution), isFalse);
       });
     });
@@ -842,7 +840,7 @@ void main() {
           int activeCount = 0;
           manager.latchedAlarms.addListener(() => activeCount++);
           manager.clearAlarm(caution);
-          fake.elapse(const Duration(seconds: 5));
+          fake.elapse(AlarmManager.latchDelay);
           // Alarm was removed exactly once.
           expect(manager.latchedAlarms.contains(caution), isFalse);
           expect(activeCount, 1);

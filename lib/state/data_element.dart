@@ -288,6 +288,12 @@ mixin WithAlarms<V extends Value, U extends Value> on DataElement<V, U> {
     _updateAlarms(_AlarmUpdateType.currentValue);
   }
 
+  @override
+  void invalidateValue() {
+    super.invalidateValue();
+    _updateAlarms(_AlarmUpdateType.currentValue);
+  }
+
   void _updateAlarms(_AlarmUpdateType updateType, {StatsInterval? statisticInterval}) {
     AlarmLevel? highestLevel;
     for (final alarm in _alarms) {
@@ -296,8 +302,10 @@ mixin WithAlarms<V extends Value, U extends Value> on DataElement<V, U> {
         // Alarm is based on current value. Try to set active based on current state if
         // included in the update request.
         if ({_AlarmUpdateType.currentValue, _AlarmUpdateType.all}.contains(updateType)) {
-          // Assess activeness based on the value.
-          active = (value == null) ? null : alarm.isTriggered(value!);
+          // Assess activeness based on the value. Note that an unknown or stale value will clear
+          // an alarm. This is particularly important for depth, where a safe depth often reads as
+          // unknown.
+          active = (value == null) ? false : alarm.isTriggered(value!);
         }
       } else {
         // Alarm is based on an average over some statistics interval. Try to set active based
@@ -307,7 +315,7 @@ mixin WithAlarms<V extends Value, U extends Value> on DataElement<V, U> {
                 statisticInterval == alarm.averagingInterval)) {
           final stats = (this as WithStats).stats(alarm.averagingInterval!);
           final mean = stats.inner?.mean;
-          active = (mean == null) ? null : alarm.isTriggered(mean);
+          active = (mean == null) ? false : alarm.isTriggered(mean);
         }
       }
       // Inform our manager about the potentially new state.
