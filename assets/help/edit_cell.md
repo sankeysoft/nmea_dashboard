@@ -33,3 +33,11 @@ This form lets you define one of the cells on a data page.
 
 * **Save**: Save the changes and close the form. Alternatively tap the back
   arrow (at the top left) to close the form without saving changes.
+
+
+# Toolbar
+
+At the top right there are two buttons:
+
+1.  **Alarms**. Tapping this edits the alarms for this source and element.
+2.  **Help**. Displays this text.

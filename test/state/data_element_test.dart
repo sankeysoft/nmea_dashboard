@@ -40,6 +40,8 @@ void main() {
       _staleness,
     );
     expect(element.id, 'local_dewPoint');
+    expect(element.name, 'dewPoint');
+    expect(element.source, Source.local);
     expect(element.property, Property.dewPoint);
     expect(element.storedType, SingleValue<double>);
     expect(element.inputType, SingleValue<double>);
@@ -112,6 +114,18 @@ void main() {
     element.updateValue(_boundSingleValue(3.0, tier: 2));
     expect(element.value, ValueMatches(SingleValue(3.0)));
     expect(element.tier, 2);
+  });
+
+  test('bearing data element exposes name and source', () {
+    final variation = ConsistentDataElement<SingleValue<double>>(
+      Source.network,
+      Property.variation,
+      _staleness,
+    );
+    final bearing = BearingDataElement(Source.network, variation, Property.heading, _staleness);
+    expect(bearing.id, 'network_heading');
+    expect(bearing.name, 'heading');
+    expect(bearing.source, Source.network);
   });
 
   test('bearing data element should accept magnetic inputs', () {

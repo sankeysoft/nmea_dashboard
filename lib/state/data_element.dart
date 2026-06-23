@@ -33,6 +33,12 @@ abstract class DataElement<V extends Value, U extends Value> with ChangeNotifier
   /// A unique and developer readable string to identify this data element.
   final String id;
 
+  /// The source that supplies this data element.
+  final Source source;
+
+  /// The string used to index this data element within its source.
+  final String name;
+
   /// The property we expect for incoming values.
   final Property property;
 
@@ -59,7 +65,7 @@ abstract class DataElement<V extends Value, U extends Value> with ChangeNotifier
   /// The tier most recently accepted by this element, even if no longer valid.
   int? _tier;
 
-  DataElement(this.id, this.property, this.staleness);
+  DataElement(this.id, this.source, this.name, this.property, this.staleness);
 
   /// A long name for the element, suitable for picking from a list.
   String get longName => property.longName;
@@ -134,7 +140,7 @@ abstract class DataElement<V extends Value, U extends Value> with ChangeNotifier
 /// A DataElement where the input type matches the storage type.
 class ConsistentDataElement<V extends Value> extends DataElement<V, V> {
   ConsistentDataElement(Source source, property, staleness)
-    : super('${source.name}_${property.name}', property, staleness);
+    : super('${source.name}_${property.name}', source, property.name, property, staleness);
   static ConsistentDataElement newForProperty(
     Source source,
     Property property,
@@ -366,7 +372,7 @@ class BearingDataElement extends DataElement<AugmentedBearing, SingleValue<doubl
   final ConsistentDataElement<SingleValue<double>> variation;
 
   BearingDataElement(Source source, this.variation, property, staleness)
-    : super('${source.name}_${property.name}', property, staleness);
+    : super('${source.name}_${property.name}', source, property.name, property, staleness);
 
   @override
   bool updateValue(final BoundValue<SingleValue<double>> newValue) {

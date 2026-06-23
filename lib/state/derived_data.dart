@@ -69,6 +69,8 @@ class DerivedDataElement extends DataElement<SingleValue<double>, SingleValue<do
     this._operand,
   ) : super(
         '${_name}_from_${_sourceElement.id}',
+        Source.derived,
+        _name,
         _sourceElement.property,
         /* No staleness, source will notify on invalid */ null,
       ) {

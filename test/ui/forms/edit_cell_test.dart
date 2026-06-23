@@ -30,10 +30,12 @@ void main() {
     late DataSet dataSet;
     late PageSettings pageSettings;
     late FormatPreferences formatPrefs;
+    late AlarmSettings alarmSettings;
 
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
+      alarmSettings = AlarmSettings(prefs);
       dataSet = DataSet(
         NetworkSettings(prefs),
         DerivedDataSettings(prefs),
@@ -71,6 +73,7 @@ void main() {
             ChangeNotifierProvider<DataSet>.value(value: dataSet),
             ChangeNotifierProvider<PageSettings>.value(value: pageSettings),
             ChangeNotifierProvider<FormatPreferences>.value(value: formatPrefs),
+            ChangeNotifierProvider<AlarmSettings>.value(value: alarmSettings),
           ],
           child: MaterialApp(
             navigatorObservers: [?observer],
@@ -256,6 +259,30 @@ void main() {
       await tester.tap(find.text('SAVE'));
       await tester.pump();
       expect(find.text('Type must be set'), findsOneWidget);
+    });
+
+    testWidgets('alarms button navigates to alarms filtered to the cell element', (tester) async {
+      final spec = DataCellSpec('network', 'speedOverGround', 'current', 'knots');
+      await pumpForm(tester, spec);
+
+      await tester.tap(find.byIcon(Icons.notifications_outlined));
+      await tester.pumpAndSettle();
+
+      // The pushed alarms page is scoped to this element (speedOverGround.shortName is "SOG").
+      expect(find.text('Edit SOG alarms'), findsOneWidget);
+    });
+
+    testWidgets('alarms button still navigates when the element is unset', (tester) async {
+      // An unknown element resolves to a null dataElement; the button must still navigate
+      // (to the unfiltered alarms page) rather than do nothing.
+      final spec = DataCellSpec('network', 'doesNotExist', 'current', 'knots');
+      final observer = TestNavObserver();
+      await pumpForm(tester, spec, observer: observer);
+
+      await tester.tap(find.byIcon(Icons.notifications_outlined));
+      await tester.pump();
+
+      expect(observer.pushCount, 1);
     });
 
     testWidgets('changing format dropdown updates internal format', (tester) async {

@@ -5,6 +5,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nmea_dashboard/state/alarms.dart';
+import 'package:nmea_dashboard/state/common.dart';
+import 'package:nmea_dashboard/state/data_element.dart';
 import 'package:nmea_dashboard/state/data_element_history.dart';
 import 'package:nmea_dashboard/state/data_set.dart';
 import 'package:nmea_dashboard/state/settings/alarm.dart';
@@ -43,6 +45,7 @@ void main() {
       AlarmSpec? spec, {
       CreateAlarmFunction? onCreate,
       TestNavObserver? observer,
+      DataElement? element,
     }) async {
       // DropdownButtonFormField renders all items off-screen for accessibility, which
       // causes layout overflow assertions in narrow test environments. Suppress them.
@@ -64,7 +67,7 @@ void main() {
           ],
           child: MaterialApp(
             navigatorObservers: [?observer],
-            home: EditAlarmPage(spec: spec, onCreate: onCreate ?? (_) {}),
+            home: EditAlarmPage(element: element, spec: spec, onCreate: onCreate ?? (_) {}),
           ),
         ),
       );
@@ -236,6 +239,24 @@ void main() {
       await tester.tap(find.text('SAVE'));
       await tester.pump();
       expect(createdSpec?.sound, 'twoTone');
+    });
+
+    testWidgets('fixed element pre-fills the source and element from the element', (tester) async {
+      final element = dataSet.find(Source.network, 'speedOverGround')!;
+      await pumpForm(tester, null, element: element);
+      expect(find.text('Network - General'), findsOneWidget);
+      expect(find.text('Speed over ground'), findsOneWidget);
+    });
+
+    testWidgets('fixed element disables the source and element selectors', (tester) async {
+      final element = dataSet.find(Source.network, 'speedOverGround')!;
+      await pumpForm(tester, null, element: element);
+
+      // Tapping the (disabled) source group must not open a selection menu, so the
+      // other group option never becomes visible.
+      await tester.tap(find.text('Network - General'));
+      await tester.pump();
+      expect(find.text('Network - Environment'), findsNothing);
     });
 
     testWidgets('changing format converts existing bounds', (tester) async {

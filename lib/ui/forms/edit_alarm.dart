@@ -20,8 +20,12 @@ const _defaultLevel = AlarmLevel.warning;
 const _defaultSound = AlarmSound.gnat;
 final _numberFormat = NumberFormat("0.##");
 
-AlarmSpec _createDefaultSpec() {
-  return AlarmSpec('network', '', AlarmLevel.caution.name, '');
+AlarmSpec _createDefaultSpec(DataElement? element) {
+  if (element == null) {
+    return AlarmSpec('network', '', AlarmLevel.caution.name, '');
+  } else {
+    return AlarmSpec(element.source.name, element.name, AlarmLevel.caution.name, '');
+  }
 }
 
 /// A function called on successful creation or update of an AlarmSpec.
@@ -29,19 +33,26 @@ typedef CreateAlarmFunction = void Function(AlarmSpec spec);
 
 /// A form that lets the user edit a single alarm.
 class EditAlarmPage extends StatefulFormPage {
-  EditAlarmPage({AlarmSpec? spec, required CreateAlarmFunction onCreate, super.key})
-    : super(
-        title: 'Edit alarm',
-        actions: [const HelpButton('edit_alarm.md')],
-        child: _EditAlarmForm(spec, onCreate),
-      );
+  EditAlarmPage({
+    DataElement? element,
+    AlarmSpec? spec,
+    required CreateAlarmFunction onCreate,
+    super.key,
+  }) : super(
+         title: 'Edit alarm',
+         actions: [const HelpButton('edit_alarm.md')],
+         child: _EditAlarmForm(element, spec, onCreate),
+       );
 }
 
 class _EditAlarmForm extends StatefulWidget {
   final CreateAlarmFunction _onCreate;
+  final bool _fixedElement;
   final AlarmSpec _spec;
 
-  _EditAlarmForm(AlarmSpec? spec, this._onCreate) : _spec = spec ?? _createDefaultSpec();
+  _EditAlarmForm(DataElement? element, AlarmSpec? spec, this._onCreate)
+    : _fixedElement = (element != null),
+      _spec = spec ?? _createDefaultSpec(element);
 
   @override
   State<_EditAlarmForm> createState() => _EditAlarmFormState();
@@ -212,6 +223,7 @@ class _EditAlarmFormState extends StatefulFormState<_EditAlarmForm> {
           _wipeInvalidFields();
         });
       },
+      enabled: !widget._fixedElement,
     );
   }
 
@@ -239,6 +251,7 @@ class _EditAlarmFormState extends StatefulFormState<_EditAlarmForm> {
         }
         return null;
       },
+      enabled: !widget._fixedElement,
     );
   }
 

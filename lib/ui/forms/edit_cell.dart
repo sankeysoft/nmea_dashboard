@@ -11,22 +11,51 @@ import 'package:nmea_dashboard/state/settings/format.dart';
 import 'package:nmea_dashboard/state/settings/page.dart';
 import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:nmea_dashboard/ui/forms/abstract.dart';
+import 'package:nmea_dashboard/ui/forms/edit_alarms.dart';
 import 'package:provider/provider.dart';
 
-/// A form that lets the user edit a data cell.
-class EditCellPage extends StatefulFormPage {
-  EditCellPage({required DataCellSpec spec, super.key})
-    : super(
-        title: 'Edit cell',
-        actions: [const HelpButton('edit_cell.md')],
-        child: _EditCellForm(spec: spec),
-      );
+/// A form that lets the user edit a data cell. Defined as a basic StatelessWidget rather than
+/// a StatefulFormPage to share a form key betwween the _AlarmsButton and the Form.
+class EditCellPage extends StatelessWidget {
+  final DataCellSpec spec;
+  final _formKey = GlobalKey<_EditCellFormState>();
+
+  EditCellPage({required this.spec, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StatefulFormPage(
+      title: 'Edit cell',
+      actions: [_AlarmsButton(_formKey), const HelpButton('edit_cell.md')],
+      child: _EditCellForm(key: _formKey, spec: spec),
+    );
+  }
+}
+
+class _AlarmsButton extends StatelessWidget {
+  final GlobalKey<_EditCellFormState> _formKey;
+  const _AlarmsButton(this._formKey);
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.notifications_outlined),
+      onPressed: () {
+        final element = _formKey.currentState?.dataElement;
+        if (element != null) {
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (context) => EditAlarmsPage(element: element)));
+        }
+      },
+    );
+  }
 }
 
 /// The stateful form itself
 class _EditCellForm extends StatefulWidget {
   final DataCellSpec spec;
-  const _EditCellForm({required this.spec});
+  const _EditCellForm({required this.spec, super.key});
 
   @override
   State<_EditCellForm> createState() => _EditCellFormState();
@@ -92,6 +121,10 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
   void dispose() {
     _nameController.dispose();
     super.dispose();
+  }
+
+  DataElement? get dataElement {
+    return _dataSet.sources[_source]?[_element];
   }
 
   // Clears any internal fields that are now inconsistent given the present value of higher level

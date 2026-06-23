@@ -14,7 +14,7 @@ caution for depth below 6 metres and a warning for depth below 3 metres.
 
 Alarms can be set on either the current value or the average value. When
 any alarm is active for a data element all cells for that element will be
-highlighted whether they are displaying current value, an average, or
+highlighted whether they are displaying the current value, an average, or
 a history.
 
 *BE CAREFUL WITH THIS FEATURE. AUDIO WON'T PLAY UNLESS THE DEVICE IS UNLOCKED
@@ -23,10 +23,12 @@ HEAR THE ALARM.*
 
 # Controls
 
-The middle of the form lists the alarms that are currently defined:
+The middle of the form lists the alarms that are currently defined. If you
+opened the form from the menu it displays all alarms. If you opened the form
+from a data cell it diplays only alarms for the property in the cell.
 
 * Tap an alarm to edit it
-* Long hold an alarm then drag to change its position
+* Long hold an alarm then drag to change its position (only for all alarms).
 * Tap the trash can next to an element to delete it.
 * Tap "Add new alarm" to add a new alarm.
 

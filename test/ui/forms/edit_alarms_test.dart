@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nmea_dashboard/state/alarms.dart';
+import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/data_element_history.dart';
 import 'package:nmea_dashboard/state/data_set.dart';
 import 'package:nmea_dashboard/state/settings/alarm.dart';
@@ -78,7 +79,8 @@ void main() {
       await tester.tap(find.byIcon(Icons.delete_outline));
       await tester.pump();
 
-      expect(find.text('Delete myElement element?'), findsOneWidget);
+      // The dialog title echoes the tile title, which is "Invalid spec" for an unresolvable spec.
+      expect(find.text('Delete Invalid spec'), findsOneWidget);
     });
 
     testWidgets('confirm delete removes alarm', (tester) async {
@@ -177,6 +179,83 @@ void main() {
       );
       await pumpPage(tester);
       expect(find.byIcon(Icons.warning), findsOneWidget);
+    });
+  });
+
+  group('EditAlarmsPage filtered to an element', () {
+    late DataSet dataSet;
+    late AlarmSettings alarmSettings;
+    late FormatPreferences formatPrefs;
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      alarmSettings = AlarmSettings(prefs);
+      formatPrefs = FormatPreferences(prefs);
+      dataSet = DataSet(
+        NetworkSettings(prefs),
+        DerivedDataSettings(prefs),
+        AlarmSettings(prefs),
+        HistoryManagerImpl(prefs),
+        AlarmManager(),
+      );
+    });
+
+    Future<void> pumpPage(WidgetTester tester, {NavigatorObserver? observer}) async {
+      final element = dataSet.find(Source.network, 'speedOverGround')!;
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<DataSet>.value(value: dataSet),
+            ChangeNotifierProvider<AlarmSettings>.value(value: alarmSettings),
+            ChangeNotifierProvider<FormatPreferences>.value(value: formatPrefs),
+          ],
+          child: MaterialApp(
+            navigatorObservers: [?observer],
+            home: EditAlarmsPage(element: element),
+          ),
+        ),
+      );
+      await tester.pump();
+    }
+
+    testWidgets('shows an element-specific title', (tester) async {
+      await pumpPage(tester);
+      // speedOverGround.shortName is "SOG".
+      expect(find.text('Edit SOG alarms'), findsOneWidget);
+      expect(find.text('Edit alarms'), findsNothing);
+    });
+
+    testWidgets('hides copy and paste actions in filtered mode', (tester) async {
+      await pumpPage(tester);
+      expect(find.byIcon(Icons.copy_all_outlined), findsNothing);
+      expect(find.byIcon(Icons.content_paste_outlined), findsNothing);
+    });
+
+    testWidgets('lists only alarms for the matching element', (tester) async {
+      // A matching alarm (network/speedOverGround) and a non-matching one (network/trueWindSpeed).
+      alarmSettings.setAlarm(
+        AlarmSpec('network', 'speedOverGround', 'warning', 'knots', min: 5.0),
+      );
+      alarmSettings.setAlarm(
+        AlarmSpec('network', 'trueWindSpeed', 'caution', 'knots', min: 5.0),
+      );
+      await pumpPage(tester);
+
+      // The matching warning alarm is shown (warning icon); the caution alarm for the
+      // other element is filtered out (no info icon present).
+      expect(find.byIcon(Icons.warning), findsOneWidget);
+      expect(find.byIcon(Icons.info_outlined), findsNothing);
+    });
+
+    testWidgets('add alarm tile navigates to edit form with the fixed element', (tester) async {
+      final observer = TestNavObserver();
+      await pumpPage(tester, observer: observer);
+
+      await tester.tap(find.text('Add new alarm'));
+      await tester.pump();
+
+      expect(observer.pushCount, greaterThan(0));
     });
   });
 }

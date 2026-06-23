@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nmea_dashboard/state/alarms.dart';
+import 'package:nmea_dashboard/state/data_element.dart';
 import 'package:nmea_dashboard/state/data_set.dart';
 import 'package:nmea_dashboard/state/settings/alarm.dart';
 import 'package:nmea_dashboard/state/settings/specs.dart';
@@ -12,13 +13,15 @@ import 'package:nmea_dashboard/ui/forms/edit_alarm.dart';
 import 'package:nmea_dashboard/ui/forms/abstract.dart';
 import 'package:provider/provider.dart';
 
-/// A form that lets the user edit the list of alarms.
+/// A form that lets the user edit the list of alarms, optionally filtered to one data element.
 class EditAlarmsPage extends StatelessFormPage {
-  EditAlarmsPage({super.key})
+  EditAlarmsPage({DataElement? element, super.key})
     : super(
-        title: 'Edit alarms',
-        actions: [_CopyButton(), _PasteButton(), const HelpButton('edit_alarms.md')],
-        content: _EditAlarmsContent(),
+        title: element == null ? 'Edit alarms' : 'Edit ${element.property.shortName} alarms',
+        actions: element == null
+            ? [_CopyButton(), _PasteButton(), const HelpButton('edit_alarms.md')]
+            : [const HelpButton('edit_alarms.md')],
+        content: _EditAlarmsContent(element),
       );
 }
 
@@ -75,6 +78,10 @@ class _PasteButton extends StatelessWidget {
 }
 
 class _EditAlarmsContent extends StatelessWidget {
+  final DataElement? _dataElement;
+
+  const _EditAlarmsContent(this._dataElement);
+
   @override
   Widget build(BuildContext context) {
     return Form(
@@ -100,18 +107,26 @@ class _EditAlarmsContent extends StatelessWidget {
 
   Widget _buildReorderableList(BuildContext context, AlarmSettings settings) {
     List<Widget> tiles = [];
+
     for (final spec in settings.alarmSpecs) {
-      tiles.add(_buildElementTile(context, settings, spec, tiles.length));
+      // If we are filtered to a data element, only add alarms that match.
+      if (_dataElement == null ||
+          (spec.source == _dataElement.source.name) && spec.element == _dataElement.name) {
+        tiles.add(_buildElementTile(context, settings, spec, tiles.length));
+      }
     }
     return ReorderableListView(
       buildDefaultDragHandles: false,
       onReorder: (oldIndex, newIndex) {
-        List<AlarmSpec> specs = settings.alarmSpecs.toList();
-        final moved = specs.removeAt(oldIndex);
-        // Correct the newIndex for the deleted item if we're moving down.
-        if (newIndex > oldIndex) newIndex -= 1;
-        specs.insert(newIndex, moved);
-        settings.replaceElements(specs);
+        // In filtered mode it doesn't make sense to manage ordering of the global list, ignore.
+        if (_dataElement == null) {
+          List<AlarmSpec> specs = settings.alarmSpecs.toList();
+          final moved = specs.removeAt(oldIndex);
+          // Correct the newIndex for the deleted item if we're moving down.
+          if (newIndex > oldIndex) newIndex -= 1;
+          specs.insert(newIndex, moved);
+          settings.replaceElements(specs);
+        }
       },
       footer: _buildAddElementTile(context, settings),
       children: tiles,
@@ -140,24 +155,28 @@ class _EditAlarmsContent extends StatelessWidget {
     } else {
       icon = const Icon(Icons.info_outlined);
     }
+    final alarmTitle = alarm?.toString() ?? "Invalid spec";
 
     return buildMovableDeletableTile(
       key: spec.key,
       index: index,
       context: context,
-      title: alarm?.toString() ?? "Invalid spec",
+      title: alarmTitle,
       icon: icon,
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) =>
-              EditAlarmPage(spec: spec, onCreate: (spec) => settings.setAlarm(spec)),
+          builder: (context) => EditAlarmPage(
+            element: _dataElement,
+            spec: spec,
+            onCreate: (spec) => settings.setAlarm(spec),
+          ),
         ),
       ),
       onDeleteTap: () => showDialog(
         context: context,
         builder: (context) => buildConfirmationDialog(
           context: context,
-          title: 'Delete ${spec.element} element?',
+          title: 'Delete $alarmTitle',
           content: 'This action cannot be undone.',
           onPressed: () => settings.removeElement(spec),
         ),
@@ -174,7 +193,8 @@ class _EditAlarmsContent extends StatelessWidget {
       icon: const Icon(Icons.add_outlined),
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) => EditAlarmPage(onCreate: (spec) => settings.setAlarm(spec)),
+          builder: (context) =>
+              EditAlarmPage(element: _dataElement, onCreate: (spec) => settings.setAlarm(spec)),
         ),
       ),
     );

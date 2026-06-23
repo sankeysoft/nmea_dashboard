@@ -54,6 +54,8 @@ void main() {
     expect(derived.value, null);
     expect(derived.shortName, _testName);
     expect(derived.longName, _testName);
+    expect(derived.name, _testName);
+    expect(derived.source, Source.derived);
     source.updateValue(BoundValue(_testSource, Property.depthUncalibrated, SingleValue(5)));
     expect(derived.value, ValueMatches(SingleValue((5 * metersToFeet + 100) / metersToFeet)));
     expect(eventCount, 1);

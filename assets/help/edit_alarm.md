@@ -20,11 +20,13 @@ HEAR THE ALARM.*
 
 # Controls
 
-* **Source**: Where the data to be alarmed comes from.
+* **Source**: Where the data to be alarmed comes from. If you opened edit alarm
+  from a cell, source will be locked to the source of that cell.
 
 * **Element**: Which data the alarm should be set on. The elements in this list
   depend on the selected source and are limited to elements that can be converted
-  to a single number.
+  to a single number. If you opened edit alarm from a cell, element will be
+  locked to the element in that cell.
 
 * **Value**: Whether the alarm should be set based on the most recent value or
   on an average, and the units that should be used.

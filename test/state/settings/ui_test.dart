@@ -32,6 +32,7 @@ void main() {
     expect(s.valueFont, 'Lexend');
     expect(s.headingFont, 'Manrope');
     expect(s.keepScreenAwake, isFalse);
+    expect(s.alarmSilenceTime, isNull);
   });
 
   test('reads stored values from prefs', () async {
@@ -45,6 +46,7 @@ void main() {
         'ui_value_font': 'Orbitron',
         'ui_heading_font': 'Kanit',
         'ui_keep_screen_awake': !defaults.keepScreenAwake,
+        'ui_alarm_silence_seconds': 300,
       }),
     );
     expect(s.firstRun, isNot(defaults.firstRun));
@@ -54,6 +56,7 @@ void main() {
     expect(s.valueFont, 'Orbitron');
     expect(s.headingFont, 'Kanit');
     expect(s.keepScreenAwake, isNot(defaults.keepScreenAwake));
+    expect(s.alarmSilenceTime, const Duration(seconds: 300));
   });
 
   test('recordNewRun sets firstRun false, persists version, and notifies', () async {
@@ -158,6 +161,30 @@ void main() {
     s.setKeepScreenAwake(true);
     expect(s.keepScreenAwake, isTrue);
     expect(p.getBool('ui_keep_screen_awake'), isTrue);
+    expect(count, 1);
+  });
+
+  test('setAlarmSilenceTime stores a duration in seconds and notifies', () async {
+    final p = await _prefs();
+    final s = UiSettings(p);
+    int count = 0;
+    s.addListener(() => count++);
+    s.setAlarmSilenceTime(const Duration(minutes: 5));
+    expect(s.alarmSilenceTime, const Duration(minutes: 5));
+    expect(p.getInt('ui_alarm_silence_seconds'), 300);
+    expect(count, 1);
+  });
+
+  test('setAlarmSilenceTime with null stores 0 and reads back as null', () async {
+    final p = await _prefs();
+    final s = UiSettings(p);
+    // Start from a non-zero value so we can observe it being cleared.
+    s.setAlarmSilenceTime(const Duration(minutes: 5));
+    int count = 0;
+    s.addListener(() => count++);
+    s.setAlarmSilenceTime(null);
+    expect(p.getInt('ui_alarm_silence_seconds'), 0);
+    expect(s.alarmSilenceTime, isNull);
     expect(count, 1);
   });
 }
