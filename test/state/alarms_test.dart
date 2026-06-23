@@ -752,7 +752,7 @@ void main() {
     test('clearAlarm on previously-acknowledged warning still clears active', () {
       fakeAsync((fake) {
         manager.setAlarm(warning);
-        manager.acknowledgeWarnings();
+        manager.acknowledgeWarnings(null);
         fake.elapse(AlarmManager.latchDelay + const Duration(seconds: 1));
         expect(manager.unacknowledgedWarnings.isEmpty, isTrue);
         manager.clearAlarm(warning);
@@ -770,7 +770,7 @@ void main() {
     test('acknowledgeWarnings clears unacknowledged but not active', () {
       manager.setAlarm(caution);
       manager.setAlarm(warning);
-      manager.acknowledgeWarnings();
+      manager.acknowledgeWarnings(null);
       expect(manager.unacknowledgedWarnings.isEmpty, isTrue);
       expect(manager.latchedAlarms.contains(caution), isTrue);
       expect(manager.latchedAlarms.contains(warning), isTrue);
@@ -778,7 +778,7 @@ void main() {
 
     test('acknowledgeWarnings is a no-op when no unacknowledged warnings', () {
       manager.setAlarm(caution);
-      expect(() => manager.acknowledgeWarnings(), returnsNormally);
+      expect(() => manager.acknowledgeWarnings(null), returnsNormally);
       expect(manager.latchedAlarms.contains(caution), isTrue);
     });
 
@@ -831,21 +831,114 @@ void main() {
       });
     });
 
-    test(
-      'second clearAlarm while clear is already pending does not re-notify',
-      () {
-        fakeAsync((fake) {
-          manager.setAlarm(caution);
-          manager.clearAlarm(caution);
-          int activeCount = 0;
-          manager.latchedAlarms.addListener(() => activeCount++);
-          manager.clearAlarm(caution);
-          fake.elapse(AlarmManager.latchDelay);
-          // Alarm was removed exactly once.
-          expect(manager.latchedAlarms.contains(caution), isFalse);
-          expect(activeCount, 1);
-        });
-      },
-    );
+    test('second clearAlarm while clear is already pending does not re-notify', () {
+      fakeAsync((fake) {
+        manager.setAlarm(caution);
+        manager.clearAlarm(caution);
+        int activeCount = 0;
+        manager.latchedAlarms.addListener(() => activeCount++);
+        manager.clearAlarm(caution);
+        fake.elapse(AlarmManager.latchDelay);
+        // Alarm was removed exactly once.
+        expect(manager.latchedAlarms.contains(caution), isFalse);
+        expect(activeCount, 1);
+      });
+    });
+
+    // Re-latches an alarm after its latch has expired, returning once it is active again. Assumes
+    // the alarm is currently latched and lets the latch delay elapse before re-triggering.
+    void reTrigger(FakeAsync fake, Alarm alarm) {
+      manager.clearAlarm(alarm);
+      fake.elapse(AlarmManager.latchDelay);
+      assert(!manager.latchedAlarms.contains(alarm));
+      manager.setAlarm(alarm);
+    }
+
+    test('acknowledgeWarnings with duration suppresses re-firing within the window', () {
+      fakeAsync((fake) {
+        manager.setAlarm(warning);
+        manager.acknowledgeWarnings(const Duration(minutes: 5));
+        expect(manager.unacknowledgedWarnings.isEmpty, isTrue);
+        // Re-trigger well inside the 5 minute silence window.
+        reTrigger(fake, warning);
+        // The alarm latches and is active again, but is not re-raised as a warning.
+        expect(manager.latchedAlarms.contains(warning), isTrue);
+        expect(manager.activeAlarms.contains(warning), isTrue);
+        expect(manager.unacknowledgedWarnings.contains(warning), isFalse);
+      });
+    });
+
+    test('acknowledgeWarnings with duration does not notify on suppressed re-fire', () {
+      fakeAsync((fake) {
+        manager.setAlarm(warning);
+        manager.acknowledgeWarnings(const Duration(minutes: 5));
+        int warnCount = 0;
+        manager.unacknowledgedWarnings.addListener(() => warnCount++);
+        reTrigger(fake, warning);
+        expect(warnCount, 0);
+      });
+    });
+
+    test('acknowledgeWarnings with duration allows re-firing after the window elapses', () {
+      fakeAsync((fake) {
+        manager.setAlarm(warning);
+        manager.acknowledgeWarnings(const Duration(minutes: 5));
+        manager.clearAlarm(warning);
+        fake.elapse(const Duration(minutes: 6));
+        expect(manager.latchedAlarms.contains(warning), isFalse);
+        manager.setAlarm(warning);
+        expect(manager.unacknowledgedWarnings.contains(warning), isTrue);
+      });
+    });
+
+    test('acknowledgeWarnings with duration still suppresses exactly at the window boundary', () {
+      fakeAsync((fake) {
+        const window = Duration(minutes: 5);
+        manager.setAlarm(warning);
+        manager.acknowledgeWarnings(window);
+        manager.clearAlarm(warning);
+        // Elapse exactly to the boundary; nextWarningTime is not strictly before now.
+        fake.elapse(window);
+        manager.setAlarm(warning);
+        expect(manager.unacknowledgedWarnings.contains(warning), isFalse);
+      });
+    });
+
+    test('acknowledgeWarnings with null does not suppress subsequent re-firing', () {
+      fakeAsync((fake) {
+        manager.setAlarm(warning);
+        manager.acknowledgeWarnings(null);
+        reTrigger(fake, warning);
+        expect(manager.unacknowledgedWarnings.contains(warning), isTrue);
+      });
+    });
+
+    test('silencing one warning does not suppress a different warning', () {
+      fakeAsync((fake) {
+        final otherWarning = _testDepthAlarm(max: 200.0, level: AlarmLevel.warning);
+        manager.setAlarm(warning);
+        manager.acknowledgeWarnings(const Duration(minutes: 5));
+        // A distinct warning that was never silenced fires normally.
+        manager.setAlarm(otherWarning);
+        expect(manager.unacknowledgedWarnings.contains(otherWarning), isTrue);
+        expect(manager.unacknowledgedWarnings.contains(warning), isFalse);
+      });
+    });
+
+    test('silence window is per-alarm and re-arms each time it is acknowledged', () {
+      fakeAsync((fake) {
+        manager.setAlarm(warning);
+        manager.acknowledgeWarnings(const Duration(minutes: 5));
+        // After the window expires the warning re-fires.
+        manager.clearAlarm(warning);
+        fake.elapse(const Duration(minutes: 6));
+        manager.setAlarm(warning);
+        expect(manager.unacknowledgedWarnings.contains(warning), isTrue);
+        // Acknowledging again re-arms the silence and suppresses the next re-fire.
+        manager.acknowledgeWarnings(const Duration(minutes: 5));
+        reTrigger(fake, warning);
+        expect(manager.unacknowledgedWarnings.contains(warning), isFalse);
+      });
+    });
   });
 }

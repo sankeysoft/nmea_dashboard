@@ -16,6 +16,7 @@ class UiSettings with ChangeNotifier {
   final PrefValue<String> _valueFont;
   final PrefValue<String> _headingFont;
   final PrefValue<bool> _keepScreenAwake;
+  final PrefValue<int> _alarmSilenceSeconds;
 
   // This hardcoded list matches the assets we added to the pubspec.
   static const List<String> availableFonts = [
@@ -37,7 +38,8 @@ class UiSettings with ChangeNotifier {
       _darkTheme = PrefValue(prefs, 'ui_dark_theme', true),
       _valueFont = PrefValue(prefs, 'ui_value_font', 'Lexend'),
       _headingFont = PrefValue(prefs, 'ui_heading_font', 'Manrope'),
-      _keepScreenAwake = PrefValue(prefs, 'ui_keep_screen_awake', false);
+      _keepScreenAwake = PrefValue(prefs, 'ui_keep_screen_awake', false),
+      _alarmSilenceSeconds = PrefValue(prefs, 'ui_alarm_silence_seconds', 0);
 
   bool get firstRun => _firstRun.value;
   int get maxRunVersion => _maxRunVersion.value;
@@ -46,6 +48,8 @@ class UiSettings with ChangeNotifier {
   String get valueFont => _valueFont.value;
   String get headingFont => _headingFont.value;
   bool get keepScreenAwake => _keepScreenAwake.value;
+  Duration? get alarmSilenceTime =>
+      _alarmSilenceSeconds.value == 0 ? null : Duration(seconds: _alarmSilenceSeconds.value);
 
   void recordNewRun(int version) {
     _firstRun.set(false);
@@ -84,6 +88,11 @@ class UiSettings with ChangeNotifier {
   void setKeepScreenAwake(bool keepAwake) {
     _keepScreenAwake.set(keepAwake);
     WakelockPlus.toggle(enable: keepAwake);
+    notifyListeners();
+  }
+
+  void setAlarmSilenceTime(Duration? duration) {
+    _alarmSilenceSeconds.set(duration == null ? 0 : duration.inSeconds);
     notifyListeners();
   }
 }

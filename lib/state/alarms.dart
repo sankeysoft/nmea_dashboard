@@ -8,6 +8,7 @@ import 'dart:collection';
 import 'package:audioplayers/audioplayers.dart' hide Source;
 import 'package:clock/clock.dart';
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/data_element.dart';
@@ -336,7 +337,13 @@ class AlarmManager {
   /// The set of not-yet acknowledged warnings, ordered by decreasing age.
   final AlarmSet unacknowledgedWarnings = AlarmSet();
 
-  final Map<Alarm, DateTime> _lastActivationTime = {};
+  /// Map from alarm to the time it was most recently latched.
+  final Map<Alarm, DateTime> _lastActivationTimes = {};
+
+  /// Map from alarm to the earliest time at which it may trigger a new warning.
+  final Map<Alarm, DateTime> _nextWarningTimes = {};
+
+  /// Map from inactive alarms to a timer that will clear thier latched on status.
   final Map<Alarm, Timer> _clearTimers = {};
 
   /// Marks an alarm as active.
@@ -345,10 +352,14 @@ class AlarmManager {
     _clearTimers.remove(alarm)?.cancel();
     final latchChanged = latchedAlarms.add(alarm);
     if (latchChanged) {
-      _lastActivationTime[alarm] = clock.now();
+      final now = clock.now();
+      _lastActivationTimes[alarm] = now;
       _log.info("Setting ${alarm.level.name} on ${alarm.elementName}");
       if (alarm.level == AlarmLevel.warning) {
-        unacknowledgedWarnings.add(alarm);
+        final nextWarningTime = _nextWarningTimes[alarm];
+        if (nextWarningTime == null || nextWarningTime.isBefore(now)) {
+          unacknowledgedWarnings.add(alarm);
+        }
       }
     }
   }
@@ -360,7 +371,7 @@ class AlarmManager {
     if (!latchedAlarms.contains(alarm) || _clearTimers.containsKey(alarm)) {
       return;
     }
-    final lastActivated = _lastActivationTime[alarm] ?? clock.now();
+    final lastActivated = _lastActivationTimes[alarm] ?? clock.now();
     final remainingDuration = latchDelay - clock.now().difference(lastActivated);
     if (remainingDuration <= Duration.zero) {
       _doRemoveAlarm(alarm);
@@ -372,16 +383,31 @@ class AlarmManager {
 
   void _doRemoveAlarm(Alarm alarm) {
     _clearTimers.remove(alarm);
-    _lastActivationTime.remove(alarm);
+    _lastActivationTimes.remove(alarm);
     _log.info("Clearing ${alarm.level.name} on ${alarm.elementName}");
     latchedAlarms.remove(alarm);
     unacknowledgedWarnings.remove(alarm);
   }
 
-  /// Acknowledges all previously unacknowledged warnings.
-  void acknowledgeWarnings() {
+  /// Acknowledges all previously unacknowledged warnings, preventing new instances of the same
+  /// warning firing within duration if duration is set.
+  void acknowledgeWarnings(Duration? duration) {
     if (unacknowledgedWarnings.isNotEmpty) {
-      _log.info("Acknowledging ${unacknowledgedWarnings.length} warnings");
+      if (duration == null) {
+        _log.info("Acknowledging ${unacknowledgedWarnings.length} warnings one time");
+        for (final alarm in unacknowledgedWarnings.alarms) {
+          _nextWarningTimes.remove(alarm);
+        }
+      } else {
+        final nextWarning = clock.now().add(duration);
+        _log.info(
+          "Acknowledging ${unacknowledgedWarnings.length} warnings until "
+          "${DateFormat('HH:mm:ss').format(nextWarning)}",
+        );
+        for (final alarm in unacknowledgedWarnings.alarms) {
+          _nextWarningTimes[alarm] = nextWarning;
+        }
+      }
       unacknowledgedWarnings.clear();
     }
   }

@@ -106,6 +106,27 @@ class _DataTablePageState extends State<DataTablePage> {
   }
 }
 
+/// The available options for silencing warnings. For now all options behave
+/// identically; the duration is purely cosmetic until silence timing is added.
+enum _SilenceOption {
+  oneTime('Silence one time', null),
+  fiveMinutes('Silence for 5 minutes', Duration(minutes: 5)),
+  oneHour('Silence for 1 hour', Duration(hours: 1));
+
+  const _SilenceOption(this.label, this.duration);
+  final String label;
+  final Duration? duration;
+
+  static _SilenceOption fromDuration(Duration? duration) {
+    for (final opt in _SilenceOption.values) {
+      if (opt.duration == duration) {
+        return opt;
+      }
+    }
+    return _SilenceOption.oneTime;
+  }
+}
+
 /// A modal popup listing currently unacknowledged warnings.
 class _WarningDialog extends StatefulWidget {
   final AlarmManager alarmManager;
@@ -121,6 +142,7 @@ class _WarningDialogState extends State<_WarningDialog> {
   bool _popped = false;
   AlarmSound? _activeSound;
   late final AudioPlayer _audioPlayer;
+  late _SilenceOption _silenceOption;
   List<Alarm> _shownAlarms = const [];
 
   @override
@@ -128,6 +150,7 @@ class _WarningDialogState extends State<_WarningDialog> {
     super.initState();
     _audioPlayer = AudioPlayer();
     _audioPlayer.setReleaseMode(ReleaseMode.loop);
+    _silenceOption = _SilenceOption.fromDuration(widget.uiSettings.alarmSilenceTime);
   }
 
   @override
@@ -203,21 +226,98 @@ class _WarningDialogState extends State<_WarningDialog> {
           actionsPadding: const EdgeInsets.all(20),
           actionsAlignment: MainAxisAlignment.center,
           actions: [
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: basicTheme.colorScheme.primary,
-                foregroundColor: basicTheme.colorScheme.onPrimary,
-                padding: const EdgeInsets.all(20),
-              ),
+            _SilenceSplitButton(
+              theme: basicTheme,
+              selected: _silenceOption,
               onPressed: () {
                 _popOnce();
-                widget.alarmManager.acknowledgeWarnings();
+                widget.uiSettings.setAlarmSilenceTime(_silenceOption.duration);
+                widget.alarmManager.acknowledgeWarnings(_silenceOption.duration);
               },
-              child: const Text('Silence'),
+              onSelected: (option) => setState(() => _silenceOption = option),
             ),
           ],
         );
       },
+    );
+  }
+}
+
+/// A split button that triggers the selected [_SilenceOption] on its main area and
+/// lets the user change the selected option via an attached dropdown.
+class _SilenceSplitButton extends StatelessWidget {
+  final ThemeData theme;
+  final _SilenceOption selected;
+  final VoidCallback onPressed;
+  final ValueChanged<_SilenceOption> onSelected;
+
+  const _SilenceSplitButton({
+    required this.theme,
+    required this.selected,
+    required this.onPressed,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final background = theme.colorScheme.primary;
+    final foreground = theme.colorScheme.onPrimary;
+
+    return IntrinsicHeight(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: background,
+              foregroundColor: foreground,
+              padding: const EdgeInsets.all(20),
+              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.horizontal(left: Radius.circular(20))),
+            ),
+            onPressed: onPressed,
+            // Stack all labels so the button reserves the width of the longest option
+            // and stays a constant size regardless of which option is selected.
+            child: Stack(
+              alignment: Alignment.center,
+              children: _SilenceOption.values
+                  .map(
+                    (option) => Visibility(
+                      visible: option == selected,
+                      maintainSize: true,
+                      maintainAnimation: true,
+                      maintainState: true,
+                      child: Text(option.label),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+          const SizedBox(width: 1),
+          PopupMenuButton<_SilenceOption>(
+            tooltip: 'Choose silence duration',
+            color: background,
+            onSelected: onSelected,
+            itemBuilder: (context) => _SilenceOption.values
+                .map(
+                  (option) => PopupMenuItem<_SilenceOption>(
+                    value: option,
+                    child: Text(option.label, style: TextStyle(color: foreground)),
+                  ),
+                )
+                .toList(),
+            child: Container(
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: background,
+                borderRadius: const BorderRadius.horizontal(right: Radius.circular(20)),
+              ),
+              child: Icon(Icons.arrow_drop_down, color: foreground),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -288,11 +388,9 @@ class _DrawerContent extends StatelessWidget {
           title: Text('Network', style: enabledStyle),
           onTap: () {
             Navigator.pop(context);
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => NetworkSettingsPage(settings: networkSettings),
-              ),
-            );
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (context) => NetworkSettingsPage(settings: networkSettings)));
           },
         ),
         ListTile(
@@ -308,9 +406,7 @@ class _DrawerContent extends StatelessWidget {
           title: Text('Derived Data', style: enabledStyle),
           onTap: () {
             Navigator.pop(context);
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (context) => EditDerivedElementsPage()));
+            Navigator.of(context).push(MaterialPageRoute(builder: (context) => EditDerivedElementsPage()));
           },
         ),
         ListTile(
@@ -326,9 +422,7 @@ class _DrawerContent extends StatelessWidget {
           title: Text('User Interface', style: enabledStyle),
           onTap: () {
             Navigator.pop(context);
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (context) => UiSettingsPage(settings: uiSettings)));
+            Navigator.of(context).push(MaterialPageRoute(builder: (context) => UiSettingsPage(settings: uiSettings)));
           },
         ),
         ListTile(
@@ -346,11 +440,8 @@ class _DrawerContent extends StatelessWidget {
             Navigator.pop(context);
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) => ViewHelpPage(
-                  title: 'Help Overview & License',
-                  filename: 'overview.md',
-                  linkToReleaseNotes: true,
-                ),
+                builder: (context) =>
+                    ViewHelpPage(title: 'Help Overview & License', filename: 'overview.md', linkToReleaseNotes: true),
               ),
             );
           },
