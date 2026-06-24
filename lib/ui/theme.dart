@@ -32,6 +32,7 @@ ThemeData createThemeData(UiSettings settings, {AlarmLevel? alarm}) {
 
   return ThemeData(
     primarySwatch: Colors.grey,
+    visualDensity: VisualDensity.compact,
     colorScheme: ColorScheme(
       brightness: Brightness.dark,
       // Primary and secondary are used for buttons and switches

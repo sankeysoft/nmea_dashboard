@@ -149,6 +149,7 @@ class _WarningDialogState extends State<_WarningDialog> {
   void initState() {
     super.initState();
     _audioPlayer = AudioPlayer();
+    _audioPlayer.setPlayerMode(PlayerMode.lowLatency);
     _audioPlayer.setReleaseMode(ReleaseMode.loop);
     _silenceOption = _SilenceOption.fromDuration(widget.uiSettings.alarmSilenceTime);
   }
