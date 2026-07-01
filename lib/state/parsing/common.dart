@@ -30,6 +30,8 @@ part 'vdr.dart';
 part 'vhw.dart';
 part 'vlw.dart';
 part 'vtg.dart';
+part 'vwr.dart';
+part 'vwt.dart';
 part 'xdr.dart';
 part 'xte.dart';
 part 'zda.dart';
@@ -44,7 +46,7 @@ const _ignoredMessages = {
   // Ignore detailed satellite information and GPS datum.
   'ALM', 'GBS', 'GSA', 'GSV', 'DTM', 'GRS',
   // Ignore other messages that haven't been explicitly requested.
-  'DBK', 'DBS', 'HDT', 'VWT', 'VWR',
+  'DBK', 'DBS', 'HDT',
 };
 
 /// The time between count events.
@@ -110,6 +112,8 @@ class NmeaParser {
     'VHW': VhwParser(),
     'VLW': VlwParser(),
     'VTG': VtgParser(),
+    'VWR': VwrParser(),
+    'VWT': VwtParser(),
     'XDR': XdrParser(),
     'XTE': XteParser(),
     'ZDA': ZdaParser(),

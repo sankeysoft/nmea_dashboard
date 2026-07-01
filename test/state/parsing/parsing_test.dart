@@ -474,6 +474,40 @@ void main() {
     );
   });
 
+  test('should parse VWR', () {
+    expect(
+      NmeaParser(true).parseString(r'$IIVWR,065,L,21.3,N,,,,*7c'),
+      BoundValueListMatches([
+        _boundSingleValue(-65.0, Property.apparentWindAngle, tier: 2),
+        _boundSingleValue(21.3 / metersPerSecondToKnots, Property.apparentWindSpeed, tier: 2),
+      ]),
+    );
+    expect(
+      NmeaParser(true).parseString(r'$IIVWR,065,R,,,10.9,M,,*69'),
+      BoundValueListMatches([
+        _boundSingleValue(65.0, Property.apparentWindAngle, tier: 2),
+        _boundSingleValue(10.9, Property.apparentWindSpeed, tier: 2),
+      ]),
+    );
+  });
+
+  test('should parse VWT', () {
+    expect(
+      NmeaParser(true).parseString(r'$IIVWT,075,L,24.8,N,,,,*75'),
+      BoundValueListMatches([
+        _boundSingleValue(-75.0, Property.trueWindAngle, tier: 2),
+        _boundSingleValue(24.8 / metersPerSecondToKnots, Property.trueWindSpeed, tier: 2),
+      ]),
+    );
+    expect(
+      NmeaParser(true).parseString(r'$IIVWT,075,R,,,12.8,M,,*6d'),
+      BoundValueListMatches([
+        _boundSingleValue(75.0, Property.trueWindAngle, tier: 2),
+        _boundSingleValue(12.8, Property.trueWindSpeed, tier: 2),
+      ]),
+    );
+  });
+
   test('should skip XDR with no known data', () {
     final parser = NmeaParser(true);
     expect(parser.emptyCounts.total, 0);
