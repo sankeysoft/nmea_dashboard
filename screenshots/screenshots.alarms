@@ -1,0 +1,25 @@
+[
+  {
+    "source": "network",
+    "element": "trueWindSpeed",
+    "type": "warning",
+    "format": "knots",
+    "max": 25.0,
+    "sound": "twoTone"
+  },
+  {
+    "source": "network",
+    "element": "depthWithOffset",
+    "type": "warning",
+    "format": "feet",
+    "min": 15.0,
+    "sound": "gnat"
+  },
+  {
+    "source": "network",
+    "element": "depthWithOffset",
+    "type": "caution",
+    "format": "feet",
+    "min": 40.0
+  }
+]

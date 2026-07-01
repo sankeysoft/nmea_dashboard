@@ -1,0 +1,38 @@
+Examples with graphs are generated using the `mike_cpmvdr.txt`.
+Run with `./test_server.py -h 127.0.0.1 -p 2000 ~/tmp/mike_cpmvdr.txt`.
+Low depth (~35ft) example shortly after an offset of 10 minutes (-o 10)
+
+Alarms examples are generated using the synthetic server
+Run with `./synthetic_server.py -h 127.0.0.1 -p 2000`.
+High TWS and low depth examples immediatly after start.
+
+
+* Launch emulator `flutter emulators --launch medium_tablet_api36`
+* Forward localhost port through NAT:
+    a. `telnet localhost 5554`
+    b. `auth <auth_token>` (read output for location)
+    c. redir add udp:2000:2000
+
+* Launch app in release mode `flutter run --release`
+* Load alarms and data pages from json. Pages named "2" are for tablet.
+* Default UI is dark mode / lexend / manrope
+
+* Start synthetic_server `./synthetic_server.py -h 127.0.0.1 -p 2000`.
+* Snap "Standard" with only TWS alarm dialog, set to 5 min dismiss
+
+* Change to light mode / fredeka one / inter
+* Snap "All Data" page with no alarms
+* Stop synthetic_server
+
+* Start test_server `./test_server.py -h 127.0.0.1 -p 2000 ~/tmp/mike_cpmvdr.txt`.
+* Change back to dark mode / lexend / manrope
+* Wait for STW to increase and depth to highlight about 8 min
+* Snap "Mixed" page with depth caution
+
+* Change to night mode / orbitron / kanit
+* Wait for depth caution to clear
+* Snap "Basics" page
+
+* Change to dark mode / lexend / sniglet
+* Wait for complete 15 min graphs to populate
+* Snap "Graphs" page

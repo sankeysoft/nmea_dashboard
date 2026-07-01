@@ -84,7 +84,7 @@ class State:
         phase_2m = (elapsed % 120.0) / 120.0
         t = 2.0 * phase_2m if phase_2m < 0.5 else 2.0 * (1.0 - phase_2m)
         self.depth_with_offset_ft = 10.0 + t * 90.0
-        self.wind_speed_kt = 10.0 + t * 15.0
+        self.wind_speed_kt = 30.0 - t * 20.0
         self.rudder_angle = 2.0 + t * 2.0
 
         phase_5m = (elapsed % 300.0) / 300.0
@@ -357,9 +357,18 @@ def create_parser() -> ArgumentParser:
         description="Script to send synthetic NMEA data as UDP broadcasts to localhost on the "
         "supplied port.",
         epilog="Copyright Jody Sankey 2026",
+        add_help=False,
     )
+    parser.add_argument("--help", action="help", help="Show this help message and exit.")
     parser.add_argument(
         "-p", "--port", action="store", default=2000, type=int, help="Broadcast port."
+    )
+    parser.add_argument(
+        "-h",
+        "--host",
+        action="store",
+        default="255.255.255.255",
+        help="Destination address (use 127.0.0.1 for an Android emulator).",
     )
     return parser
 
@@ -372,8 +381,9 @@ def main():
     )
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    sock.connect(("255.255.255.255", args.port))
+    if args.host == "255.255.255.255":
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    sock.connect((args.host, args.port))
 
     state = State()
     start_time = time.time()

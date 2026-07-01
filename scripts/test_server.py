@@ -175,8 +175,9 @@ def truncate_data(data_string: str) -> str:
 def send_data(args: Namespace, data_string: str):
     """Sends the supplied string over a new connection then closes it."""
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP) as sock:
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        sock.connect(("255.255.255.255", args.port))
+        if args.host == "255.255.255.255":
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        sock.connect((args.host, args.port))
 
         msg = data_string.encode("utf-8")
         total_sent = 0
@@ -201,7 +202,9 @@ def create_parser() -> ArgumentParser:
         "data from a file as UDP packets to localhost on the "
         "supplied port.",
         epilog="Copyright Jody Sankey 2022",
+        add_help=False,
     )
+    parser.add_argument("--help", action="help", help="Show this help message and exit.")
     parser.add_argument(
         "input",
         metavar="NMEA_FILE",
@@ -210,6 +213,13 @@ def create_parser() -> ArgumentParser:
     )
     parser.add_argument(
         "-p", "--port", action="store", default=1456, type=int, help="Broadcast port."
+    )
+    parser.add_argument(
+        "-h",
+        "--host",
+        action="store",
+        default="255.255.255.255",
+        help="Destination address (use 127.0.0.1 for an Android emulator).",
     )
     parser.add_argument(
         "-c",
