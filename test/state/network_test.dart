@@ -4,7 +4,7 @@
 
 import 'dart:typed_data';
 
-import 'package:nmea_dashboard/state/parsing/common.dart';
+import 'package:nmea_dashboard/state/parsing/0183/common.dart';
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/network.dart';
 import 'package:test/test.dart';
@@ -45,10 +45,10 @@ void main() {
   });
 
   group('valuesFromPackets', () {
-    late NmeaParser parser;
+    late Nmea0183Parser parser;
 
     setUp(() {
-      parser = NmeaParser(true);
+      parser = Nmea0183Parser(true);
     });
 
     test('empty packet yields null', () async {

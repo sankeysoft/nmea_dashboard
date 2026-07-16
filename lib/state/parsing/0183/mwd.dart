@@ -6,6 +6,9 @@ part of 'common.dart';
 
 class MwdParser extends SentenceParser {
   @override
+  final type = 'MWD';
+
+  @override
   List<BoundValue> parse(List<String> fields) {
     _validateFieldCounts(fields, [6, 8]);
     var ret = <BoundValue<SingleValue<double>>?>[];

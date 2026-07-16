@@ -6,6 +6,9 @@ part of 'common.dart';
 
 class HdgParser extends SentenceParser {
   @override
+  final type = 'HDG';
+
+  @override
   List<BoundValue> parse(List<String> fields) {
     _validateFieldCount(fields, 5);
     // TODO: Currently we support mag-only but not true-only. Consider

@@ -6,6 +6,9 @@ part of 'common.dart';
 
 class VtgParser extends SentenceParser {
   @override
+  final type = 'VTG';
+
+  @override
   List<BoundValue> parse(List<String> fields) {
     _validateMinFieldCount(fields, 8);
     _validateFieldValue(fields, index: 1, expected: 'T');

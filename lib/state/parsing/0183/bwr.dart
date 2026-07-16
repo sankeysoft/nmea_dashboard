@@ -6,6 +6,9 @@ part of 'common.dart';
 
 class BwrParser extends SentenceParser {
   @override
+  final type = 'BWR';
+
+  @override
   List<BoundValue> parse(List<String> fields) {
     _validateMinFieldCount(fields, 12);
     final ret = <BoundValue<SingleValue<double>>?>[];

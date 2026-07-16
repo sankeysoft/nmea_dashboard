@@ -6,6 +6,9 @@ part of 'common.dart';
 
 class XteParser extends SentenceParser {
   @override
+  final type = 'XTE';
+
+  @override
   List<BoundValue> parse(List<String> fields) {
     _validateMinFieldCount(fields, 5);
     _validateValidityIndicator(fields, index: 0);

@@ -6,6 +6,9 @@ part of 'common.dart';
 
 class VdrParser extends SentenceParser {
   @override
+  final type = 'VDR';
+
+  @override
   List<BoundValue> parse(List<String> fields) {
     _validateFieldCount(fields, 6);
     _validateFieldValue(fields, index: 1, expected: 'T');

@@ -35,6 +35,9 @@ enum Units {
 
 class XdrParser extends SentenceParser {
   @override
+  final type = 'XDR';
+
+  @override
   List<BoundValue<Value>> parse(List<String> fields) {
     _validateMinFieldCount(fields, 4);
     final List<BoundValue> values = [];

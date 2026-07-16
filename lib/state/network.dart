@@ -9,7 +9,7 @@ import 'package:async/async.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
-import 'package:nmea_dashboard/state/parsing/common.dart';
+import 'package:nmea_dashboard/state/parsing/0183/common.dart';
 import 'package:nmea_dashboard/state/settings/network.dart';
 import 'package:nmea_dashboard/state/values.dart';
 import 'package:udp/udp.dart';
@@ -23,7 +23,7 @@ final _log = Logger('Network');
 /// (potentially null) values at least every _timeout seconds even if no network
 /// traffic is present to enable cancelling.
 Stream<BoundValue?> valuesFromNetwork(NetworkSettings settings) {
-  NmeaParser parser = NmeaParser(settings.requireChecksum);
+  Nmea0183Parser parser = Nmea0183Parser(settings.requireChecksum);
   switch (settings.mode) {
     case NetworkMode.tcpConnect:
       return _valuesFromTcpConnect(settings.ipAddress, settings.port, parser);
@@ -39,7 +39,7 @@ Stream<BoundValue?> valuesFromNetwork(NetworkSettings settings) {
 Stream<BoundValue?> _valuesFromTcpConnect(
   InternetAddress ipAddress,
   int portNum,
-  NmeaParser parser,
+  Nmea0183Parser parser,
 ) async* {
   _log.info('Starting TCP stream on $ipAddress:$portNum');
   try {
@@ -68,7 +68,7 @@ Stream<BoundValue?> _valuesFromTcpConnect(
 /// network port, logging any errors, guaranteed to return (potentially null)
 /// values at least every _timeout seconds even if no network traffic is present
 /// to enable cancelling.
-Stream<BoundValue?> _valuesFromUdpListen(int portNum, NmeaParser parser) async* {
+Stream<BoundValue?> _valuesFromUdpListen(int portNum, Nmea0183Parser parser) async* {
   _log.info('Starting UDP listen stream on $portNum');
   try {
     while (true) {
@@ -106,7 +106,10 @@ Stream<Uint8List> _periodicEmptyPackets() {
 /// least every _timeout seconds even if no network traffic is present to
 /// enable cancelling.
 @visibleForTesting
-Stream<BoundValue?> valuesFromPackets(Stream<Uint8List> packetStream, NmeaParser parser) async* {
+Stream<BoundValue?> valuesFromPackets(
+  Stream<Uint8List> packetStream,
+  Nmea0183Parser parser,
+) async* {
   String remaining = '';
   await for (final packet in StreamGroup.merge([packetStream, _periodicEmptyPackets()])) {
     parser.logAndClearIfNeeded();

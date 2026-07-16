@@ -4,11 +4,14 @@
 
 part of 'common.dart';
 
-class DbtParser extends SentenceParser {
+class RsaParser extends SentenceParser {
+  @override
+  final type = 'RSA';
+
   @override
   List<BoundValue> parse(List<String> fields) {
-    _validateFieldCount(fields, 6);
-    _validateFieldValue(fields, index: 3, expected: 'M');
-    return [_parseSingleValue(fields[2], Property.depthUncalibrated, tier: 2)].nonNulls.toList();
+    _validateFieldCount(fields, 4);
+    _validateValidityIndicator(fields, index: 1);
+    return [_parseSingleValue(fields[0], Property.rudderAngle)].nonNulls.toList();
   }
 }

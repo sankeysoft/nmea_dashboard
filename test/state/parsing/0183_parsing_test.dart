@@ -2,7 +2,9 @@
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
-import 'package:nmea_dashboard/state/parsing/common.dart';
+import 'dart:io';
+
+import 'package:nmea_dashboard/state/parsing/0183/common.dart';
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/values.dart';
 import 'package:test/test.dart';
@@ -23,26 +25,38 @@ BoundValue<DoubleValue<T>> _boundDoubleValue<T>(
 }
 
 void main() {
+  test('should register a parser matching each sentence file', () {
+    final fileTypes = Directory('lib/state/parsing/0183')
+        .listSync()
+        .map((f) => f.uri.pathSegments.last)
+        .where((name) => name.endsWith('.dart') && name != 'common.dart')
+        .map((name) => name.substring(0, name.length - 5).toUpperCase());
+    expect(Nmea0183Parser.supportedTypes.toSet(), fileTypes.toSet());
+  });
+
   test('should fail invalid checksum', () {
     expect(
-      () => NmeaParser(true).parseString(r'$YDDPT,18.56,-1.61,140.0,*00'),
+      () => Nmea0183Parser(true).parseString(r'$YDDPT,18.56,-1.61,140.0,*00'),
       throwsFormatException,
     );
   });
 
   test('should accept missing checksum iff checksum not required', () {
     expect(
-      NmeaParser(false).parseString(r'$YDDPT,18.56,-1.61,140.0'),
+      Nmea0183Parser(false).parseString(r'$YDDPT,18.56,-1.61,140.0'),
       BoundValueListMatches([
         _boundSingleValue(16.95, Property.depthWithOffset),
         _boundSingleValue(18.56, Property.depthUncalibrated),
       ]),
     );
-    expect(() => NmeaParser(true).parseString(r'$YDDPT,18.56,-1.61,140.0'), throwsFormatException);
+    expect(
+      () => Nmea0183Parser(true).parseString(r'$YDDPT,18.56,-1.61,140.0'),
+      throwsFormatException,
+    );
   });
 
   test('should skip ignored message', () {
-    final parser = NmeaParser(true);
+    final parser = Nmea0183Parser(true);
     expect(
       parser.parseString(r'$YDGSV,5,1,18,65,75,281,19,10,69,352,25,88,65,332,27,87,61,137,15*7C'),
       BoundValueListMatches([]),
@@ -51,7 +65,7 @@ void main() {
   });
 
   test('should report (fictional) unsupported message one time', () {
-    final parser = NmeaParser(true);
+    final parser = Nmea0183Parser(true);
     expect(() => parser.parseString(r'$YDXXX,4,1,17,N*08'), throwsFormatException);
     expect(parser.unsupportedCounts.total, 1);
     expect(parser.parseString(r'$YDXXX,4,1,17,N*08'), BoundValueListMatches([]));
@@ -59,15 +73,15 @@ void main() {
   });
 
   test('should reject message without dollar prefix', () {
-    expect(() => NmeaParser(true).parseString('HELLO'), throwsFormatException);
+    expect(() => Nmea0183Parser(true).parseString('HELLO'), throwsFormatException);
   });
 
   test('should not log if check interval has not elapsed', () {
-    NmeaParser(true).logAndClearIfNeeded();
+    Nmea0183Parser(true).logAndClearIfNeeded();
   });
 
   test('should increment message counts', () {
-    final parser = NmeaParser(true);
+    final parser = Nmea0183Parser(true);
     expect(parser.ignoredCounts.total, 0);
     expect(parser.unsupportedCounts.total, 0);
     expect(parser.successCounts.total, 0);
@@ -81,11 +95,11 @@ void main() {
   });
 
   test('should log no-messages notice when all counts are zero', () {
-    NmeaParser(true).logAndClearCounts();
+    Nmea0183Parser(true).logAndClearCounts();
   });
 
   test('should log and clear empty message counts', () {
-    final parser = NmeaParser(true);
+    final parser = Nmea0183Parser(true);
     expect(() => parser.parseString(r'$IIDPT,,0.0*6E'), throwsFormatException);
     expect(parser.emptyCounts.total, 1);
     parser.logAndClearCounts();
@@ -93,7 +107,7 @@ void main() {
   });
 
   test('should log and clear unsupported message counts', () {
-    final parser = NmeaParser(true);
+    final parser = Nmea0183Parser(true);
     expect(() => parser.parseString(r'$YDXXX,4,1,17,N*08'), throwsFormatException);
     expect(parser.unsupportedCounts.total, 1);
     parser.logAndClearCounts();
@@ -102,7 +116,7 @@ void main() {
 
   test('should parse BWR', () {
     expect(
-      NmeaParser(
+      Nmea0183Parser(
         true,
       ).parseString(r'$YDBWR,203514.60,3740.2436,N,12222.6994,W,148.0,T,134.9,M,0.11,N,0,A*4C'),
       BoundValueListMatches([
@@ -113,25 +127,25 @@ void main() {
   });
 
   test('should skip empty RMB ', () {
-    final parser = NmeaParser(true);
+    final parser = Nmea0183Parser(true);
     expect(() => parser.parseString(r'$IIBWR,,,N,,E,,T,,M,,N,*1B'), throwsFormatException);
     expect(parser.emptyCounts.total, 1);
   });
 
   test('should support DBT', () {
     expect(
-      NmeaParser(true).parseString(r'$SDDBT,58.10,f,17.71,M,,F*24'),
+      Nmea0183Parser(true).parseString(r'$SDDBT,58.10,f,17.71,M,,F*24'),
       BoundValueListMatches([_boundSingleValue(17.71, Property.depthUncalibrated, tier: 2)]),
     );
   });
 
   test('should reject DPT with too few fields', () {
-    expect(() => NmeaParser(false).parseString(r'$YDDPT,18.56'), throwsFormatException);
+    expect(() => Nmea0183Parser(false).parseString(r'$YDDPT,18.56'), throwsFormatException);
   });
 
   test('should parse DPT', () {
     expect(
-      NmeaParser(true).parseString(r'$YDDPT,18.56,-1.61,140.0,*67'),
+      Nmea0183Parser(true).parseString(r'$YDDPT,18.56,-1.61,140.0,*67'),
       BoundValueListMatches([
         _boundSingleValue(16.95, Property.depthWithOffset),
         _boundSingleValue(18.56, Property.depthUncalibrated),
@@ -140,7 +154,7 @@ void main() {
   });
 
   test('should parse DPT without data', () {
-    final parser = NmeaParser(true);
+    final parser = Nmea0183Parser(true);
     expect(() => parser.parseString(r'$IIDPT,,0.0*6E'), throwsFormatException);
     expect(parser.emptyCounts.total, 1);
     expect(parser.parseString(r'$IIDPT,,0.0*6E'), BoundValueListMatches([]));
@@ -149,7 +163,7 @@ void main() {
 
   test('should parse HDG with variation', () {
     expect(
-      NmeaParser(true).parseString(r'$YDHDG,7.3,,,13.1,E*08'),
+      Nmea0183Parser(true).parseString(r'$YDHDG,7.3,,,13.1,E*08'),
       BoundValueListMatches([
         _boundSingleValue(-13.1, Property.variation),
         _boundSingleValue(20.4, Property.heading),
@@ -159,29 +173,29 @@ void main() {
 
   test('should parse HDG without variation', () {
     expect(
-      NmeaParser(true).parseString(r'$YDHDG,173.8,,,,*59'),
+      Nmea0183Parser(true).parseString(r'$YDHDG,173.8,,,,*59'),
       BoundValueListMatches([_boundSingleValue(173.8, Property.headingMag)]),
     );
   });
 
   test('should reject HDG with wrong field count', () {
-    expect(() => NmeaParser(false).parseString(r'$YDHDG,7.3,X,Y'), throwsFormatException);
+    expect(() => Nmea0183Parser(false).parseString(r'$YDHDG,7.3,X,Y'), throwsFormatException);
   });
 
   test('should reject HDG with invalid variation direction', () {
-    expect(() => NmeaParser(false).parseString(r'$YDHDG,7.3,,,13.1,X'), throwsFormatException);
+    expect(() => Nmea0183Parser(false).parseString(r'$YDHDG,7.3,,,13.1,X'), throwsFormatException);
   });
 
   test('should parse HDM', () {
     expect(
-      NmeaParser(true).parseString(r'$IIHDM,143.3,M*27'),
+      Nmea0183Parser(true).parseString(r'$IIHDM,143.3,M*27'),
       BoundValueListMatches([_boundSingleValue(143.3, Property.headingMag, tier: 2)]),
     );
   });
 
   test('should parse GGA with HDOP', () {
     expect(
-      NmeaParser(
+      Nmea0183Parser(
         true,
       ).parseString(r'$YDGGA,170202.60,3749.3097,N,12228.9446,W,1,12,0.86,,M,-29.70,M,,*76'),
       BoundValueListMatches([
@@ -193,7 +207,7 @@ void main() {
 
   test('should parse GGA without HDOP', () {
     expect(
-      NmeaParser(
+      Nmea0183Parser(
         true,
       ).parseString(r'$YDGGA,170202.60,3749.3097,N,12228.9446,W,1,12,,,M,-29.70,M,,*66'),
       BoundValueListMatches([_boundDoubleValue(37.82183, -122.48241, Property.gpsPosition)]),
@@ -202,7 +216,7 @@ void main() {
 
   test('should parse GLL', () {
     expect(
-      NmeaParser(true).parseString(r'$YDGLL,3748.8322,N,12230.6429,W,171453.24,A,A*7A'),
+      Nmea0183Parser(true).parseString(r'$YDGLL,3748.8322,N,12230.6429,W,171453.24,A,A*7A'),
       BoundValueListMatches([
         _boundDoubleValue(37.81387, -122.51072, Property.gpsPosition, tier: 2),
       ]),
@@ -211,7 +225,7 @@ void main() {
 
   test('should parse GLL with south latitude', () {
     expect(
-      NmeaParser(false).parseString(r'$YDGLL,3748.8322,S,12230.6429,W,171453.24,A,A'),
+      Nmea0183Parser(false).parseString(r'$YDGLL,3748.8322,S,12230.6429,W,171453.24,A,A'),
       BoundValueListMatches([
         _boundDoubleValue(-37.81387, -122.51072, Property.gpsPosition, tier: 2),
       ]),
@@ -220,21 +234,21 @@ void main() {
 
   test('should reject GLL with invalid latitude direction', () {
     expect(
-      () => NmeaParser(false).parseString(r'$YDGLL,3748.8322,X,12230.6429,W,171453.24,A,A'),
+      () => Nmea0183Parser(false).parseString(r'$YDGLL,3748.8322,X,12230.6429,W,171453.24,A,A'),
       throwsFormatException,
     );
   });
 
   test('should reject GLL with invalid longitude direction', () {
     expect(
-      () => NmeaParser(false).parseString(r'$YDGLL,3748.8322,N,12230.6429,X,171453.24,A,A'),
+      () => Nmea0183Parser(false).parseString(r'$YDGLL,3748.8322,N,12230.6429,X,171453.24,A,A'),
       throwsFormatException,
     );
   });
 
   test('should parse MDA with temp and RH', () {
     expect(
-      NmeaParser(true).parseString(r'$YDMDA,,I,,B,23.9,C,,C,55.5,,14.4,C,,T,,M,,N,,M*15'),
+      Nmea0183Parser(true).parseString(r'$YDMDA,,I,,B,23.9,C,,C,55.5,,14.4,C,,T,,M,,N,,M*15'),
       BoundValueListMatches([
         _boundSingleValue(23.9, Property.airTemperature),
         _boundSingleValue(55.5, Property.relativeHumidity),
@@ -245,14 +259,14 @@ void main() {
 
   test('should parse MDA with pressure', () {
     expect(
-      NmeaParser(true).parseString(r'$YDMDA,29.8902,I,1.0122,B,,C,,C,,,,C,,T,,M,,N,,M*3F'),
+      Nmea0183Parser(true).parseString(r'$YDMDA,29.8902,I,1.0122,B,,C,,C,,,,C,,T,,M,,N,,M*3F'),
       BoundValueListMatches([_boundSingleValue(101220.0, Property.pressure)]),
     );
   });
 
   test('should parse MDA with pressure, water temp, and TWD', () {
     expect(
-      NmeaParser(
+      Nmea0183Parser(
         true,
       ).parseString(r'$YDMDA,30.1767,I,1.0219,B,,C,20.4,C,,,,C,315.6,T,302.6,M,9.3,N,4.8,M*20'),
       BoundValueListMatches([
@@ -265,7 +279,7 @@ void main() {
 
   test('should parse MWD with direction', () {
     expect(
-      NmeaParser(true).parseString(r'$YDMWD,154.7,T,141.8,M,12.1,N,6.2,M*64'),
+      Nmea0183Parser(true).parseString(r'$YDMWD,154.7,T,141.8,M,12.1,N,6.2,M*64'),
       BoundValueListMatches([
         _boundSingleValue(154.7, Property.trueWindDirection),
         _boundSingleValue(6.2, Property.trueWindSpeed, tier: 2),
@@ -275,25 +289,25 @@ void main() {
 
   test('should parse MWD with missing direction', () {
     expect(
-      NmeaParser(true).parseString(r'$YDMWD,,T,,M,12.1,N,6.2,M*6F'),
+      Nmea0183Parser(true).parseString(r'$YDMWD,,T,,M,12.1,N,6.2,M*6F'),
       BoundValueListMatches([_boundSingleValue(6.2, Property.trueWindSpeed, tier: 2)]),
     );
   });
 
   test('should reject MWD with invalid field count', () {
-    expect(() => NmeaParser(false).parseString(r'$YDMWD,154.7,T,141.8'), throwsFormatException);
+    expect(() => Nmea0183Parser(false).parseString(r'$YDMWD,154.7,T,141.8'), throwsFormatException);
   });
 
   test('should reject MWD with wrong field value', () {
     expect(
-      () => NmeaParser(false).parseString(r'$YDMWD,154.7,X,141.8,M,12.1,N,6.2,M'),
+      () => Nmea0183Parser(false).parseString(r'$YDMWD,154.7,X,141.8,M,12.1,N,6.2,M'),
       throwsFormatException,
     );
   });
 
   test('should parse MWD with direction and only one speed format', () {
     expect(
-      NmeaParser(true).parseString(r'$IIMWD,322.8,T,333.9,M,4.5,M*24'),
+      Nmea0183Parser(true).parseString(r'$IIMWD,322.8,T,333.9,M,4.5,M*24'),
       BoundValueListMatches([
         _boundSingleValue(322.8, Property.trueWindDirection),
         _boundSingleValue(4.5, Property.trueWindSpeed, tier: 2),
@@ -303,7 +317,7 @@ void main() {
 
   test('should parse MWV with apparent in m/s', () {
     expect(
-      NmeaParser(true).parseString(r'$YDMWV,354.9,R,0.9,M,A*21'),
+      Nmea0183Parser(true).parseString(r'$YDMWV,354.9,R,0.9,M,A*21'),
       BoundValueListMatches([
         _boundSingleValue(354.9, Property.apparentWindAngle),
         _boundSingleValue(0.9, Property.apparentWindSpeed),
@@ -313,7 +327,7 @@ void main() {
 
   test('should parse MWV with apparent in kmph', () {
     expect(
-      NmeaParser(true).parseString(r'$YDMWV,354.9,R,3.24,K,A*1B'),
+      Nmea0183Parser(true).parseString(r'$YDMWV,354.9,R,3.24,K,A*1B'),
       BoundValueListMatches([
         _boundSingleValue(354.9, Property.apparentWindAngle),
         _boundSingleValue(0.9, Property.apparentWindSpeed),
@@ -323,7 +337,7 @@ void main() {
 
   test('should parse MWV with true in m/s', () {
     expect(
-      NmeaParser(true).parseString(r'$YDMWV,352.5,T,0.6,M,A*22'),
+      Nmea0183Parser(true).parseString(r'$YDMWV,352.5,T,0.6,M,A*22'),
       BoundValueListMatches([
         _boundSingleValue(352.5, Property.trueWindAngle),
         _boundSingleValue(0.6, Property.trueWindSpeed),
@@ -333,7 +347,7 @@ void main() {
 
   test('should parse MWV with true in knots', () {
     expect(
-      NmeaParser(true).parseString(r'$YDMWV,352.5,T,20.0,N,A*15'),
+      Nmea0183Parser(true).parseString(r'$YDMWV,352.5,T,20.0,N,A*15'),
       BoundValueListMatches([
         _boundSingleValue(352.5, Property.trueWindAngle),
         _boundSingleValue(10.28891, Property.trueWindSpeed),
@@ -343,14 +357,14 @@ void main() {
 
   test('should parse MWV without angle', () {
     expect(
-      NmeaParser(true).parseString(r'$YDMWV,,R,0.9,M,A*04'),
+      Nmea0183Parser(true).parseString(r'$YDMWV,,R,0.9,M,A*04'),
       BoundValueListMatches([_boundSingleValue(0.9, Property.apparentWindSpeed)]),
     );
   });
 
   test('should parse MWV with true in knots', () {
     expect(
-      NmeaParser(true).parseString(r'$YDMWV,352.5,T,20.0,N,A*15'),
+      Nmea0183Parser(true).parseString(r'$YDMWV,352.5,T,20.0,N,A*15'),
       BoundValueListMatches([
         _boundSingleValue(352.5, Property.trueWindAngle),
         _boundSingleValue(10.28891, Property.trueWindSpeed),
@@ -360,14 +374,14 @@ void main() {
 
   test('should parse MTW', () {
     expect(
-      NmeaParser(true).parseString(r'$YDMTW,20.4,C*08'),
+      Nmea0183Parser(true).parseString(r'$YDMTW,20.4,C*08'),
       BoundValueListMatches([_boundSingleValue(20.4, Property.waterTemperature, tier: 2)]),
     );
   });
 
   test('should parse RMB', () {
     expect(
-      NmeaParser(
+      Nmea0183Parser(
         true,
       ).parseString(r'$YDRMB,A,0.100,L,0,0,3740.2436,N,12222.6994,W,0.11,148.0,0.0,V,A*4F'),
       BoundValueListMatches([
@@ -379,14 +393,14 @@ void main() {
   });
 
   test('should skip empty RMB ', () {
-    final parser = NmeaParser(true);
+    final parser = Nmea0183Parser(true);
     expect(() => parser.parseString(r'$IIRMB,A,,R,,,,N,,E,,,,,*45'), throwsFormatException);
     expect(parser.emptyCounts.total, 1);
   });
 
   test('should parse RMC', () {
     expect(
-      NmeaParser(
+      Nmea0183Parser(
         true,
       ).parseString(r'$GPRMC,230830,A,1755.039,N,06443.653,W,5.50,357.0,250803,3.0,W*4B'),
       BoundValueListMatches([
@@ -401,20 +415,20 @@ void main() {
 
   test('should parse ROT', () {
     expect(
-      NmeaParser(true).parseString(r'$YDROT,-176.7,A*11'),
+      Nmea0183Parser(true).parseString(r'$YDROT,-176.7,A*11'),
       BoundValueListMatches([_boundSingleValue(-2.945, Property.rateOfTurn)]),
     );
   });
 
   test('should parse RSA', () {
     expect(
-      NmeaParser(true).parseString(r'$YDRSA,2.8,A,,V*6E'),
+      Nmea0183Parser(true).parseString(r'$YDRSA,2.8,A,,V*6E'),
       BoundValueListMatches([_boundSingleValue(2.8, Property.rudderAngle)]),
     );
   });
   test('should parse VDR', () {
     expect(
-      NmeaParser(true).parseString(r'$YDVDR,88.4,T,75.3,M,1.6,N*26'),
+      Nmea0183Parser(true).parseString(r'$YDVDR,88.4,T,75.3,M,1.6,N*26'),
       BoundValueListMatches([
         _boundSingleValue(88.4, Property.currentSet),
         _boundSingleValue(0.82311, Property.currentDrift),
@@ -423,13 +437,13 @@ void main() {
   });
   test('should parse VHW', () {
     expect(
-      NmeaParser(true).parseString(r'$YDVHW,339.8,T,326.7,M,1.3,N,2.4,K,*61'),
+      Nmea0183Parser(true).parseString(r'$YDVHW,339.8,T,326.7,M,1.3,N,2.4,K,*61'),
       BoundValueListMatches([_boundSingleValue(0.6667, Property.speedThroughWater)]),
     );
   });
 
   test('should parse VHW without data', () {
-    final parser = NmeaParser(true);
+    final parser = Nmea0183Parser(true);
     expect(() => parser.parseString(r'$VWVHW,,T,,M,,N,,K*54'), throwsFormatException);
     expect(parser.emptyCounts.total, 1);
     expect(parser.parseString(r'$VWVHW,,T,,M,,N,,K*54'), BoundValueListMatches([]));
@@ -438,18 +452,18 @@ void main() {
 
   test('should parse VHW with missing kmph', () {
     expect(
-      NmeaParser(true).parseString(r'$IIVHW,,,301,M,4.2,N,,*50'),
+      Nmea0183Parser(true).parseString(r'$IIVHW,,,301,M,4.2,N,,*50'),
       BoundValueListMatches([_boundSingleValue(2.1607, Property.speedThroughWater)]),
     );
     expect(
-      NmeaParser(true).parseString(r'$IIVHW,,,,,00.0,N,,*19'),
+      Nmea0183Parser(true).parseString(r'$IIVHW,,,,,00.0,N,,*19'),
       BoundValueListMatches([_boundSingleValue(0.0, Property.speedThroughWater)]),
     );
   });
 
   test('should parse VLW', () {
     expect(
-      NmeaParser(true).parseString(r'$YDVLW,363.135,N,181.393,N*50'),
+      Nmea0183Parser(true).parseString(r'$YDVLW,363.135,N,181.393,N*50'),
       BoundValueListMatches([
         _boundSingleValue(672525.7752, Property.distanceTotal),
         _boundSingleValue(335939.7137, Property.distanceTrip),
@@ -459,14 +473,14 @@ void main() {
 
   test('should parse VLW without trip', () {
     expect(
-      NmeaParser(true).parseString(r'$YDVLW,363.135,N,,*31'),
+      Nmea0183Parser(true).parseString(r'$YDVLW,363.135,N,,*31'),
       BoundValueListMatches([_boundSingleValue(672525.7752, Property.distanceTotal)]),
     );
   });
 
   test('should parse VTG', () {
     expect(
-      NmeaParser(true).parseString(r'$YDVTG,210.9,T,197.8,M,0.6,N,1.2,K,A*21'),
+      Nmea0183Parser(true).parseString(r'$YDVTG,210.9,T,197.8,M,0.6,N,1.2,K,A*21'),
       BoundValueListMatches([
         _boundSingleValue(210.9, Property.courseOverGround),
         _boundSingleValue(0.33333, Property.speedOverGround),
@@ -476,14 +490,14 @@ void main() {
 
   test('should parse VWR', () {
     expect(
-      NmeaParser(true).parseString(r'$IIVWR,065,L,21.3,N,,,,*7c'),
+      Nmea0183Parser(true).parseString(r'$IIVWR,065,L,21.3,N,,,,*7c'),
       BoundValueListMatches([
         _boundSingleValue(-65.0, Property.apparentWindAngle, tier: 2),
         _boundSingleValue(21.3 / metersPerSecondToKnots, Property.apparentWindSpeed, tier: 2),
       ]),
     );
     expect(
-      NmeaParser(true).parseString(r'$IIVWR,065,R,,,10.9,M,,*69'),
+      Nmea0183Parser(true).parseString(r'$IIVWR,065,R,,,10.9,M,,*69'),
       BoundValueListMatches([
         _boundSingleValue(65.0, Property.apparentWindAngle, tier: 2),
         _boundSingleValue(10.9, Property.apparentWindSpeed, tier: 2),
@@ -493,14 +507,14 @@ void main() {
 
   test('should parse VWT', () {
     expect(
-      NmeaParser(true).parseString(r'$IIVWT,075,L,24.8,N,,,,*75'),
+      Nmea0183Parser(true).parseString(r'$IIVWT,075,L,24.8,N,,,,*75'),
       BoundValueListMatches([
         _boundSingleValue(-75.0, Property.trueWindAngle, tier: 2),
         _boundSingleValue(24.8 / metersPerSecondToKnots, Property.trueWindSpeed, tier: 2),
       ]),
     );
     expect(
-      NmeaParser(true).parseString(r'$IIVWT,075,R,,,12.8,M,,*6d'),
+      Nmea0183Parser(true).parseString(r'$IIVWT,075,R,,,12.8,M,,*6d'),
       BoundValueListMatches([
         _boundSingleValue(75.0, Property.trueWindAngle, tier: 2),
         _boundSingleValue(12.8, Property.trueWindSpeed, tier: 2),
@@ -509,7 +523,7 @@ void main() {
   });
 
   test('should skip XDR with no known data', () {
-    final parser = NmeaParser(true);
+    final parser = Nmea0183Parser(true);
     expect(parser.emptyCounts.total, 0);
     expect(
       () => parser.parseString(r'$YDXDR,A,0.0,D,Foo,A,1.00,D,Bar,A,0.25,D,Baz*30'),
@@ -520,7 +534,7 @@ void main() {
 
   test('should parse XDR with roll pitch yaw in degrees', () {
     expect(
-      NmeaParser(true).parseString(r'$YDXDR,A,-44.75,D,Yaw,A,1.00,D,Pitch,A,0.25,D,Roll*65'),
+      Nmea0183Parser(true).parseString(r'$YDXDR,A,-44.75,D,Yaw,A,1.00,D,Pitch,A,0.25,D,Roll*65'),
       BoundValueListMatches([
         _boundSingleValue(-44.75, Property.yaw),
         _boundSingleValue(1.0, Property.pitch),
@@ -531,7 +545,7 @@ void main() {
 
   test('should parse XDR with roll pitch yaw in radians', () {
     expect(
-      NmeaParser(
+      Nmea0183Parser(
         true,
       ).parseString(r'$YDXDR,A,-0.781035,R,Yaw,A,0.017453,R,Pitch,A,0.004363,R,Roll*49'),
       BoundValueListMatches([
@@ -544,14 +558,14 @@ void main() {
 
   test('should parse XDR with pressure', () {
     expect(
-      NmeaParser(true).parseString(r'$YDXDR,P,101080,P,Baro*65'),
+      Nmea0183Parser(true).parseString(r'$YDXDR,P,101080,P,Baro*65'),
       BoundValueListMatches([_boundSingleValue(101080.0, Property.pressure, tier: 2)]),
     );
   });
 
   test('should parse XDR with temperature and RH', () {
     expect(
-      NmeaParser(true).parseString(r'$YDXDR,C,23.6,C,Air,H,57.9,P,Air*47'),
+      Nmea0183Parser(true).parseString(r'$YDXDR,C,23.6,C,Air,H,57.9,P,Air*47'),
       BoundValueListMatches([
         _boundSingleValue(23.6, Property.airTemperature, tier: 2),
         _boundSingleValue(57.9, Property.relativeHumidity, tier: 2),
@@ -561,21 +575,21 @@ void main() {
 
   test('should parse XDR with temperature in Kelvin', () {
     expect(
-      NmeaParser(true).parseString(r'$GPXDR,C,294.750,K,airtemp*04'),
+      Nmea0183Parser(true).parseString(r'$GPXDR,C,294.750,K,airtemp*04'),
       BoundValueListMatches([_boundSingleValue(21.6, Property.airTemperature, tier: 2)]),
     );
   });
 
   test('should parse XDR with spelled out air temperature', () {
     expect(
-      NmeaParser(true).parseString(r'$IIXDR,C,15.70,C,TempAir*15'),
+      Nmea0183Parser(true).parseString(r'$IIXDR,C,15.70,C,TempAir*15'),
       BoundValueListMatches([_boundSingleValue(15.7, Property.airTemperature, tier: 2)]),
     );
   });
 
   test('should parse XDR with spelled out water and air temperatures', () {
     expect(
-      NmeaParser(true).parseString(r'$IIXDR,C,15.70,C,AirTemp,C,10.1,C,WaterTemp*72'),
+      Nmea0183Parser(true).parseString(r'$IIXDR,C,15.70,C,AirTemp,C,10.1,C,WaterTemp*72'),
       BoundValueListMatches([
         _boundSingleValue(15.7, Property.airTemperature, tier: 2),
         _boundSingleValue(10.1, Property.waterTemperature, tier: 2),
@@ -585,14 +599,14 @@ void main() {
 
   test('should parse XDR with spelled out barometer and vague temperature', () {
     expect(
-      NmeaParser(true).parseString(r'$WIXDR,P,1.0282,B,barometer,C,19.7,C,temperature*5D'),
+      Nmea0183Parser(true).parseString(r'$WIXDR,P,1.0282,B,barometer,C,19.7,C,temperature*5D'),
       BoundValueListMatches([_boundSingleValue(102820.0, Property.pressure, tier: 2)]),
     );
   });
 
   test('should parse XDR with engine 1 data', () {
     expect(
-      NmeaParser(true).parseString(
+      Nmea0183Parser(true).parseString(
         r'$IIXDR,P,100300.00,P,ENGINEOIL#0,C,85.0,C,ENGINE#0,U,26.44,V,ALTERNATOR#0*09',
       ),
       BoundValueListMatches([
@@ -605,7 +619,7 @@ void main() {
 
   test('should parse XDR with engine 2 data', () {
     expect(
-      NmeaParser(true).parseString(
+      Nmea0183Parser(true).parseString(
         r'$IIXDR,P,123000.00,P,ENGINEOIL#1,C,95.0,C,ENGINE#1,U,25.00,V,ALTERNATOR#1*08',
       ),
       BoundValueListMatches([
@@ -618,14 +632,14 @@ void main() {
 
   test('should parse XDR with engine RPM', () {
     expect(
-      NmeaParser(true).parseString(r'$IIXDR,T,800.0,R,ENGINE#0*73'),
+      Nmea0183Parser(true).parseString(r'$IIXDR,T,800.0,R,ENGINE#0*73'),
       BoundValueListMatches([_boundSingleValue(800.0, Property.engine1Rpm)]),
     );
   });
 
   test('should parse XDR with battery voltages', () {
     expect(
-      NmeaParser(true).parseString(r'$IIXDR,U,27.5,V,BATTERY#0,U,26.0,V,BATTERY#1*4B'),
+      Nmea0183Parser(true).parseString(r'$IIXDR,U,27.5,V,BATTERY#0,U,26.0,V,BATTERY#1*4B'),
       BoundValueListMatches([
         _boundSingleValue(27.5, Property.battery1Voltage),
         _boundSingleValue(26.0, Property.battery2Voltage),
@@ -635,38 +649,41 @@ void main() {
 
   test('should parse XDR with fuel level', () {
     expect(
-      NmeaParser(true).parseString(r'$IIXDR,E,50.00,P,FUEL#0*79'),
+      Nmea0183Parser(true).parseString(r'$IIXDR,E,50.00,P,FUEL#0*79'),
       BoundValueListMatches([_boundSingleValue(50.0, Property.fuelLevel)]),
     );
   });
 
   test('should parse XDR with water level', () {
     expect(
-      NmeaParser(true).parseString(r'$IIXDR,E,75.00,P,FRESHWATER#0*7B'),
+      Nmea0183Parser(true).parseString(r'$IIXDR,E,75.00,P,FRESHWATER#0*7B'),
       BoundValueListMatches([_boundSingleValue(75.0, Property.water1Level)]),
     );
   });
 
   test('should parse XTE', () {
     expect(
-      NmeaParser(true).parseString(r'$YDXTE,A,A,1.000,R,N,A*26'),
+      Nmea0183Parser(true).parseString(r'$YDXTE,A,A,1.000,R,N,A*26'),
       BoundValueListMatches([_boundSingleValue(1851.9993, Property.crossTrackError)]),
     );
   });
 
   test('should reject XTE with invalid direction', () {
-    expect(() => NmeaParser(false).parseString(r'$YDXTE,A,A,1.000,X,N,A'), throwsFormatException);
+    expect(
+      () => Nmea0183Parser(false).parseString(r'$YDXTE,A,A,1.000,X,N,A'),
+      throwsFormatException,
+    );
   });
 
   test('should skip empty XTE', () {
-    final parser = NmeaParser(true);
+    final parser = Nmea0183Parser(true);
     expect(() => parser.parseString(r'$IIXTE,A,A,,R,N*79'), throwsFormatException);
     expect(parser.emptyCounts.total, 1);
   });
 
   test('should parse ZDA', () {
     expect(
-      NmeaParser(true).parseString(r'$YDZDA,171541.56,15,10,2022,,*6F'),
+      Nmea0183Parser(true).parseString(r'$YDZDA,171541.56,15,10,2022,,*6F'),
       BoundValueListMatches([
         _boundSingleValue(DateTime.utc(2022, 10, 15, 17, 15, 41), Property.utcTime),
       ]),

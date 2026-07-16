@@ -6,6 +6,9 @@ part of 'common.dart';
 
 class VlwParser extends SentenceParser {
   @override
+  final type = 'VLW';
+
+  @override
   List<BoundValue> parse(List<String> fields) {
     _validateMinFieldCount(fields, 4);
     final ret = <BoundValue<SingleValue<double>>?>[];

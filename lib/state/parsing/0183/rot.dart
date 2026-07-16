@@ -4,11 +4,14 @@
 
 part of 'common.dart';
 
-class RsaParser extends SentenceParser {
+class RotParser extends SentenceParser {
+  @override
+  final type = 'ROT';
+
   @override
   List<BoundValue> parse(List<String> fields) {
-    _validateFieldCount(fields, 4);
+    _validateFieldCount(fields, 2);
     _validateValidityIndicator(fields, index: 1);
-    return [_parseSingleValue(fields[0], Property.rudderAngle)].nonNulls.toList();
+    return [_parseSingleValue(fields[0], Property.rateOfTurn, divisor: 60)].nonNulls.toList();
   }
 }

@@ -6,6 +6,9 @@ part of 'common.dart';
 
 class RmbParser extends SentenceParser {
   @override
+  final type = 'RMB';
+
+  @override
   List<BoundValue> parse(List<String> fields) {
     _validateMinFieldCount(fields, 13);
     _validateValidityIndicator(fields, index: 0);

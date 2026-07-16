@@ -6,6 +6,9 @@ part of 'common.dart';
 
 class GllParser extends SentenceParser {
   @override
+  final type = 'GLL';
+
+  @override
   List<BoundValue> parse(List<String> fields) {
     _validateMinFieldCount(fields, 6);
     // Note we do not support messages where the position is missing.

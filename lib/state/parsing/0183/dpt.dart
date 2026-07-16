@@ -6,6 +6,9 @@ part of 'common.dart';
 
 class DptParser extends SentenceParser {
   @override
+  final type = 'DPT';
+
+  @override
   List<BoundValue> parse(List<String> fields) {
     _validateMinFieldCount(fields, 2);
     if (fields[0].isEmpty) {

@@ -6,6 +6,9 @@ part of 'common.dart';
 
 class GgaParser extends SentenceParser {
   @override
+  final type = 'GGA';
+
+  @override
   List<BoundValue> parse(List<String> fields) {
     _validateFieldCount(fields, 14);
     // Note we do not support messages where the position is missing.

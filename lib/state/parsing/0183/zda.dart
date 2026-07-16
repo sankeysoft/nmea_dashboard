@@ -6,6 +6,9 @@ part of 'common.dart';
 
 class ZdaParser extends SentenceParser {
   @override
+  final type = 'ZDA';
+
+  @override
   List<BoundValue> parse(List<String> fields) {
     _validateFieldCount(fields, 6);
     if (fields[0].length < 6) {

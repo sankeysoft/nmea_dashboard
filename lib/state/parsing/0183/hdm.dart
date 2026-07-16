@@ -4,11 +4,14 @@
 
 part of 'common.dart';
 
-class RotParser extends SentenceParser {
+class HdmParser extends SentenceParser {
+  @override
+  final type = 'HDM';
+
   @override
   List<BoundValue> parse(List<String> fields) {
     _validateFieldCount(fields, 2);
-    _validateValidityIndicator(fields, index: 1);
-    return [_parseSingleValue(fields[0], Property.rateOfTurn, divisor: 60)].nonNulls.toList();
+    _validateFieldValue(fields, index: 1, expected: 'M');
+    return [_parseSingleValue(fields[0], Property.headingMag, tier: 2)].nonNulls.toList();
   }
 }

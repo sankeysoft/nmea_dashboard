@@ -6,6 +6,9 @@ part of 'common.dart';
 
 class VhwParser extends SentenceParser {
   @override
+  final type = 'VHW';
+
+  @override
   List<BoundValue> parse(List<String> fields) {
     BoundValue<SingleValue<double>>? ret;
     _validateMinFieldCount(fields, 8);

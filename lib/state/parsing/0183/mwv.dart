@@ -6,6 +6,9 @@ part of 'common.dart';
 
 class MwvParser extends SentenceParser {
   @override
+  final type = 'MWV';
+
+  @override
   List<BoundValue> parse(List<String> fields) {
     _validateFieldCount(fields, 5);
     _validateValidityIndicator(fields, index: 4);

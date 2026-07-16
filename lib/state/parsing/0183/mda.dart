@@ -6,6 +6,9 @@ part of 'common.dart';
 
 class MdaParser extends SentenceParser {
   @override
+  final type = 'MDA';
+
+  @override
   List<BoundValue> parse(List<String> fields) {
     _validateFieldCount(fields, 20);
     var ret = <BoundValue<SingleValue<double>>?>[];

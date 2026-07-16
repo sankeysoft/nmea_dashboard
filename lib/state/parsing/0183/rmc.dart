@@ -6,6 +6,9 @@ part of 'common.dart';
 
 class RmcParser extends SentenceParser {
   @override
+  final type = 'RMC';
+
+  @override
   List<BoundValue> parse(List<String> fields) {
     _validateMinFieldCount(fields, 11);
     _validateValidityIndicator(fields, index: 1);

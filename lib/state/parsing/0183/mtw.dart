@@ -6,6 +6,9 @@ part of 'common.dart';
 
 class MtwParser extends SentenceParser {
   @override
+  final type = 'MTW';
+
+  @override
   List<BoundValue> parse(List<String> fields) {
     _validateFieldCount(fields, 2);
     _validateFieldValue(fields, index: 1, expected: 'C');
