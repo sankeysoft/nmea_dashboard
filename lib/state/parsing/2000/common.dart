@@ -136,9 +136,9 @@ sealed class PacketParser {
 
   /// Validates the supplied payload is as least the supplied length.
   void _validateMinPayloadLength(ByteData payload, int length) {
-    if (payload.lengthInBytes != length) {
+    if (payload.lengthInBytes < length) {
       throw FormatException(
-        'PGN $pgn payload length ${payload.lengthInBytes} less than minimim of $length',
+        'PGN $pgn payload length ${payload.lengthInBytes} less than minimum of $length',
       );
     }
   }
@@ -180,33 +180,22 @@ int? _readUint24(ByteData payload, int offset) {
 /// Reads a Uint32 from the supplied offset in payload, returning null if the content matches
 /// the NMEA2000 "data not available" sentinel.
 int? _readUint32(ByteData payload, int offset) {
-  final value = ByteData.sublistView(payload).getUint32(offset, Endian.little);
+  final value = payload.getUint32(offset, Endian.little);
   return (value == 0xFFFFFFFF) ? null : value;
 }
 
 /// Reads an Int32 from the supplied offset in payload, returning null if the content matches
 /// the NMEA2000 "data not available" sentinel.
 int? _readInt32(ByteData payload, int offset) {
-  final value = ByteData.sublistView(payload).getInt32(offset, Endian.little);
+  final value = payload.getInt32(offset, Endian.little);
   return (value >= 0x7FFFFFFD) ? null : value;
 }
 
 /// Reads an Int64 from the supplied offset in payload, returning null if the content matches
 /// the NMEA2000 "data not available" sentinel.
-int? _readInt64(ByteData payload, int offset, int length) {
-  // TODO: try to use the builtin
-  int raw = 0;
-  for (int i = 0; i < length; i++) {
-    raw |= payload.getUint8(offset + i) << (8 * i);
-  }
-  final signBit = 1 << ((length * 8) - 1);
-  if (raw >= ((1 << (length * 8)) - 2)) {
-    return null;
-  }
-  if ((raw & signBit) != 0) {
-    raw -= 1 << (length * 8);
-  }
-  return raw;
+int? _readInt64(ByteData payload, int offset) {
+  final value = payload.getInt64(offset, Endian.little);
+  return (value >= 0x7FFFFFFFFFFFFFFD) ? null : value;
 }
 
 double? _scaleIfNotNull(int? value, double scale) {

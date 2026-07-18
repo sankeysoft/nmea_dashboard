@@ -11,7 +11,7 @@ class Parser129283 extends PacketParser {
   @override
   List<BoundValue> parse(ByteData payload) {
     _validatePayloadLength(payload, 8);
-    final xte = _scaleIfNotNull(_readInt32(payload, 1), 0.01);
+    final xte = _scaleIfNotNull(_readInt32(payload, 2), 0.01);
     return xte == null ? [] : [boundSingleValue(xte, Property.crossTrackError)];
   }
 }

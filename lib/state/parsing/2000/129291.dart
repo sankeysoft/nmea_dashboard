@@ -13,7 +13,7 @@ class Parser129291 extends PacketParser {
     _validatePayloadLength(payload, 8);
     final reference = payload.getUint8(1) & 0x03;
     final set = _scaleIfNotNull(_readUint16(payload, 2), 0.0001 * radiansToDegrees);
-    final drift = _scaleIfNotNull(_readUint16(payload, 2), 0.01);
+    final drift = _scaleIfNotNull(_readUint16(payload, 4), 0.01);
 
     final values = <BoundValue>[];
     // Only process set when reported as true.

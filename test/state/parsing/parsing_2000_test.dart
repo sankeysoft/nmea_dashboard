@@ -79,6 +79,12 @@ List<int> _i32(int value) {
   return bytes;
 }
 
+List<int> _i64(int value) {
+  final bytes = Uint8List(8);
+  ByteData.sublistView(bytes).setInt64(0, value, Endian.little);
+  return bytes;
+}
+
 void main() {
   test('should register a parser matching each sentence file', () {
     final fileTypes = Directory('lib/state/parsing/2000')
@@ -87,6 +93,30 @@ void main() {
         .where((name) => name.endsWith('.dart') && name != 'common.dart')
         .map((name) => int.parse(name.substring(0, name.length - 5)));
     expect(Nmea2000Parser.supportedPgns.toSet(), fileTypes.toSet());
+  });
+
+  test('should reject packet shorter than header', () {
+    expect(() => Nmea2000Parser().parsePacket(ByteData(15)), throwsFormatException);
+  });
+
+  test('should reject packet with zero payload length', () {
+    final packet = _makePacket(127251, []);
+    expect(() => Nmea2000Parser().parsePacket(packet), throwsFormatException);
+  });
+
+  test('should reject packet whose declared payload length does not match its size', () {
+    final packet = _makePacket(127251, [0x04, ..._i32(-5585054), 0xFF, 0xFF, 0xFF]);
+    packet.setUint8(15, 12);
+    expect(() => Nmea2000Parser().parsePacket(packet), throwsFormatException);
+  });
+
+  test('should only throw on first packet with unsupported PGN', () {
+    final parser = Nmea2000Parser();
+    final packet = _makePacket(60928, [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
+    expect(() => parser.parsePacket(packet), throwsFormatException);
+    expect(parser.parsePacket(packet), isEmpty);
+    expect(parser.unsupportedCounts.total, 2);
+    expect(parser.successCounts.total, 0);
   });
 
   test('should parse valid rate of turn packet', () {
@@ -111,6 +141,51 @@ void main() {
         boundSingleValue(-1.9996, Property.variation),
         boundSingleValue(90.0002, Property.heading),
       ]),
+    );
+  });
+
+  test('should parse magnetic vessel heading packet', () {
+    final packet = _makePacket(127250, [
+      0x01,
+      ..._u16(15708),
+      ..._i16(0x7FFF),
+      ..._i16(-349),
+      0x01,
+    ]);
+    expect(
+      Nmea2000Parser().parsePacket(packet),
+      BoundValueListMatches([
+        boundSingleValue(-1.9996, Property.variation),
+        boundSingleValue(90.0002, Property.headingMag),
+      ]),
+    );
+  });
+
+  test('should not parse heading from vessel heading packet with unknown reference', () {
+    final packet = _makePacket(127250, [
+      0x01,
+      ..._u16(15708),
+      ..._i16(0x7FFF),
+      ..._i16(-349),
+      0x02,
+    ]);
+    expect(
+      Nmea2000Parser().parsePacket(packet),
+      BoundValueListMatches([boundSingleValue(-1.9996, Property.variation)]),
+    );
+  });
+
+  test('should parse vessel heading packet with unavailable heading', () {
+    final packet = _makePacket(127250, [
+      0x01,
+      0xFF, 0xFF,
+      ..._i16(0x7FFF),
+      ..._i16(-349),
+      0x00,
+    ]);
+    expect(
+      Nmea2000Parser().parsePacket(packet),
+      BoundValueListMatches([boundSingleValue(-1.9996, Property.variation)]),
     );
   });
 
@@ -140,6 +215,78 @@ void main() {
     );
   });
 
+  test('should parse valid magnetic variation packet', () {
+    final packet = _makePacket(127258, [0xFF, 0xFF, 0xFF, 0xFF, ..._i16(-349), 0xFF, 0xFF]);
+    expect(
+      Nmea2000Parser().parsePacket(packet),
+      BoundValueListMatches([boundSingleValue(-1.9996, Property.variation, tier: 2)]),
+    );
+  });
+
+  test('should parse valid fuel level packet', () {
+    final packet = _makePacket(127505, [0x00, ..._i16(12500), 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
+    expect(
+      Nmea2000Parser().parsePacket(packet),
+      BoundValueListMatches([boundSingleValue(50.0, Property.fuelLevel)]),
+    );
+  });
+
+  test('should parse valid water level packets for both instances', () {
+    final packet1 = _makePacket(127505, [0x10, ..._i16(25000), 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
+    expect(
+      Nmea2000Parser().parsePacket(packet1),
+      BoundValueListMatches([boundSingleValue(100.0, Property.water1Level)]),
+    );
+    final packet2 = _makePacket(127505, [0x11, ..._i16(2500), 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
+    expect(
+      Nmea2000Parser().parsePacket(packet2),
+      BoundValueListMatches([boundSingleValue(10.0, Property.water2Level)]),
+    );
+  });
+
+  test('should not parse fluid level packet for unsupported tank', () {
+    final parser = Nmea2000Parser();
+    final packet = _makePacket(127505, [0x50, ..._i16(12500), 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
+    expect(() => parser.parsePacket(packet), throwsFormatException);
+    expect(parser.emptyCounts.total, 1);
+    expect(parser.successCounts.total, 0);
+  });
+
+  test('should reject fluid level packet outside valid range', () {
+    final parser = Nmea2000Parser();
+    final packet = _makePacket(127505, [0x00, ..._i16(30000), 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
+    expect(() => parser.parsePacket(packet), throwsFormatException);
+    expect(parser.emptyCounts.total, 0);
+    expect(parser.successCounts.total, 0);
+  });
+
+  test('should parse valid speed packet', () {
+    final packet = _makePacket(128259, [0xFF, ..._u16(320), 0xFF, 0xFF, ..._u16(510), 0xFF]);
+    expect(
+      Nmea2000Parser().parsePacket(packet),
+      BoundValueListMatches([
+        boundSingleValue(3.2, Property.speedThroughWater),
+        boundSingleValue(5.1, Property.speedOverGround),
+      ]),
+    );
+  });
+
+  test('should parse speed packet with unavailable ground speed', () {
+    final packet = _makePacket(128259, [0xFF, ..._u16(320), 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
+    expect(
+      Nmea2000Parser().parsePacket(packet),
+      BoundValueListMatches([boundSingleValue(3.2, Property.speedThroughWater)]),
+    );
+  });
+
+  test('should parse speed packet with unavailable water speed', () {
+    final packet = _makePacket(128259, [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, ..._u16(510), 0xFF]);
+    expect(
+      Nmea2000Parser().parsePacket(packet),
+      BoundValueListMatches([boundSingleValue(5.1, Property.speedOverGround)]),
+    );
+  });
+
   test('should parse valid COG/SOG packet', () {
     final packet = _makePacket(129026, [0x02, 0x00, ..._u16(47124), ..._u16(520), 0xFF, 0xFF]);
     expect(
@@ -162,6 +309,14 @@ void main() {
     );
   });
 
+  test('should not parse COG from magnetic referenced COG/SOG packet', () {
+    final packet = _makePacket(129026, [0x02, 0x01, ..._u16(47124), ..._u16(520), 0xFF, 0xFF]);
+    expect(
+      Nmea2000Parser().parsePacket(packet),
+      BoundValueListMatches([boundSingleValue(5.2, Property.speedOverGround)]),
+    );
+  });
+
   test('should parse valid water depth packet', () {
     final packet = _makePacket(128267, [0x03, ..._u32(1234), ..._i16(-500), 0xFF]);
     expect(
@@ -170,6 +325,51 @@ void main() {
         boundSingleValue(12.34, Property.depthUncalibrated),
         boundSingleValue(11.84, Property.depthWithOffset),
       ]),
+    );
+  });
+
+  test('should parse water depth packet with unavailable offset', () {
+    final packet = _makePacket(128267, [0x03, ..._u32(1234), 0xFF, 0x7F, 0xFF]);
+    expect(
+      Nmea2000Parser().parsePacket(packet),
+      BoundValueListMatches([boundSingleValue(12.34, Property.depthUncalibrated)]),
+    );
+  });
+
+  test('should not parse water depth packet with unavailable depth', () {
+    final parser = Nmea2000Parser();
+    final packet = _makePacket(128267, [0x03, 0xFF, 0xFF, 0xFF, 0xFF, ..._i16(-500), 0xFF]);
+    expect(() => parser.parsePacket(packet), throwsFormatException);
+    expect(parser.emptyCounts.total, 1);
+    expect(parser.successCounts.total, 0);
+  });
+
+  test('should parse valid distance log packet', () {
+    final packet = _makePacket(128275, [
+      0xFF, 0xFF, // date
+      0xFF, 0xFF, 0xFF, 0xFF, // time
+      ..._u32(123456), // log
+      ..._u32(6543), // trip
+    ]);
+    expect(
+      Nmea2000Parser().parsePacket(packet),
+      BoundValueListMatches([
+        boundSingleValue(123456.0, Property.distanceTotal),
+        boundSingleValue(6543.0, Property.distanceTrip),
+      ]),
+    );
+  });
+
+  test('should parse distance log packet with unavailable trip', () {
+    final packet = _makePacket(128275, [
+      0xFF, 0xFF, // date
+      0xFF, 0xFF, 0xFF, 0xFF, // time
+      ..._u32(123456), // log
+      0xFF, 0xFF, 0xFF, 0xFF, // trip
+    ]);
+    expect(
+      Nmea2000Parser().parsePacket(packet),
+      BoundValueListMatches([boundSingleValue(123456.0, Property.distanceTotal)]),
     );
   });
 
@@ -183,6 +383,11 @@ void main() {
         boundSingleValue(101300.0, Property.pressure, tier: 2),
       ]),
     );
+  });
+
+  test('should reject environmental parameters packet with wrong length', () {
+    final packet = _makePacket(130310, [0x01, ..._u16(29355), ..._u16(29815), ..._u16(1013)]);
+    expect(() => Nmea2000Parser().parsePacket(packet), throwsFormatException);
   });
 
   test('should parse valid rapid position packet', () {
@@ -203,6 +408,123 @@ void main() {
     );
   });
 
+  test('should not parse rapid position packet with unavailable latitude', () {
+    final parser = Nmea2000Parser();
+    final packet = _makePacket(129025, [..._i32(0x7FFFFFFF), ..._i32(-1225000000)]);
+    expect(() => parser.parsePacket(packet), throwsFormatException);
+    expect(parser.emptyCounts.total, 1);
+    expect(parser.successCounts.total, 0);
+  });
+
+  test('should parse valid GNSS position packet', () {
+    final packet = _makePacket(129029, [
+      0xFF, // SID
+      ..._u16(20000), // date
+      ..._u32(452960000), // time
+      ..._i64(375000000000000000), // latitude
+      ..._i64(-1225000000000000000), // longitude
+      ...List.filled(8, 0xFF), // altitude
+    ]);
+    expect(
+      Nmea2000Parser().parsePacket(packet),
+      BoundValueListMatches([
+        boundDoubleValue(37.5, -122.5, Property.gpsPosition),
+        boundSingleValue(DateTime.utc(2024, 10, 4, 12, 34, 56), Property.utcTime),
+      ]),
+    );
+  });
+
+  test('should parse GNSS position packet including HDOP', () {
+    final packet = _makePacket(129029, [
+      0xFF, // SID
+      ..._u16(20000), // date
+      ..._u32(452960000), // time
+      ..._i64(375000000000000000), // latitude
+      ..._i64(-1225000000000000000), // longitude
+      ...List.filled(8, 0xFF), // altitude
+      0x12, // GNSS type and method
+      0xFC, // integrity and reserved
+      0x0A, // number of SVs
+      ..._i16(123), // HDOP
+    ]);
+    expect(
+      Nmea2000Parser().parsePacket(packet),
+      BoundValueListMatches([
+        boundDoubleValue(37.5, -122.5, Property.gpsPosition),
+        boundSingleValue(DateTime.utc(2024, 10, 4, 12, 34, 56), Property.utcTime),
+        boundSingleValue(1.23, Property.gpsHdop),
+      ]),
+    );
+  });
+
+  test('should parse valid cross track error packet', () {
+    final packet = _makePacket(129283, [0xFF, 0x00, ..._i32(-12345), 0xFF, 0xFF]);
+    expect(
+      Nmea2000Parser().parsePacket(packet),
+      BoundValueListMatches([boundSingleValue(-123.45, Property.crossTrackError)]),
+    );
+  });
+
+  test('should parse valid navigation data packet', () {
+    final packet = _makePacket(129284, [
+      0xFF, // SID
+      ..._u32(123456), // distance to waypoint
+      0x00, // reference and flags
+      0xFF, 0xFF, 0xFF, 0xFF, // ETA time
+      0xFF, 0xFF, // ETA date
+      0xFF, 0xFF, // bearing, origin to destination
+      ..._u16(7854), // bearing, position to destination
+      ...List.filled(8, 0xFF), // waypoint numbers
+      ...List.filled(8, 0xFF), // destination latitude and longitude
+      0xFF, 0xFF, // waypoint closing velocity
+    ]);
+    expect(
+      Nmea2000Parser().parsePacket(packet),
+      BoundValueListMatches([
+        boundSingleValue(1234.56, Property.waypointRange),
+        boundSingleValue(45.0001, Property.waypointBearing),
+      ]),
+    );
+  });
+
+  test('should not parse bearing from magnetic referenced navigation data packet', () {
+    final packet = _makePacket(129284, [
+      0xFF, // SID
+      ..._u32(123456), // distance to waypoint
+      0x01, // reference and flags
+      0xFF, 0xFF, 0xFF, 0xFF, // ETA time
+      0xFF, 0xFF, // ETA date
+      0xFF, 0xFF, // bearing, origin to destination
+      ..._u16(7854), // bearing, position to destination
+      ...List.filled(8, 0xFF), // waypoint numbers
+      ...List.filled(8, 0xFF), // destination latitude and longitude
+      0xFF, 0xFF, // waypoint closing velocity
+    ]);
+    expect(
+      Nmea2000Parser().parsePacket(packet),
+      BoundValueListMatches([boundSingleValue(1234.56, Property.waypointRange)]),
+    );
+  });
+
+  test('should parse valid set and drift packet', () {
+    final packet = _makePacket(129291, [0xFF, 0x00, ..._u16(7854), ..._u16(250), 0xFF, 0xFF]);
+    expect(
+      Nmea2000Parser().parsePacket(packet),
+      BoundValueListMatches([
+        boundSingleValue(45.0001, Property.currentSet),
+        boundSingleValue(2.5, Property.currentDrift),
+      ]),
+    );
+  });
+
+  test('should not parse set from magnetic referenced set and drift packet', () {
+    final packet = _makePacket(129291, [0xFF, 0x01, ..._u16(7854), ..._u16(250), 0xFF, 0xFF]);
+    expect(
+      Nmea2000Parser().parsePacket(packet),
+      BoundValueListMatches([boundSingleValue(2.5, Property.currentDrift)]),
+    );
+  });
+
   test('should parse valid date/time packet', () {
     final packet = _makePacket(129033, [..._u16(20000), ..._u32(452960000), 0xFF, 0xFF]);
     expect(
@@ -211,6 +533,14 @@ void main() {
         boundSingleValue(DateTime.utc(2024, 10, 4, 12, 34, 56), Property.utcTime, tier: 2),
       ]),
     );
+  });
+
+  test('should not parse date/time packet with unavailable date', () {
+    final parser = Nmea2000Parser();
+    final packet = _makePacket(129033, [0xFF, 0xFF, ..._u32(452960000), 0xFF, 0xFF]);
+    expect(() => parser.parsePacket(packet), throwsFormatException);
+    expect(parser.emptyCounts.total, 1);
+    expect(parser.successCounts.total, 0);
   });
 
   // TODO: Add support and tests for waypoint name (PGN 129285).
@@ -231,6 +561,95 @@ void main() {
         boundSingleValue(10.2, Property.apparentWindSpeed),
         boundSingleValue(45.0001, Property.apparentWindAngle),
       ]),
+    );
+  });
+
+  test('should parse valid true ground referenced wind packet', () {
+    final packet = _makePacket(130306, [0x04, ..._u16(1020), ..._u16(7854), 0x00]);
+    expect(
+      Nmea2000Parser().parsePacket(packet),
+      BoundValueListMatches([
+        boundSingleValue(10.2, Property.trueWindSpeed),
+        boundSingleValue(45.0001, Property.trueWindDirection),
+      ]),
+    );
+  });
+
+  test('should parse boat referenced true wind packet wrapping angle from bow', () {
+    final packet = _makePacket(130306, [0x04, ..._u16(1020), ..._u16(47124), 0x03]);
+    expect(
+      Nmea2000Parser().parsePacket(packet),
+      BoundValueListMatches([
+        boundSingleValue(10.2, Property.trueWindSpeed),
+        boundSingleValue(-89.9994, Property.trueWindAngle),
+      ]),
+    );
+  });
+
+  test('should not parse angle from magnetic ground referenced wind packet', () {
+    final packet = _makePacket(130306, [0x04, ..._u16(1020), ..._u16(7854), 0x01]);
+    expect(
+      Nmea2000Parser().parsePacket(packet),
+      BoundValueListMatches([boundSingleValue(10.2, Property.trueWindSpeed)]),
+    );
+  });
+
+  test('should reject wind packet with angle outside valid range', () {
+    final parser = Nmea2000Parser();
+    final packet = _makePacket(130306, [0x04, ..._u16(1020), ..._u16(65000), 0x02]);
+    expect(() => parser.parsePacket(packet), throwsFormatException);
+    expect(parser.emptyCounts.total, 0);
+    expect(parser.successCounts.total, 0);
+  });
+
+  test('should parse valid humidity packet', () {
+    final packet = _makePacket(130313, [0xFF, 0x00, 0x00, ..._i16(12500), 0xFF, 0xFF, 0xFF]);
+    expect(
+      Nmea2000Parser().parsePacket(packet),
+      BoundValueListMatches([boundSingleValue(50.0, Property.relativeHumidity)]),
+    );
+  });
+
+  test('should parse valid atmospheric pressure packet', () {
+    final packet = _makePacket(130314, [0xFF, 0x00, 0x00, ..._i32(1013250), 0xFF]);
+    expect(
+      Nmea2000Parser().parsePacket(packet),
+      BoundValueListMatches([boundSingleValue(101325.0, Property.pressure)]),
+    );
+  });
+
+  test('should parse valid oil pressure packet', () {
+    final packet = _makePacket(130314, [0xFF, 0x00, 0x07, ..._i32(3000000), 0xFF]);
+    expect(
+      Nmea2000Parser().parsePacket(packet),
+      BoundValueListMatches([boundSingleValue(300000.0, Property.engine1OilPressure)]),
+    );
+  });
+
+  test('should not parse pressure packet for unsupported source', () {
+    final parser = Nmea2000Parser();
+    final packet = _makePacket(130314, [0xFF, 0x00, 0x02, ..._i32(1013250), 0xFF]);
+    expect(() => parser.parsePacket(packet), throwsFormatException);
+    expect(parser.emptyCounts.total, 1);
+    expect(parser.successCounts.total, 0);
+  });
+
+  test('should parse valid extended temperature packets for each supported source', () {
+    final parser = Nmea2000Parser();
+    final waterPacket = _makePacket(130316, [0xFF, 0x00, 0x00, 0x1E, 0x79, 0x04, 0xFF, 0xFF]);
+    expect(
+      parser.parsePacket(waterPacket),
+      BoundValueListMatches([boundSingleValue(20.0, Property.waterTemperature)]),
+    );
+    final airPacket = _makePacket(130316, [0xFF, 0x00, 0x01, 0xA6, 0x8C, 0x04, 0xFF, 0xFF]);
+    expect(
+      parser.parsePacket(airPacket),
+      BoundValueListMatches([boundSingleValue(25.0, Property.airTemperature)]),
+    );
+    final dewPacket = _makePacket(130316, [0xFF, 0x00, 0x02, 0x96, 0x65, 0x04, 0xFF, 0xFF]);
+    expect(
+      parser.parsePacket(dewPacket),
+      BoundValueListMatches([boundSingleValue(15.0, Property.dewPoint)]),
     );
   });
 }

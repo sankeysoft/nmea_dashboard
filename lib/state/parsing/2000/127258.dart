@@ -11,7 +11,7 @@ class Parser127258 extends PacketParser {
   @override
   List<BoundValue> parse(ByteData payload) {
     _validatePayloadLength(payload, 8);
-    final value = _scaleIfNotNull(_readInt16(payload, 5), 0.0001 * radiansToDegrees);
+    final value = _scaleIfNotNull(_readInt16(payload, 4), 0.0001 * radiansToDegrees);
     return value == null ? [] : [boundSingleValue(value, Property.variation, tier: 2)];
   }
 }

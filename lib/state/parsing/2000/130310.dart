@@ -10,6 +10,7 @@ class Parser130310 extends PacketParser {
 
   @override
   List<BoundValue> parse(ByteData payload) {
+    _validatePayloadLength(payload, 8);
     final waterTemp = _scaleOffsetIfNotNull(_readUint16(payload, 1), 0.01, absoluteZeroInCelcius);
     final airTemp = _scaleOffsetIfNotNull(_readUint16(payload, 3), 0.01, absoluteZeroInCelcius);
     final pressure = _scaleIfNotNull(_readUint16(payload, 5), 100);

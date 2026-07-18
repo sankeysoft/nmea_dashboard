@@ -11,7 +11,7 @@ class Parser130313 extends PacketParser {
   @override
   List<BoundValue> parse(ByteData payload) {
     _validatePayloadLength(payload, 8);
-    final humidity = _scaleIfNotNull(_readUint16(payload, 3), 0.004);
+    final humidity = _scaleIfNotNull(_readInt16(payload, 3), 0.004);
     return humidity == null ? [] : [boundSingleValue(humidity, Property.relativeHumidity)];
   }
 }

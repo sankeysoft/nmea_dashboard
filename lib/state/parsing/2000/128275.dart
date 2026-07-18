@@ -11,8 +11,8 @@ class Parser128275 extends PacketParser {
   @override
   List<BoundValue> parse(ByteData payload) {
     _validatePayloadLength(payload, 14);
-    final log = _scaleIfNotNull(_readInt32(payload, 6), 0.01);
-    final trip = _scaleIfNotNull(_readInt32(payload, 6), 0.01);
+    final log = _readUint32(payload, 6)?.toDouble();
+    final trip = _readUint32(payload, 10)?.toDouble();
     return [
       optionalBoundSingleValue(log, Property.distanceTotal),
       optionalBoundSingleValue(trip, Property.distanceTrip),

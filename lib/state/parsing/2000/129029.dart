@@ -12,11 +12,11 @@ class Parser129029 extends PacketParser {
   List<BoundValue> parse(ByteData payload) {
     _validateMinPayloadLength(payload, 31);
     final days = _readUint16(payload, 1);
-    final microseconds = _multiplyIfNotNull(_readUint32(payload, 2), 100);
-    final lat = _scaleIfNotNull(_readInt64(payload, 7, 8), 1e-16);
-    final long = _scaleIfNotNull(_readInt64(payload, 16, 8), 1e-16);
-    final hdop = (payload.lengthInBytes >= 35)
-        ? _scaleIfNotNull(_readUint16(payload, 33), 0.01)
+    final microseconds = _multiplyIfNotNull(_readUint32(payload, 3), 100);
+    final lat = _scaleIfNotNull(_readInt64(payload, 7), 1e-16);
+    final long = _scaleIfNotNull(_readInt64(payload, 15), 1e-16);
+    final hdop = (payload.lengthInBytes >= 36)
+        ? _scaleIfNotNull(_readInt16(payload, 34), 0.01)
         : null;
 
     final values = <BoundValue>[];
