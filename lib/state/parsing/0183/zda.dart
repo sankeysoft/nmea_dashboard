@@ -21,6 +21,6 @@ class ZdaParser extends SentenceParser {
     final month = int.parse(fields[2]);
     final year = int.parse(fields[3]);
     final dt = DateTime.utc(year, month, day, hour, minute, second);
-    return [_boundSingleValue(dt, Property.utcTime)];
+    return [boundSingleValue(dt, Property.utcTime)];
   }
 }

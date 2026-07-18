@@ -28,8 +28,8 @@ class RmcParser extends SentenceParser {
     final year = 2000 + int.parse(fields[8].substring(4, 6));
     final dt = DateTime.utc(year, month, day, hour, minute, second);
     var ret = <BoundValue?>[
-      _boundDoubleValue(lat, long, Property.gpsPosition, tier: 3),
-      _boundSingleValue(dt, Property.utcTime, tier: 2),
+      boundDoubleValue(lat, long, Property.gpsPosition, tier: 3),
+      boundSingleValue(dt, Property.utcTime, tier: 2),
     ];
     if (fields[6].isNotEmpty) {
       ret.add(
@@ -46,7 +46,7 @@ class RmcParser extends SentenceParser {
     }
     if (fields[9].isNotEmpty) {
       final variation = _parseVariation(fields[9], fields[10]);
-      ret.add(_boundSingleValue(variation, Property.variation, tier: 2));
+      ret.add(boundSingleValue(variation, Property.variation, tier: 2));
     }
     return ret.nonNulls.toList();
   }

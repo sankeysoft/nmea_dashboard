@@ -7,6 +7,8 @@ import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
+import 'package:nmea_dashboard/state/common.dart';
+import 'package:nmea_dashboard/state/values.dart';
 
 /// The time between count events.
 const Duration _logInterval = Duration(minutes: 5);
@@ -95,4 +97,28 @@ abstract class NmeaParser {
       ignoredCounts.clear();
     }
   }
+}
+
+// Creates a BoundValue<SingleValue<double>> from the supplied input.
+BoundValue<SingleValue<T>> boundSingleValue<T>(T number, Property property, {int tier = 1}) {
+  return BoundValue(Source.network, property, SingleValue(number), tier: tier);
+}
+
+// Creates a BoundValue<SingleValue<double>> from the supplied input, or null if the input is null.
+BoundValue<SingleValue<T>>? optionalBoundSingleValue<T>(
+  T? number,
+  Property property, {
+  int tier = 1,
+}) {
+  return number == null ? null : boundSingleValue(number, property, tier: tier);
+}
+
+// Creates a BoundValue<DoubleValue<double>> from the supplied input.
+BoundValue<DoubleValue<double>> boundDoubleValue(
+  double first,
+  double second,
+  Property property, {
+  int tier = 1,
+}) {
+  return BoundValue(Source.network, property, DoubleValue(first, second), tier: tier);
 }

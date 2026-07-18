@@ -16,7 +16,7 @@ class XteParser extends SentenceParser {
     if (fields[2].isNotEmpty) {
       _validateFieldValue(fields, index: 4, expected: 'N');
       final xte = _parseCrossTrackError(fields[2], fields[3]);
-      return [_boundSingleValue(xte, Property.crossTrackError)];
+      return [boundSingleValue(xte, Property.crossTrackError)];
     } else {
       return [];
     }

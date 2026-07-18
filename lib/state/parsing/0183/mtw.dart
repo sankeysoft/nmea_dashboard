@@ -12,6 +12,6 @@ class MtwParser extends SentenceParser {
   List<BoundValue> parse(List<String> fields) {
     _validateFieldCount(fields, 2);
     _validateFieldValue(fields, index: 1, expected: 'C');
-    return [_parseSingleValue(fields[0], Property.waterTemperature, tier: 2)].nonNulls.toList();
+    return [_parseSingleValue(fields[0], Property.waterTemperature, tier: 3)].nonNulls.toList();
   }
 }

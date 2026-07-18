@@ -17,8 +17,8 @@ class DptParser extends SentenceParser {
     final depth = double.parse(fields[0]);
     final offset = fields[1].isEmpty ? 0.0 : double.parse(fields[1]);
     return [
-      _boundSingleValue(depth + offset, Property.depthWithOffset),
-      _boundSingleValue(depth, Property.depthUncalibrated),
+      boundSingleValue(depth + offset, Property.depthWithOffset),
+      boundSingleValue(depth, Property.depthUncalibrated),
     ];
   }
 }

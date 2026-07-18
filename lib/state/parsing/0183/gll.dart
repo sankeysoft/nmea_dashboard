@@ -15,6 +15,6 @@ class GllParser extends SentenceParser {
     _validateValidityIndicator(fields, index: 5);
     final lat = _parseLatitude(fields[0], fields[1]);
     final long = _parseLongitude(fields[2], fields[3]);
-    return [_boundDoubleValue(lat, long, Property.gpsPosition, tier: 2)];
+    return [boundDoubleValue(lat, long, Property.gpsPosition, tier: 2)];
   }
 }

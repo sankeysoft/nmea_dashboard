@@ -200,22 +200,7 @@ BoundValue<SingleValue<double>>? _parseSingleValue(
   if (divisor != null) {
     number = number / divisor;
   }
-  return _boundSingleValue(number, property, tier: tier);
-}
-
-// Creates a BoundValue<SingleValue<double>> from the supplied input.
-BoundValue<SingleValue<T>> _boundSingleValue<T>(T number, Property property, {int tier = 1}) {
-  return BoundValue(Source.network, property, SingleValue(number), tier: tier);
-}
-
-// Creates a BoundValue<DoubleValue<double>> from the supplied input.
-BoundValue<DoubleValue<double>> _boundDoubleValue(
-  double first,
-  double second,
-  Property property, {
-  int tier = 1,
-}) {
-  return BoundValue(Source.network, property, DoubleValue(first, second), tier: tier);
+  return boundSingleValue(number, property, tier: tier);
 }
 
 /// Validates fields contains the expected number of entries.

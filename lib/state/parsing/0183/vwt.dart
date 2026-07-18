@@ -14,16 +14,16 @@ class VwtParser extends SentenceParser {
     final ret = <BoundValue<SingleValue<double>>?>[];
     if (fields[0].isNotEmpty) {
       if (fields[1] == 'L') {
-        ret.add(_parseSingleValue("-${fields[0]}", Property.trueWindAngle, tier: 2));
+        ret.add(_parseSingleValue("-${fields[0]}", Property.trueWindAngle, tier: 3));
       } else if (fields[1] == 'R') {
-        ret.add(_parseSingleValue(fields[0], Property.trueWindAngle, tier: 2));
+        ret.add(_parseSingleValue(fields[0], Property.trueWindAngle, tier: 3));
       } else {
         throw FormatException('Invalid wind angle direction $fields[1]');
       }
     }
     if (fields[4].isNotEmpty) {
       _validateFieldValue(fields, index: 5, expected: 'M');
-      ret.add(_parseSingleValue(fields[4], Property.trueWindSpeed, tier: 2));
+      ret.add(_parseSingleValue(fields[4], Property.trueWindSpeed, tier: 3));
     } else if (fields[2].isNotEmpty) {
       _validateFieldValue(fields, index: 3, expected: 'N');
       ret.add(
@@ -31,7 +31,7 @@ class VwtParser extends SentenceParser {
           fields[2],
           Property.trueWindSpeed,
           divisor: metersPerSecondToKnots,
-          tier: 2,
+          tier: 3,
         ),
       );
     }
