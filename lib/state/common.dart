@@ -2,6 +2,8 @@
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
+import 'dart:math';
+
 import 'package:intl/intl.dart';
 import 'package:nmea_dashboard/state/data_element.dart';
 import 'package:nmea_dashboard/state/values.dart';
@@ -15,6 +17,8 @@ const double metersToFeet = 3.28084;
 const double pascalsToInchesMercury = 0.0002953;
 const double pascalsToMillibar = 0.01;
 const double pascalsToPsi = 0.000145038;
+const double radiansToDegrees = 180.0 / pi;
+const double absoluteZeroInCelcius = -273.15;
 
 const int serializationDp = 4;
 
