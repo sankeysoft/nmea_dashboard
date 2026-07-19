@@ -29,6 +29,7 @@ void main() {
     expect(s.mode, NetworkMode.udpListen);
     expect(s.ipAddress.address, '192.168.4.1');
     expect(s.port, 2000);
+    expect(s.protocol, NetworkProtocol.nmea0183);
     expect(s.requireChecksum, isTrue);
     expect(s.staleness, const Duration(seconds: 10));
   });
@@ -39,6 +40,7 @@ void main() {
         'network_mode': 1,
         'network_address': '10.0.0.1',
         'network_port': 3000,
+        'network_protocol': 1,
         'network_checksum': false,
         'network_staleness_seconds': 30,
       }),
@@ -46,6 +48,7 @@ void main() {
     expect(s.mode, NetworkMode.tcpConnect);
     expect(s.ipAddress.address, '10.0.0.1');
     expect(s.port, 3000);
+    expect(s.protocol, NetworkProtocol.nmea2000raw);
     expect(s.requireChecksum, isFalse);
     expect(s.staleness, const Duration(seconds: 30));
   });
@@ -55,6 +58,17 @@ void main() {
     expect(s.mode, NetworkMode.udpListen);
   });
 
+  test('out-of-range protocol index falls back to nmea0183', () async {
+    expect(
+      NetworkSettings(await _prefs({'network_protocol': 99})).protocol,
+      NetworkProtocol.nmea0183,
+    );
+    expect(
+      NetworkSettings(await _prefs({'network_protocol': -1})).protocol,
+      NetworkProtocol.nmea0183,
+    );
+  });
+
   test('set() updates all fields and persists to prefs', () async {
     final p = await _prefs();
     final s = NetworkSettings(p);
@@ -62,17 +76,20 @@ void main() {
       mode: NetworkMode.tcpConnect,
       port: 5000,
       ipAddress: InternetAddress('10.0.0.2'),
+      protocol: NetworkProtocol.nmea2000assembled,
       requireChecksum: false,
       staleness: const Duration(seconds: 20),
     );
     expect(s.mode, NetworkMode.tcpConnect);
     expect(s.port, 5000);
     expect(s.ipAddress.address, '10.0.0.2');
+    expect(s.protocol, NetworkProtocol.nmea2000assembled);
     expect(s.requireChecksum, isFalse);
     expect(s.staleness, const Duration(seconds: 20));
     expect(p.getInt('network_mode'), 1);
     expect(p.getString('network_address'), '10.0.0.2');
     expect(p.getInt('network_port'), 5000);
+    expect(p.getInt('network_protocol'), 2);
     expect(p.getBool('network_checksum'), isFalse);
     expect(p.getInt('network_staleness_seconds'), 20);
   });

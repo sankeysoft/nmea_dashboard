@@ -34,6 +34,7 @@ class _NetworkSettingsFormState extends StatefulFormState<_NetworkSettingsForm> 
   late int _portNum;
   late InternetAddress _ipAddress;
   late NetworkMode _mode;
+  late NetworkProtocol _protocol;
   late bool _requireChecksum;
   late Duration _staleness;
 
@@ -42,6 +43,7 @@ class _NetworkSettingsFormState extends StatefulFormState<_NetworkSettingsForm> 
     _ipAddress = widget._settings.ipAddress;
     _portNum = widget._settings.port;
     _mode = widget._settings.mode;
+    _protocol = widget._settings.protocol;
     _requireChecksum = widget._settings.requireChecksum;
     _staleness = widget._settings.staleness;
     super.initState();
@@ -61,6 +63,7 @@ class _NetworkSettingsFormState extends StatefulFormState<_NetworkSettingsForm> 
                 _buildModeField(),
                 _buildIpField(),
                 _buildPortField(),
+                _buildProtocolField(),
                 _buildRequireChecksumField(),
                 _buildStalenessField(),
               ],
@@ -72,6 +75,7 @@ class _NetworkSettingsFormState extends StatefulFormState<_NetworkSettingsForm> 
                 mode: _mode,
                 port: _portNum,
                 ipAddress: _ipAddress,
+                protocol: _protocol,
                 requireChecksum: _requireChecksum,
                 staleness: _staleness,
               );
@@ -144,10 +148,29 @@ class _NetworkSettingsFormState extends StatefulFormState<_NetworkSettingsForm> 
     );
   }
 
+  Widget _buildProtocolField() {
+    buildItem(NetworkProtocol protocol) =>
+        DropdownEntry(value: protocol, text: protocol.description);
+    return buildDropdownBox(
+      label: 'Protocol',
+      items: NetworkProtocol.values.map(buildItem).toList(),
+      initialValue: _protocol,
+      onChanged: (value) {
+        setState(() {
+          // Setting state lets us change enable on the checksum field.
+          if (value != null) {
+            _protocol = value;
+          }
+        });
+      },
+    );
+  }
+
   Widget _buildRequireChecksumField() {
     return buildSwitch(
       label: 'Require checksum',
       initialValue: _requireChecksum,
+      enabled: _protocol == NetworkProtocol.nmea0183,
       onSaved: (value) {
         if (value != null) {
           _requireChecksum = value;

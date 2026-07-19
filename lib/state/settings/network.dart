@@ -13,6 +13,7 @@ class NetworkSettings with ChangeNotifier {
   final PrefMappedValue<int, NetworkMode> _mode;
   final PrefMappedValue<String, InternetAddress> _ipAddress;
   final PrefValue<int> _port;
+  final PrefMappedValue<int, NetworkProtocol> _protocol;
   final PrefValue<bool> _requireChecksum;
   final PrefMappedValue<int, Duration> _staleness;
 
@@ -34,6 +35,15 @@ class NetworkSettings with ChangeNotifier {
         (n) => n.address,
       ),
       _port = PrefValue(prefs, 'network_port', 2000),
+      _protocol = PrefMappedValue(
+        prefs,
+        'network_protocol',
+        NetworkProtocol.nmea0183,
+        (p) => (p >= 0 && p < NetworkProtocol.values.length)
+            ? NetworkProtocol.values[p]
+            : NetworkProtocol.nmea0183,
+        (n) => n.index,
+      ),
       _requireChecksum = PrefValue(prefs, 'network_checksum', true),
       _staleness = PrefMappedValue(
         prefs,
@@ -46,6 +56,7 @@ class NetworkSettings with ChangeNotifier {
   NetworkMode get mode => _mode.value;
   InternetAddress get ipAddress => _ipAddress.value;
   int get port => _port.value;
+  NetworkProtocol get protocol => _protocol.value;
   bool get requireChecksum => _requireChecksum.value;
   Duration get staleness => _staleness.value;
 
@@ -53,6 +64,7 @@ class NetworkSettings with ChangeNotifier {
     NetworkMode? mode,
     int? port,
     InternetAddress? ipAddress,
+    NetworkProtocol? protocol,
     bool? requireChecksum,
     Duration? staleness,
   }) {
@@ -64,6 +76,9 @@ class NetworkSettings with ChangeNotifier {
     }
     if (ipAddress != null) {
       _ipAddress.set(ipAddress);
+    }
+    if (protocol != null) {
+      _protocol.set(protocol);
     }
     if (requireChecksum != null) {
       _requireChecksum.set(requireChecksum);
@@ -82,4 +97,14 @@ enum NetworkMode {
 
   final String description;
   const NetworkMode(this.description);
+}
+
+// The supported protocol modes.
+enum NetworkProtocol {
+  nmea0183('NMEA0183 Text'),
+  nmea2000raw('NMEA2000 YD RAW'),
+  nmea2000assembled('NMEA2000 Packets');
+
+  final String description;
+  const NetworkProtocol(this.description);
 }

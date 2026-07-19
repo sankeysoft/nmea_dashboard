@@ -436,6 +436,7 @@ abstract class StatefulFormState<T extends StatefulWidget> extends State<T> {
   Widget buildSwitch({
     required String label,
     required bool initialValue,
+    bool enabled = true,
     ValueChanged<bool>? onChanged,
     FormFieldSetter<bool>? onSaved,
   }) {
@@ -455,12 +456,14 @@ abstract class StatefulFormState<T extends StatefulWidget> extends State<T> {
             return Switch(
               value: field.value ?? true,
               activeThumbColor: theme.colorScheme.tertiary,
-              onChanged: (val) {
-                field.didChange(val);
-                if (onChanged != null) {
-                  onChanged(val);
-                }
-              },
+              onChanged: enabled
+                  ? (val) {
+                      field.didChange(val);
+                      if (onChanged != null) {
+                        onChanged(val);
+                      }
+                    }
+                  : null,
             );
           },
           onSaved: onSaved,
