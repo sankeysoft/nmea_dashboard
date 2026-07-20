@@ -6,7 +6,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:async/async.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/state/parsing/0183/common.dart';
@@ -21,19 +20,25 @@ const _networkErrorRetry = Duration(seconds: 15);
 
 final _log = Logger('Network');
 
+/// A function that converts a stream of network packets into a stream of bound values parsed
+/// from the NMEA messages contained in those network packets.
+typedef PacketProcessor = Stream<BoundValue?> Function(Stream<Uint8List> packetStream);
+
 /// Returns an infinite stream of valid bound values read from a port specified
 /// in the supplied network settings, logging any errors. Guaranteed to return
 /// (potentially null) values at least every _timeout seconds even if no network
 /// traffic is present to enable cancelling.
 Stream<BoundValue?> valuesFromNetwork(NetworkSettings settings) {
-  final splitter = CrlfMessageSplitter(startRegex: RegExp(r'[\$!]'));
-  final validator = Nmea0183Validator(settings.requireChecksum);
-  final parser = Nmea0183Parser();
+  final packetProcessor = makePacketProcessingFunction(
+    CrlfMessageSplitter(startRegex: RegExp(r'[\$!]')),
+    Nmea0183Validator(settings.requireChecksum),
+    Nmea0183Parser(),
+  );
   switch (settings.mode) {
     case NetworkMode.tcpConnect:
-      return _valuesFromTcpConnect(settings.ipAddress, settings.port, splitter, validator, parser);
+      return _valuesFromTcpConnect(settings.ipAddress, settings.port, packetProcessor);
     case NetworkMode.udpListen:
-      return _valuesFromUdpListen(settings.port, splitter, validator, parser);
+      return _valuesFromUdpListen(settings.port, packetProcessor);
   }
 }
 
@@ -44,16 +49,14 @@ Stream<BoundValue?> valuesFromNetwork(NetworkSettings settings) {
 Stream<BoundValue?> _valuesFromTcpConnect(
   InternetAddress ipAddress,
   int portNum,
-  MessageSplitter splitter,
-  MessageValidator validator,
-  MessageParser parser,
+  PacketProcessor processPackets,
 ) async* {
   _log.info('Starting TCP stream on $ipAddress:$portNum');
   try {
     while (true) {
       try {
         var socket = await Socket.connect(ipAddress, portNum);
-        await for (final value in valuesFromPackets(socket, splitter, validator, parser)) {
+        await for (final value in processPackets(socket)) {
           yield value;
         }
         socket.close();
@@ -75,22 +78,14 @@ Stream<BoundValue?> _valuesFromTcpConnect(
 /// network port, logging any errors, guaranteed to return (potentially null)
 /// values at least every _timeout seconds even if no network traffic is present
 /// to enable cancelling.
-Stream<BoundValue?> _valuesFromUdpListen(
-  int portNum,
-  MessageSplitter splitter,
-  MessageValidator validator,
-  MessageParser parser,
-) async* {
+Stream<BoundValue?> _valuesFromUdpListen(int portNum, PacketProcessor processPackets) async* {
   _log.info('Starting UDP listen stream on $portNum');
   try {
     while (true) {
       try {
         var receiver = await UDP.bind(Endpoint.any(port: Port(portNum)));
-        await for (final value in valuesFromPackets(
+        await for (final value in processPackets(
           receiver.asStream().map((d) => d?.data ?? _emptyPacket),
-          splitter,
-          validator,
-          parser,
         )) {
           yield value;
         }
@@ -115,43 +110,43 @@ Stream<Uint8List> _periodicEmptyPackets() {
   return Stream.periodic(const Duration(seconds: 3), (_) => _emptyPacket);
 }
 
-/// Returns a stream of valid values read from the supplied packet stream,
-/// logging any errors, guaranteed to return (potentially null) values at
-/// least every _timeout seconds even if no network traffic is present to
-/// enable cancelling.
-@visibleForTesting
-Stream<BoundValue?> valuesFromPackets<M, S>(
-  Stream<Uint8List> packetStream,
+/// Returns a function that converts a packet stream into a stream of the valid
+/// values read using the supplied splitter, validator, and parser, logging any
+/// errors, guaranteed to return (potentially null) values at least every
+/// _timeout seconds even if no network traffic is present to enable cancelling.
+PacketProcessor makePacketProcessingFunction<M, S>(
   MessageSplitter<M> splitter,
   MessageValidator<M, S> validator,
   MessageParser<M, S> parser,
-) async* {
-  await for (final packet in StreamGroup.merge([packetStream, _periodicEmptyPackets()])) {
-    parser.logAndClearIfNeeded();
-    if (packet.isEmpty) {
-      // Empty packets are included in the stream even if no traffic is
-      // present so we can return empty values that let a subscriber cancel
-      // the stream.
-      yield null;
-    } else {
-      for (final message in splitter.read(packet)) {
-        ValidatedMessage<M, S>? validated;
-        try {
-          validated = validator.validate(message);
-        } on FormatException catch (e) {
-          _log.warning('Error validating ${splitter.loggable(message)}: ${e.message}');
-        }
-        if (validated == null) {
-          continue;
-        }
-        try {
-          for (final value in parser.parse(validated)) {
-            yield value;
+) {
+  return (Stream<Uint8List> packetStream) async* {
+    await for (final packet in StreamGroup.merge([packetStream, _periodicEmptyPackets()])) {
+      parser.logAndClearIfNeeded();
+      if (packet.isEmpty) {
+        // Empty packets are included in the stream even if no traffic is
+        // present so we can return empty values that let a subscriber cancel
+        // the stream.
+        yield null;
+      } else {
+        for (final message in splitter.read(packet)) {
+          ValidatedMessage<M, S>? validated;
+          try {
+            validated = validator.validate(message);
+          } on FormatException catch (e) {
+            _log.warning('Error validating ${splitter.loggable(message)}: ${e.message}');
           }
-        } on FormatException catch (e) {
-          _log.warning('Error parsing ${splitter.loggable(message)}: ${e.message}');
+          if (validated == null) {
+            continue;
+          }
+          try {
+            for (final value in parser.parse(validated)) {
+              yield value;
+            }
+          } on FormatException catch (e) {
+            _log.warning('Error parsing ${splitter.loggable(message)}: ${e.message}');
+          }
         }
       }
     }
-  }
+  };
 }
