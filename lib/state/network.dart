@@ -10,6 +10,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/state/parsing/0183/common.dart';
+import 'package:nmea_dashboard/state/parsing/common.dart';
+import 'package:nmea_dashboard/state/parsing/splitters.dart';
+import 'package:nmea_dashboard/state/parsing/validators.dart';
 import 'package:nmea_dashboard/state/settings/network.dart';
 import 'package:nmea_dashboard/state/values.dart';
 import 'package:udp/udp.dart';
@@ -23,12 +26,14 @@ final _log = Logger('Network');
 /// (potentially null) values at least every _timeout seconds even if no network
 /// traffic is present to enable cancelling.
 Stream<BoundValue?> valuesFromNetwork(NetworkSettings settings) {
-  Nmea0183Parser parser = Nmea0183Parser(settings.requireChecksum);
+  final splitter = CrlfMessageSplitter(startRegex: RegExp(r'[\$!]'));
+  final validator = Nmea0183Validator(settings.requireChecksum);
+  final parser = Nmea0183Parser();
   switch (settings.mode) {
     case NetworkMode.tcpConnect:
-      return _valuesFromTcpConnect(settings.ipAddress, settings.port, parser);
+      return _valuesFromTcpConnect(settings.ipAddress, settings.port, splitter, validator, parser);
     case NetworkMode.udpListen:
-      return _valuesFromUdpListen(settings.port, parser);
+      return _valuesFromUdpListen(settings.port, splitter, validator, parser);
   }
 }
 
@@ -39,14 +44,16 @@ Stream<BoundValue?> valuesFromNetwork(NetworkSettings settings) {
 Stream<BoundValue?> _valuesFromTcpConnect(
   InternetAddress ipAddress,
   int portNum,
-  Nmea0183Parser parser,
+  MessageSplitter splitter,
+  MessageValidator validator,
+  MessageParser parser,
 ) async* {
   _log.info('Starting TCP stream on $ipAddress:$portNum');
   try {
     while (true) {
       try {
         var socket = await Socket.connect(ipAddress, portNum);
-        await for (final value in valuesFromPackets(socket, parser)) {
+        await for (final value in valuesFromPackets(socket, splitter, validator, parser)) {
           yield value;
         }
         socket.close();
@@ -68,7 +75,12 @@ Stream<BoundValue?> _valuesFromTcpConnect(
 /// network port, logging any errors, guaranteed to return (potentially null)
 /// values at least every _timeout seconds even if no network traffic is present
 /// to enable cancelling.
-Stream<BoundValue?> _valuesFromUdpListen(int portNum, Nmea0183Parser parser) async* {
+Stream<BoundValue?> _valuesFromUdpListen(
+  int portNum,
+  MessageSplitter splitter,
+  MessageValidator validator,
+  MessageParser parser,
+) async* {
   _log.info('Starting UDP listen stream on $portNum');
   try {
     while (true) {
@@ -76,6 +88,8 @@ Stream<BoundValue?> _valuesFromUdpListen(int portNum, Nmea0183Parser parser) asy
         var receiver = await UDP.bind(Endpoint.any(port: Port(portNum)));
         await for (final value in valuesFromPackets(
           receiver.asStream().map((d) => d?.data ?? _emptyPacket),
+          splitter,
+          validator,
           parser,
         )) {
           yield value;
@@ -106,11 +120,12 @@ Stream<Uint8List> _periodicEmptyPackets() {
 /// least every _timeout seconds even if no network traffic is present to
 /// enable cancelling.
 @visibleForTesting
-Stream<BoundValue?> valuesFromPackets(
+Stream<BoundValue?> valuesFromPackets<M, S>(
   Stream<Uint8List> packetStream,
-  Nmea0183Parser parser,
+  MessageSplitter<M> splitter,
+  MessageValidator<M, S> validator,
+  MessageParser<M, S> parser,
 ) async* {
-  String remaining = '';
   await for (final packet in StreamGroup.merge([packetStream, _periodicEmptyPackets()])) {
     parser.logAndClearIfNeeded();
     if (packet.isEmpty) {
@@ -119,44 +134,24 @@ Stream<BoundValue?> valuesFromPackets(
       // the stream.
       yield null;
     } else {
-      // Process whatever we left over plus the new packet.
-      remaining += String.fromCharCodes(packet);
-
-      // Keep going while the string contains terminators or a .
-      var nextSplit = findSplit(remaining);
-      while (nextSplit >= 0) {
-        final potentialMessage = remaining.substring(0, nextSplit).trim();
-        remaining = remaining.substring(nextSplit).trim();
-        nextSplit = findSplit(remaining);
-
-        if (potentialMessage.isNotEmpty) {
-          try {
-            for (final value in parser.parseString(potentialMessage)) {
-              yield value;
-            }
-          } on FormatException catch (e) {
-            _log.warning('Error parsing $potentialMessage ${e.message}');
+      for (final message in splitter.read(packet)) {
+        ValidatedMessage<M, S>? validated;
+        try {
+          validated = validator.validate(message);
+        } on FormatException catch (e) {
+          _log.warning('Error validating ${splitter.loggable(message)}: ${e.message}');
+        }
+        if (validated == null) {
+          continue;
+        }
+        try {
+          for (final value in parser.parse(validated)) {
+            yield value;
           }
+        } on FormatException catch (e) {
+          _log.warning('Error parsing ${splitter.loggable(message)}: ${e.message}');
         }
       }
     }
   }
-}
-
-/// Returns the best location to split remaing data based on the first CR LF,
-/// or message start indicator, or -1 if there is none. This is needed because
-/// annoyingly some networks don't CRLF terminate all messages correctly.
-@visibleForTesting
-int findSplit(String remainingData) {
-  if (remainingData.length < 2) {
-    return -1;
-  }
-  final nextEnd = remainingData.indexOf(RegExp(r'[\n\r]'));
-  final nextStart = remainingData.indexOf(RegExp(r'[\$!]'), 1);
-  if (nextEnd >= 0 && (nextStart <= 0 || nextEnd < nextStart)) {
-    return nextEnd;
-  } else if (nextStart > 0) {
-    return nextStart;
-  }
-  return -1;
 }

@@ -8,6 +8,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/parsing/common.dart';
+import 'package:nmea_dashboard/state/parsing/validators.dart';
 import 'package:nmea_dashboard/state/values.dart';
 
 part 'bwr.dart';
@@ -48,9 +49,59 @@ const _ignoredMessages = {
   'DBK', 'DBS', 'HDT',
 };
 
+/// A validator for NMEA0183 messages.
+class Nmea0183Validator extends MessageValidator<String, String> {
+  final bool _requireChecksum;
+
+  /// Constructs a new validator for NMEA messages
+  Nmea0183Validator(this._requireChecksum);
+
+  @override
+  ValidatedMessage<String, String>? validate(String raw) {
+    if (raw.startsWith('!')) {
+      // Silently discard encapsulated sentences (e.g. AIS).
+      return null;
+    } else if (!raw.startsWith('\$')) {
+      // Thow an exception for any other prefix.
+      throw const FormatException('Does not start with \$');
+    }
+
+    // Try to validate and remove a checksum if there is one, throw an error if there
+    // isn't a checksum but we require one.
+    if (raw.length > 3 && raw[raw.length - 3] == '*') {
+      _validateChecksum(raw.substring(1, raw.length - 3), raw.substring(raw.length - 2));
+      raw = raw.substring(0, raw.length - 3);
+    } else if (_requireChecksum) {
+      throw const FormatException('Does not end in a checksum');
+    }
+
+    // Check length.
+    if (raw.length < 7) {
+      throw const FormatException('Message is truncated');
+    }
+    return ValidatedMessage(raw.substring(3, 6), raw.substring(1, 3), raw.substring(7));
+  }
+
+  /// Validates that the supplied content matches the expected ASCII checksum, throwing
+  /// a FormatException if not.
+  static void _validateChecksum(String content, String checksumString) {
+    final int checksumInt = int.parse(checksumString, radix: 16);
+    int xor = 0;
+    for (final codeUnit in content.codeUnits) {
+      xor ^= codeUnit;
+    }
+    if (xor != checksumInt) {
+      throw FormatException(
+        'Invalid checksum: expected 0x${checksumInt.toRadixString(16)}, '
+        'got 0x${xor.toRadixString(16)}',
+      );
+    }
+  }
+}
+
 /// Parses strings into nmea messages, keeping track of the count for each
 /// message type.
-class Nmea0183Parser extends NmeaParser {
+class Nmea0183Parser extends MessageParser<String, String> {
   static final List<SentenceParser> _allParsers = [
     BwrParser(),
     DbtParser(),
@@ -86,73 +137,35 @@ class Nmea0183Parser extends NmeaParser {
   @visibleForTesting
   static Iterable<String> get supportedTypes => _parserMap.keys;
 
-  final bool _requireChecksum;
-
-  /// Constructs a new parser for NMEA messages
-  Nmea0183Parser(this._requireChecksum);
-
-  /// Attempts to parse the supplied string as a NMEA0183 message, returning
-  /// one or more bound values if parsing the message contents was successful or
-  /// zero values if parsing was unsuccessful but the failure mode should not be
-  /// logged (e.g. a benign problem that has already been logged). Throws a
-  /// FormatException if parsing errors were encountered and the first time a new
-  /// unsupported message or a message with no data is received.
-  /// If requireChecksum is true messages without a checksum are rejected.
-  List<BoundValue> parseString(String string) {
-    if (string.startsWith('!')) {
-      // Silently discard the encapsulated (e.g. AIS) sentences which are often
-      // on the network.
-      return [];
-    } else if (!string.startsWith('\$')) {
-      // Thow an exception for any other prefix, its potentially a network
-      // parsing problem.
-      throw const FormatException('Message is not marked with \$');
-    }
-
-    // Try to validate a checksum if there is one, throw an error if there
-    // isn't a checksum but we require one.
-    if (string.length > 3 && string[string.length - 3] == '*') {
-      _validateChecksum(
-        string.substring(1, string.length - 3),
-        string.substring(string.length - 2),
-      );
-      string = string.substring(0, string.length - 3);
-    } else if (_requireChecksum) {
-      throw const FormatException('Message did not end in a checksum');
-    }
-
-    // Pull out the salient pieces of what is left.
-    if (string.length < 7) {
-      throw const FormatException('Message is truncated');
-    }
-    final type = string.substring(3, 6);
-    final fields = string.substring(7).split(',');
-
-    // Skip ignored sentence types.
-    if (_ignoredMessages.contains(type)) {
-      ignoredCounts.increment(type);
+  @override
+  List<BoundValue> parse(ValidatedMessage<String, String> message) {
+    // Silently skip ignored sentence types.
+    if (_ignoredMessages.contains(message.type)) {
+      ignoredCounts.increment(message.type);
       return [];
     }
 
-    final parser = _parserMap[type];
+    // Lookup a parser for this sentence type.
+    final parser = _parserMap[message.type];
     if (parser == null) {
       // Only cause logging of each unsupported type once per interval.
-      if (unsupportedCounts.increment(type) <= 1) {
+      if (unsupportedCounts.increment(message.type) <= 1) {
         throw const FormatException('Unsupported message type');
       }
       return [];
     }
 
+    final fields = message.payload.split(',');
     final values = parser.parse(fields);
     if (values.isEmpty) {
       // Only cause logging of each empty type once per interval.
-      if (emptyCounts.increment(type) <= 1) {
+      if (emptyCounts.increment(message.type) <= 1) {
         throw const FormatException('No data found');
       }
       return [];
     }
 
-    successCounts.increment(type);
+    successCounts.increment(message.type);
     return values;
   }
 }
@@ -166,22 +179,6 @@ sealed class SentenceParser {
   /// if unsuccessful or an UnsupportedMessageException if the message type is
   /// not recognized.
   List<BoundValue> parse(List<String> fields);
-}
-
-/// Validates that the supplied payload matches the expected ASCII checksum, throwing
-/// a FormatException if not.
-void _validateChecksum(String payload, String checksumString) {
-  final int checksum = int.parse(checksumString, radix: 16);
-  int xor = 0;
-  for (final codeUnit in payload.codeUnits) {
-    xor ^= codeUnit;
-  }
-  if (xor != checksum) {
-    throw FormatException(
-      'Invalid checksum: expected 0x${checksum.toRadixString(16)}, '
-      'got 0x${xor.toRadixString(16)}',
-    );
-  }
 }
 
 // Parse a BoundValue<SingleValue<double>> from the supplied input, returning

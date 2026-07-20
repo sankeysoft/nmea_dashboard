@@ -5,6 +5,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/parsing/common.dart';
+import 'package:nmea_dashboard/state/parsing/validators.dart';
 import 'package:nmea_dashboard/state/values.dart';
 
 part '127245.dart';
@@ -28,11 +29,38 @@ part '130313.dart';
 part '130314.dart';
 part '130316.dart';
 
-const int nmea2kHeaderLength = 16;
+/// A validator for assembled NMEA2000 messages with a 16 byte header.
+class ForkValidator extends MessageValidator<ByteData, int> {
+  static const int _headerLength = 16;
+
+  @override
+  ValidatedMessage<ByteData, int>? validate(ByteData raw) {
+    if (raw.lengthInBytes < _headerLength) {
+      throw const FormatException('Shorter than $_headerLength bytes');
+    }
+
+    final pgn = raw.getUint32(11, Endian.little);
+    final source = raw.getUint8(8);
+
+    final payloadLength = raw.getUint8(15);
+    if (payloadLength < 1) {
+      throw const FormatException('Payload length was zero');
+    }
+
+    final expectedLength = payloadLength + _headerLength;
+    if (raw.lengthInBytes != expectedLength) {
+      throw FormatException(
+        'Invalid packet length, expected $expectedLength, got ${raw.lengthInBytes}',
+      );
+    }
+
+    return ValidatedMessage(pgn, source, ByteData.sublistView(raw, _headerLength));
+  }
+}
 
 /// Parses strings into nmea 2000 messages, keeping track of the count for each
 /// message type.
-class Nmea2000Parser extends NmeaParser {
+class Nmea2000Parser extends MessageParser<ByteData, int> {
   static final List<PacketParser> _allParsers = [
     Parser127245(),
     Parser127250(),
@@ -64,55 +92,29 @@ class Nmea2000Parser extends NmeaParser {
   @visibleForTesting
   static Iterable<int> get supportedPgns => _parserMap.keys;
 
-  /// Constructs a new parser for NMEA 2000 packets
-  Nmea2000Parser();
+  @override
+  List<BoundValue> parse(ValidatedMessage<ByteData, int> message) {
+    final pgnString = message.type.toString();
 
-  /// Attempts to parse the supplied byte list as a binary NMEA2000 assembled packet, returning
-  /// one or more bound values if parsing the message contents was successful or
-  /// zero values if parsing was unsuccessful but the failure mode should not be
-  /// logged (e.g. a benign problem that has already been logged). Throws a
-  /// FormatException if parsing errors were encountered and the first time a new
-  /// unsupported message or a message with no data is received.
-  List<BoundValue> parsePacket(ByteData packet) {
-    if (packet.lengthInBytes < 16) {
-      throw const FormatException('Packet is shorter than the 16-byte header');
-    }
-
-    final pgn = packet.getUint32(11, Endian.little);
-
-    final payloadLength = packet.getUint8(15);
-    if (payloadLength < 1) {
-      throw const FormatException('Packet payload length was zero');
-    }
-
-    final expectedLength = payloadLength + nmea2kHeaderLength;
-    if (packet.lengthInBytes != expectedLength) {
-      throw FormatException(
-        'Packet length incorrect, expected $expectedLength bytes and got ${packet.lengthInBytes}',
-      );
-    }
-
-    final payload = ByteData.sublistView(packet, 16, expectedLength);
-
-    final parser = _parserMap[pgn];
+    final parser = _parserMap[message.type];
     if (parser == null) {
       // Only cause logging of each unsupported PGN once per interval.
-      if (unsupportedCounts.increment(pgn.toString()) <= 1) {
-        throw FormatException('Unsupported PGN $pgn');
+      if (unsupportedCounts.increment(pgnString) <= 1) {
+        throw FormatException('Unsupported PGN $pgnString');
       }
       return [];
     }
 
-    final values = parser.parse(payload);
+    final values = parser.parse(message.payload);
     if (values.isEmpty) {
       // Only cause logging of each empty PGN once per interval.
-      if (emptyCounts.increment(pgn.toString()) <= 1) {
-        throw FormatException('No data found in PGN $pgn');
+      if (emptyCounts.increment(pgnString) <= 1) {
+        throw FormatException('No data found in PGN $pgnString');
       }
       return [];
     }
 
-    successCounts.increment(pgn.toString());
+    successCounts.increment(pgnString);
     return values;
   }
 }

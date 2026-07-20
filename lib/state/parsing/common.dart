@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/state/common.dart';
+import 'package:nmea_dashboard/state/parsing/validators.dart';
 import 'package:nmea_dashboard/state/values.dart';
 
 /// The time between count events.
@@ -49,10 +50,9 @@ class MessageCounts {
   }
 }
 
-/// Parses strings into nmea messages, keeping track of the count for each
-/// message type.
-abstract class NmeaParser {
-  static final _log = Logger('NmeaParser');
+/// Parses nmea messages into values, keeping track of the count for each message type.
+abstract class MessageParser<M, S> {
+  static final _log = Logger('MessageParser');
 
   final ignoredCounts = MessageCounts();
   final unsupportedCounts = MessageCounts();
@@ -61,7 +61,14 @@ abstract class NmeaParser {
   DateTime _lastLog;
 
   /// Constructs a new parser for NMEA messages
-  NmeaParser() : _lastLog = DateTime.now();
+  MessageParser() : _lastLog = DateTime.now();
+
+  /// Attempts to parse the supplied message, returning one or more bound values if parsing
+  /// the message contents was successful or zero values if parsing was unsuccessful but the
+  /// failure mode should not be logged (e.g. no supported data). Throws a FormatException
+  /// if parsing errors were encountered and the first time a new unsupported message or a
+  /// message with no data is received.
+  List<BoundValue> parse(ValidatedMessage<M, S> message);
 
   /// If sufficient time has passed since the last count log, logs the current message counts then
   /// resets them.
