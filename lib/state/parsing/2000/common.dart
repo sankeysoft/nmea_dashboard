@@ -58,6 +58,45 @@ class ForkValidator extends MessageValidator<ByteData, int> {
   }
 }
 
+/// A validator for ActiSense NGT format packets (after DLE start/stop/escape has been removed).
+class NgtValidator extends MessageValidator<ByteData, int> {
+  static const int _packetHeaderLen = 2;
+  static const int _payloadHeaderLen = 11;
+  static const int _packetTrailerLen = 1;
+  static const int _incomingID = 147;
+
+  @override
+  ValidatedMessage<ByteData, int>? validate(ByteData raw) {
+    if (raw.lengthInBytes < _packetHeaderLen + _payloadHeaderLen + _packetTrailerLen) {
+      throw const FormatException('Packet too short');
+    }
+
+    final packetSize = raw.getUint8(1);
+    if (raw.lengthInBytes != _packetHeaderLen + _packetTrailerLen + packetSize) {
+      throw FormatException('Packet data does not match size=$packetSize');
+    }
+    final id = raw.getUint8(0);
+    if (id != _incomingID) {
+      // Ignore outgoing packets.
+      return null;
+    }
+
+    final pgn = raw.getUint32(_packetHeaderLen + 0, Endian.little) >> 8;
+    final source = raw.getUint8(_packetHeaderLen + 5);
+    final payloadSize = raw.getUint8(_packetHeaderLen + 10);
+    if (raw.lengthInBytes - _packetHeaderLen - _payloadHeaderLen - _packetTrailerLen !=
+        payloadSize) {
+      throw FormatException('Payload data does not match size=$payloadSize');
+    }
+
+    // TODO: Validate checksum
+
+    final payloadStart = _packetHeaderLen + _payloadHeaderLen;
+    final payloadEnd = raw.lengthInBytes - _packetTrailerLen;
+    return ValidatedMessage(pgn, source, ByteData.sublistView(raw, payloadStart, payloadEnd));
+  }
+}
+
 /// Parses strings into nmea 2000 messages, keeping track of the count for each
 /// message type.
 class Nmea2000Parser extends MessageParser<ByteData, int> {

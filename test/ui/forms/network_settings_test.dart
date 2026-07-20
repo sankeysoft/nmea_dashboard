@@ -69,14 +69,14 @@ void main() {
           'network_mode': NetworkMode.tcpConnect.index,
           'network_address': '10.0.0.5',
           'network_port': 3000,
-          'network_protocol': NetworkProtocol.nmea2000raw.index,
+          'network_protocol': NetworkProtocol.nmea2000ngt.index,
           'network_staleness_seconds': 30,
         },
       );
       expect(find.text('Connect to TCP port'), findsOneWidget);
       expect(find.text('10.0.0.5'), findsOneWidget);
       expect(find.text('3000'), findsOneWidget);
-      expect(find.text('NMEA2000 YD RAW'), findsOneWidget);
+      expect(find.text('NMEA2000 ActiSense NGT'), findsOneWidget);
       expect(find.text('30'), findsOneWidget);
     });
 
@@ -87,7 +87,7 @@ void main() {
 
     testWidgets('disables checksum switch when an NMEA2000 protocol is selected', (tester) async {
       await pumpForm(tester);
-      await selectProtocol(tester, NetworkProtocol.nmea2000raw);
+      await selectProtocol(tester, NetworkProtocol.nmea2000ngt);
       expect(getChecksumSwitch(tester).onChanged, isNull);
 
       await selectProtocol(tester, NetworkProtocol.nmea0183);
@@ -107,7 +107,10 @@ void main() {
       await tester.enterText(find.text('192.168.4.1'), '999.1.1.1');
       await tester.tap(find.text('SAVE'));
       await tester.pump();
-      expect(find.text('IP address must be a valid IPv4 address such as 192.168.1.1'), findsOneWidget);
+      expect(
+        find.text('IP address must be a valid IPv4 address such as 192.168.1.1'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('SAVE persists values and pops navigator', (tester) async {
@@ -115,7 +118,7 @@ void main() {
       await pumpForm(tester, observer: observer);
 
       await tester.enterText(find.text('2000'), '3000');
-      await selectProtocol(tester, NetworkProtocol.nmea2000assembled);
+      await selectProtocol(tester, NetworkProtocol.nmea2000ngt);
       // Selecting from the dropdown menu pops its own route, so count only the save.
       final popsBefore = observer.popCount;
       await tester.tap(find.text('SAVE'));
@@ -123,16 +126,16 @@ void main() {
 
       expect(observer.popCount, popsBefore + 1);
       expect(settings.port, 3000);
-      expect(settings.protocol, NetworkProtocol.nmea2000assembled);
+      expect(settings.protocol, NetworkProtocol.nmea2000ngt);
     });
 
     testWidgets('SAVE preserves checksum value while switch is disabled', (tester) async {
       await pumpForm(tester);
-      await selectProtocol(tester, NetworkProtocol.nmea2000raw);
+      await selectProtocol(tester, NetworkProtocol.nmea2000ngt);
       await tester.tap(find.text('SAVE'));
       await tester.pump();
 
-      expect(settings.protocol, NetworkProtocol.nmea2000raw);
+      expect(settings.protocol, NetworkProtocol.nmea2000ngt);
       expect(settings.requireChecksum, isTrue);
     });
   });

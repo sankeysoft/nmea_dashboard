@@ -9,6 +9,7 @@ import 'package:async/async.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/state/parsing/0183/common.dart';
+import 'package:nmea_dashboard/state/parsing/2000/common.dart';
 import 'package:nmea_dashboard/state/parsing/common.dart';
 import 'package:nmea_dashboard/state/parsing/splitters.dart';
 import 'package:nmea_dashboard/state/parsing/validators.dart';
@@ -29,11 +30,19 @@ typedef PacketProcessor = Stream<BoundValue?> Function(Stream<Uint8List> packetS
 /// (potentially null) values at least every _timeout seconds even if no network
 /// traffic is present to enable cancelling.
 Stream<BoundValue?> valuesFromNetwork(NetworkSettings settings) {
-  final packetProcessor = makePacketProcessingFunction(
-    CrlfMessageSplitter(startRegex: RegExp(r'[\$!]')),
-    Nmea0183Validator(settings.requireChecksum),
-    Nmea0183Parser(),
-  );
+  final packetProcessor = switch (settings.protocol) {
+    (NetworkProtocol.nmea0183) => makePacketProcessingFunction(
+      CrlfMessageSplitter(startRegex: RegExp(r'[\$!]')),
+      Nmea0183Validator(settings.requireChecksum),
+      Nmea0183Parser(),
+    ),
+    (NetworkProtocol.nmea2000ngt) => makePacketProcessingFunction(
+      DleMessageSplitter(),
+      NgtValidator(),
+      Nmea2000Parser(),
+    ),
+  };
+
   switch (settings.mode) {
     case NetworkMode.tcpConnect:
       return _valuesFromTcpConnect(settings.ipAddress, settings.port, packetProcessor);
