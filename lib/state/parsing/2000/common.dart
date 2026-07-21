@@ -90,15 +90,14 @@ class NgtValidator extends MessageValidator<ByteData, int> {
     }
 
     // TODO: Validate checksum
-
     final payloadStart = _packetHeaderLen + _payloadHeaderLen;
     final payloadEnd = raw.lengthInBytes - _packetTrailerLen;
+
     return ValidatedMessage(pgn, source, ByteData.sublistView(raw, payloadStart, payloadEnd));
   }
 }
 
-/// Parses strings into nmea 2000 messages, keeping track of the count for each
-/// message type.
+/// Parses nmea 2000 messages into values, keeping track of the count for each message type.
 class Nmea2000Parser extends MessageParser<ByteData, int> {
   static final List<PacketParser> _allParsers = [
     Parser127245(),
@@ -127,9 +126,11 @@ class Nmea2000Parser extends MessageParser<ByteData, int> {
     for (final parser in _allParsers) parser.pgn: parser,
   };
 
+  static final Set<int> _supportedPgns = _parserMap.keys.toSet();
+
   /// The sentence types this parser supports.
   @visibleForTesting
-  static Iterable<int> get supportedPgns => _parserMap.keys;
+  static Set<int> get supportedPgns => _supportedPgns;
 
   @override
   List<BoundValue> parse(ValidatedMessage<ByteData, int> message) {

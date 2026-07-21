@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/state/parsing/0183/common.dart';
 import 'package:nmea_dashboard/state/parsing/2000/common.dart';
+import 'package:nmea_dashboard/state/parsing/2000/raw.dart';
 import 'package:nmea_dashboard/state/parsing/common.dart';
 import 'package:nmea_dashboard/state/parsing/splitters.dart';
 import 'package:nmea_dashboard/state/parsing/validators.dart';
@@ -39,6 +40,11 @@ Stream<BoundValue?> valuesFromNetwork(NetworkSettings settings) {
     (NetworkProtocol.nmea2000ngt) => makePacketProcessingFunction(
       DleMessageSplitter(),
       NgtValidator(),
+      Nmea2000Parser(),
+    ),
+    (NetworkProtocol.nmea2000raw) => makePacketProcessingFunction(
+      YdRawMessageSplitter(),
+      YdRawMessageValidator(),
       Nmea2000Parser(),
     ),
   };

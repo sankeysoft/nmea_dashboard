@@ -119,7 +119,7 @@ class DleMessageSplitter extends MessageSplitter<ByteData> {
 
   @override
   String loggable(ByteData message) {
-    return _hexString(message);
+    return hexString(message);
   }
 }
 
@@ -132,11 +132,11 @@ class NullSplitter extends MessageSplitter<ByteData> {
 
   @override
   String loggable(ByteData message) {
-    return _hexString(message);
+    return hexString(message);
   }
 }
 
-String _hexString(ByteData data) {
+String hexString(ByteData data) {
   final hex = data.buffer
       .asUint8List(data.offsetInBytes, data.lengthInBytes)
       .map((b) => b.toRadixString(16).padLeft(2, '0'))
