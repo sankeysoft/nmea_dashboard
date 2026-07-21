@@ -1,53 +1,219 @@
 #!/usr/bin/python3
 
-# Copyright Jody M Sankey 2022-2023
+# Copyright Jody M Sankey 2022-2026
 # This software may be modified and distributed under the terms
 # of the MIT license. See the LICENCE.md file for details.
 
 """This is a simple python script I use to playback recorded NMEA network on a local network
 during development, optionally with fragmentation, trunctation and corruption."""
 
+from abc import ABC, abstractmethod
 from argparse import ArgumentParser, Namespace
-from datetime import datetime, timedelta
+from datetime import date, datetime, time, timedelta
+import re
 import socket
 import os
 from random import randrange
-import time
+import time as time_module
 import typing
 
 DEFAULT_INTERVAL = timedelta(milliseconds=50)
 EWMA_ALPHA = 0.2
 ONE_MS = timedelta(milliseconds=1)
 
+# Arbitrary anchor date used to turn RAW format's time-of-day timestamps into full datetimes.
+# Only deltas and ordering between timestamps are ever used, never the calendar date itself.
+_RAW_EPOCH_DATE = date(2000, 1, 1)
 
-def find_start_index(lines: list[str], offset_minutes: int) -> int:
+_RAW_LINE_RE = re.compile(r"^(\d{2}):(\d{2}):(\d{2})\.(\d{3}) ([RT]) ([0-9A-Fa-f]{8}) ")
+
+
+class MessageFormat(ABC):
+    """Interface for a recorded file format that can be played back by this script."""
+
+    name: str
+
+    # Whether every line carries its own timestamp, so playback can simply sleep for the
+    # recorded delta between consecutive lines. False means timestamps are sparse (e.g. only
+    # on occasional sentences), so playback instead has to estimate a fixed rate using an EWMA
+    # over data-to-real time ratio.
+    per_line_timing: bool
+
+    @staticmethod
+    @abstractmethod
+    def sniff(first_line: str) -> bool:
+        """Returns whether first_line looks like it belongs to this format."""
+
+    @abstractmethod
+    def message_type(self, line: str) -> typing.Optional[str]:
+        """Returns a short type identifier for line, used to match --exclude, or None if line
+        does not have a recognizable type."""
+
+    @abstractmethod
+    def timestamp(self, line: str) -> typing.Optional[datetime]:
+        """Returns the timestamp carried by line, or None if line carries no usable timestamp.
+
+        Implementations may be stateful, tracking enough history to return monotonic
+        datetimes even when the underlying format only encodes a partial date/time.
+        """
+
+
+class Nmea0183Format(MessageFormat):
+    """The ASCII NMEA0183 message format, timed using ZDA sentences."""
+
+    name = "0183"
+    per_line_timing = False
+
+    @staticmethod
+    def sniff(first_line: str) -> bool:
+        return first_line.startswith("$") or first_line.startswith("!")
+
+    def message_type(self, line: str) -> typing.Optional[str]:
+        return line[3:6] if len(line) > 6 else None
+
+    def timestamp(self, line: str) -> typing.Optional[datetime]:
+        if self.message_type(line) != "ZDA":
+            return None
+        try:
+            # Returns the date encoded in a NMEA ZDA message, note this does not verify the
+            # checksum and does not fail elegantly if the message happened to be corrupted.
+            data = line.split(",")
+            microsecond = int(float(data[1][6:]) * 1000000.0)
+            return datetime(
+                int(data[4]),
+                int(data[3]),
+                int(data[2]),
+                int(data[1][0:2]),
+                int(data[1][2:4]),
+                int(data[1][4:6]),
+                microsecond,
+            )
+        except (ValueError, IndexError):
+            return None
+
+
+class RawFormat(MessageFormat):
+    """The Yacht Devices "RAW" CAN frame format, timed using the leading time-of-day field."""
+
+    name = "RAW"
+    per_line_timing = True
+
+    def __init__(self):
+        self._last_time_of_day: typing.Optional[time] = None
+        self._day_count = 0
+
+    @staticmethod
+    def sniff(first_line: str) -> bool:
+        return _RAW_LINE_RE.match(first_line) is not None
+
+    def message_type(self, line: str) -> typing.Optional[str]:
+        match = _RAW_LINE_RE.match(line)
+        if not match:
+            return None
+        return hex(_pgn_from_header(match.group(6)))[2:].upper()
+
+    def timestamp(self, line: str) -> typing.Optional[datetime]:
+        match = _RAW_LINE_RE.match(line)
+        if not match:
+            return None
+        hour, minute, second, millis = (int(match.group(i)) for i in range(1, 5))
+        time_of_day = time(hour, minute, second, millis * 1000)
+        if self._last_time_of_day is not None:
+            # Real captures interleave frames from multiple CAN sources and are not perfectly
+            # monotonic, so small backward steps are jitter rather than a midnight rollover.
+            # Only treat a large backward step as a day wrap.
+            last_as_delta = timedelta(
+                hours=self._last_time_of_day.hour,
+                minutes=self._last_time_of_day.minute,
+                seconds=self._last_time_of_day.second,
+                microseconds=self._last_time_of_day.microsecond,
+            )
+            this_as_delta = timedelta(
+                hours=time_of_day.hour,
+                minutes=time_of_day.minute,
+                seconds=time_of_day.second,
+                microseconds=time_of_day.microsecond,
+            )
+            if last_as_delta - this_as_delta > timedelta(hours=12):
+                self._day_count += 1
+        self._last_time_of_day = time_of_day
+        return datetime.combine(
+            _RAW_EPOCH_DATE + timedelta(days=self._day_count), time_of_day
+        )
+
+
+def _pgn_from_header(header: str) -> int:
+    """Returns the PGN encoded in an 8 hex digit CAN header, mirroring
+    lib/state/parsing/2000/raw.dart's _hexHeaderToPgnSource."""
+    frame_id = int(header, 16)
+    data_page = (frame_id >> 24) & 0x1
+    pdu_format = (frame_id >> 16) & 0xFF
+    pdu_specific = (frame_id >> 8) & 0xFF
+    if pdu_format < 240:
+        return (data_page << 16) | (pdu_format << 8)
+    return (data_page << 16) | (pdu_format << 8) | pdu_specific
+
+
+FORMATS: list[type[MessageFormat]] = [Nmea0183Format, RawFormat]
+
+
+def detect_format(lines: list[str]) -> MessageFormat:
+    """Returns a SentenceFormat instance for the first format that recognizes the first
+    non-blank line in lines. Exits with an error if no format matches."""
+    first_line = next((line for line in lines if line.strip()), "")
+    for format_class in FORMATS:
+        if format_class.sniff(first_line):
+            return format_class()
+    print(f"Error: could not auto-detect format from first line: {first_line!r}")
+    raise SystemExit(1)
+
+
+def format_by_name(name: str, lines: list[str]) -> MessageFormat:
+    """Returns a SentenceFormat instance for the named format ("auto" to detect it)."""
+    if name.lower() == "auto":
+        return detect_format(lines)
+    for format_class in FORMATS:
+        if format_class.name.lower() == name.lower():
+            return format_class()
+    raise ValueError(f"Unknown format: {name}")
+
+
+def _resolve_format_name(value: str) -> str:
+    """Normalizes a case-insensitive --format value to its canonical spelling."""
+    if value.lower() == "auto":
+        return "auto"
+    for format_class in FORMATS:
+        if format_class.name.lower() == value.lower():
+            return format_class.name
+    return value
+
+
+def find_start_index(fmt: MessageFormat, lines: list[str], offset_minutes: int) -> int:
     """Returns the line index to start sending from when applying a time offset.
 
-    Scans for ZDA timestamps, returns the index of the first line whose timestamp is at least
-    offset_minutes after the first timestamp in the file. Exits with an error if the offset
-    exceeds the file duration.
+    Scans for timestamps using fmt, returns the index of the first line whose timestamp is at
+    least offset_minutes after the first timestamp in the file. Exits with an error if the
+    offset exceeds the file duration.
     """
     first_timestamp = None
     last_timestamp = None
 
     for i, line in enumerate(lines):
-        if sentence_type(line) == "ZDA":
-            try:
-                ts = datetime_from_zda(line)
-            except (ValueError, IndexError):
-                continue
-            if first_timestamp is None:
-                first_timestamp = ts
-                print(f'First timestamp: {ts.strftime("%Y-%m-%d %H:%M:%S")}')
-            last_timestamp = ts
-            if ts >= first_timestamp + timedelta(minutes=offset_minutes):
-                print(
-                    f'Skipping to {ts.strftime("%Y-%m-%d %H:%M:%S")} '
-                    f"({offset_minutes}m offset from first timestamp, line {i + 1})"
-                )
-                return i
+        ts = fmt.timestamp(line)
+        if ts is None:
+            continue
+        if first_timestamp is None:
+            first_timestamp = ts
+            print(f'First timestamp: {ts.strftime("%Y-%m-%d %H:%M:%S")}')
+        last_timestamp = ts
+        if ts >= first_timestamp + timedelta(minutes=offset_minutes):
+            print(
+                f'Skipping to {ts.strftime("%Y-%m-%d %H:%M:%S")} '
+                f"({offset_minutes}m offset from first timestamp, line {i + 1})"
+            )
+            return i
 
-    if first_timestamp is None:
+    if first_timestamp is None or last_timestamp is None:
         print("Error: no timestamps found in file, cannot apply --offset.")
     else:
         duration_min = (last_timestamp - first_timestamp).total_seconds() / 60
@@ -57,9 +223,64 @@ def find_start_index(lines: list[str], offset_minutes: int) -> int:
     raise SystemExit(1)
 
 
-def send_file(args: Namespace, open_file: typing.TextIO):
-    """Sends all the lines in the supplied file, corrupting some of them if requested in args."""
+def send_file(args: Namespace, fmt: MessageFormat, lines: list[str]):
+    """Sends all the supplied lines, corrupting some of them if requested in args."""
     exclude = set(args.exclude.split(",")) if args.exclude else set()
+    start_index = find_start_index(fmt, lines, args.offset) if args.offset else 0
+    remaining = lines[start_index:]
+
+    if fmt.per_line_timing:
+        _send_with_recorded_timing(args, fmt, remaining, exclude)
+    else:
+        _send_with_ewma_timing(args, fmt, remaining, exclude)
+
+
+def _send_with_recorded_timing(
+    args: Namespace, fmt: MessageFormat, lines: list[str], exclude: set[str]
+):
+    """Sends lines, sleeping before each one for the delta between its timestamp and the
+    previous line's timestamp. Suitable for formats where every line is individually timed.
+    """
+    print("Sending using each line's recorded timestamp.")
+    carry = ""
+    last_timestamp = None
+    last_progress_clock = time_module.monotonic()
+    sent_since_progress = 0
+
+    for line in lines:
+        if fmt.message_type(line) in exclude:
+            print(f"Not sending {line}", end="")
+            continue
+        timestamp = fmt.timestamp(line)
+        if timestamp is not None:
+            if last_timestamp is None:
+                print(
+                    f'Found first timestamp {timestamp.strftime("%Y-%m-%d %H:%M:%S")}'
+                )
+            else:
+                delay = (timestamp - last_timestamp).total_seconds()
+                if delay > 0:
+                    time_module.sleep(delay)
+            last_timestamp = timestamp
+
+        carry = send_line(args, carry + line)
+        sent_since_progress += 1
+
+        now = time_module.monotonic()
+        if now - last_progress_clock >= 5:
+            print(
+                f"Sent {sent_since_progress} lines in the last {now - last_progress_clock:.1f}s"
+            )
+            last_progress_clock = now
+            sent_since_progress = 0
+
+
+def _send_with_ewma_timing(
+    args: Namespace, fmt: MessageFormat, lines: list[str], exclude: set[str]
+):
+    """Sends lines at a fixed interval, adjusting that interval with an EWMA over the ratio of
+    real to data time observed between occasional timestamped lines. Suitable for formats where
+    only some lines carry a timestamp (e.g. NMEA0183's ZDA sentences)."""
     carry = ""
     interval = DEFAULT_INTERVAL
 
@@ -70,24 +291,24 @@ def send_file(args: Namespace, open_file: typing.TextIO):
     last_timestamp = None
     line_count = 0
 
-    lines = open_file.readlines()
-    start_index = find_start_index(lines, args.offset) if args.offset else 0
-
-    for line in lines[start_index:]:
+    for line in lines:
         line_count += 1
-        if sentence_type(line) in exclude:
+        if fmt.message_type(line) in exclude:
             print(f"Not sending {line}", end="")
             continue
-        if sentence_type(line) == "ZDA":
-            clock, timestamp = datetime.now(), datetime_from_zda(line)
+        timestamp = fmt.timestamp(line)
+        if timestamp is not None:
+            clock = datetime.now()
             if last_timestamp is None:
                 print(
                     f'Found first timestamp {timestamp.strftime("%Y-%m-%d %H:%M:%S")}'
                 )
-            elif timestamp <= last_timestamp or clock <= last_clock:
+            elif timestamp <= last_timestamp:
                 print(
                     f'Ignoring non-positive step. {timestamp.strftime("%Y-%m-%d %H:%M:%S")}'
                 )
+            elif last_clock is None or clock <= last_clock:
+                print(f"Ignoring non-positive clock jump.")
             else:
                 # Adjust the rate at which we send new lines based on how successful we were at
                 # maintaining a real to data time ratio over the last invterval with EWMA to smooth
@@ -106,28 +327,7 @@ def send_file(args: Namespace, open_file: typing.TextIO):
             last_clock, last_timestamp, line_count = clock, timestamp, 0
 
         carry = send_line(args, carry + line)
-        time.sleep(interval.total_seconds())
-
-
-def sentence_type(line: str) -> str | None:
-    """Returns the NMEA sentence type for the supplied string."""
-    return line[3:6] if len(line) > 6 else None
-
-
-def datetime_from_zda(line: str) -> datetime:
-    """Returns the date encoded in a NMEA ZDA message, note this does not verify the checksum
-    and does not fail elegantly if the message happened to be corrupted."""
-    data = line.split(",")
-    microsecond = int(float(data[1][6:]) * 1000000.0)
-    return datetime(
-        int(data[4]),
-        int(data[3]),
-        int(data[2]),
-        int(data[1][0:2]),
-        int(data[1][2:4]),
-        int(data[1][4:6]),
-        microsecond,
-    )
+        time_module.sleep(interval.total_seconds())
 
 
 def send_line(args: Namespace, line: str) -> str:
@@ -141,7 +341,7 @@ def send_line(args: Namespace, line: str) -> str:
         # Send the line in two chunks
         idx = randrange(len(line))
         send_data(args, line[:idx])
-        time.sleep(0.01)
+        time_module.sleep(0.01)
         send_data(args, line[idx:])
     elif introduce_random_event():
         # Just carry the line to send with the next
@@ -199,17 +399,29 @@ def create_parser() -> ArgumentParser:
 
     parser = ArgumentParser(
         description="Script to simulate a YDWG-02 NMEA bridge by broadcasting "
-        "data from a file as UDP packets to localhost on the "
-        "supplied port.",
-        epilog="Copyright Jody Sankey 2022",
+        "data from a file as UDP packets to localhost on the supplied port. "
+        "Supports both ASCII NMEA0183 files and Yacht Devices RAW format "
+        "NMEA2000 files.",
+        epilog="Copyright Jody Sankey 2022-2026",
         add_help=False,
     )
-    parser.add_argument("--help", action="help", help="Show this help message and exit.")
+    parser.add_argument(
+        "--help", action="help", help="Show this help message and exit."
+    )
     parser.add_argument(
         "input",
-        metavar="NMEA_FILE",
+        metavar="FILE",
         type=lambda x: file_if_valid(parser, x),
-        help="A file containing ASCII NMEA0183 data.",
+        help="A file containing ASCII NMEA0183 or Yacht Devices RAW format data.",
+    )
+    parser.add_argument(
+        "-f",
+        "--format",
+        action="store",
+        default="auto",
+        choices=["auto"] + [f.name for f in FORMATS],
+        type=_resolve_format_name,
+        help="Input file format, or auto to detect it from the file contents.",
     )
     parser.add_argument(
         "-p", "--port", action="store", default=1456, type=int, help="Broadcast port."
@@ -250,7 +462,10 @@ def main():
     args = create_parser().parse_args()
     print(f"Opening file: {args.input}")
     with open(args.input, mode="r", encoding="utf-8") as f:
-        send_file(args, f)
+        lines = f.readlines()
+    fmt = format_by_name(args.format, lines)
+    print(f"Using format: {fmt.name}")
+    send_file(args, fmt, lines)
 
 
 if __name__ == "__main__":
