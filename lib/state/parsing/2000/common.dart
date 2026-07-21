@@ -89,11 +89,33 @@ class NgtValidator extends MessageValidator<ByteData, int> {
       throw FormatException('Payload data does not match size=$payloadSize');
     }
 
-    // TODO: Validate checksum
+    _validateChecksum(raw);
     final payloadStart = _packetHeaderLen + _payloadHeaderLen;
     final payloadEnd = raw.lengthInBytes - _packetTrailerLen;
 
     return ValidatedMessage(pgn, source, ByteData.sublistView(raw, payloadStart, payloadEnd));
+  }
+
+  /// Validates that the supplied packet's trailing checksum byte matches its content, throwing
+  /// a FormatException if not.
+  static void _validateChecksum(ByteData raw) {
+    // The checksum is defined as the 2's complement of the sum of all bytes from byte 0 to
+    // byte n-4 of the original DLE-STX...DLE-ETX frame, i.e. everything except the checksum
+    // itself. The message splitter already strips the framing DLE/STX/ETX bytes from raw, so
+    // we reinstate the leading STX byte here before summing.
+    const stx = 0x02;
+    int sum = stx;
+    for (int i = 0; i < raw.lengthInBytes - _packetTrailerLen; i++) {
+      sum += raw.getUint8(i);
+    }
+    final expected = (0x100 - (sum & 0xFF)) & 0xFF;
+    final actual = raw.getUint8(raw.lengthInBytes - 1);
+    if (expected != actual) {
+      throw FormatException(
+        'Invalid checksum: expected 0x${expected.toRadixString(16)}, '
+        'got 0x${actual.toRadixString(16)}',
+      );
+    }
   }
 }
 
