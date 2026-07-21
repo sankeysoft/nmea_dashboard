@@ -103,10 +103,11 @@ List<int> _i64(int value) {
 
 void main() {
   test('should register a parser matching each sentence file', () {
+    final pgnFileName = RegExp(r'^\d+\.dart$');
     final fileTypes = Directory('lib/state/parsing/2000')
         .listSync()
         .map((f) => f.uri.pathSegments.last)
-        .where((name) => name.endsWith('.dart') && name != 'common.dart')
+        .where((name) => pgnFileName.hasMatch(name))
         .map((name) => int.parse(name.substring(0, name.length - 5)));
     expect(Nmea2000Parser.supportedPgns.toSet(), fileTypes.toSet());
   });
