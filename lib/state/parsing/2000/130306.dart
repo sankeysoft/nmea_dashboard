@@ -10,7 +10,7 @@ class Parser130306 extends PacketParser {
 
   @override
   List<BoundValue> parse(ByteData payload) {
-    _validatePayloadLength(payload, 6);
+    _validatePayloadLength(payload, 8);
     final reference = payload.getUint8(5) & 0x07;
     final speed = _scaleIfNotNull(_readUint16(payload, 1), 0.01);
     var angle = _scaleIfNotNull(_readUint16(payload, 3), 0.0001 * radiansToDegrees);

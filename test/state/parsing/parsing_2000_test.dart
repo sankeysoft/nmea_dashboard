@@ -292,12 +292,12 @@ void main() {
   });
 
   test('should parse valid speed packet', () {
-    final message = _testMsg(128259, [0xFF, ..._u16(320), 0xFF, 0xFF, ..._u16(510), 0xFF]);
+    final message = _testMsg(128259, [0xFF, ..._u16(320), ..._u16(510), 0xFF, 0xFF, 0xFF]);
     expect(
       Nmea2000Parser().parse(message),
       BoundValueListMatches([
         boundSingleValue(3.2, Property.speedThroughWater),
-        boundSingleValue(5.1, Property.speedOverGround),
+        boundSingleValue(5.1, Property.speedOverGround, tier: 2),
       ]),
     );
   });
@@ -311,10 +311,10 @@ void main() {
   });
 
   test('should parse speed packet with unavailable water speed', () {
-    final message = _testMsg(128259, [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, ..._u16(510), 0xFF]);
+    final message = _testMsg(128259, [0xFF, 0xFF, 0xFF, ..._u16(510), 0xFF, 0xFF, 0xFF]);
     expect(
       Nmea2000Parser().parse(message),
-      BoundValueListMatches([boundSingleValue(5.1, Property.speedOverGround)]),
+      BoundValueListMatches([boundSingleValue(5.1, Property.speedOverGround, tier: 2)]),
     );
   });
 
@@ -585,7 +585,7 @@ void main() {
   // a significant change.
 
   test('should parse valid apparent wind packet', () {
-    final message = _testMsg(130306, [0x04, ..._u16(1020), ..._u16(7854), 0x02]);
+    final message = _testMsg(130306, [0x04, ..._u16(1020), ..._u16(7854), 0x02, 0xFF, 0xFF]);
     expect(
       Nmea2000Parser().parse(message),
       BoundValueListMatches([
@@ -596,7 +596,7 @@ void main() {
   });
 
   test('should parse valid true ground referenced wind packet', () {
-    final message = _testMsg(130306, [0x04, ..._u16(1020), ..._u16(7854), 0x00]);
+    final message = _testMsg(130306, [0x04, ..._u16(1020), ..._u16(7854), 0x00, 0xFF, 0xFF]);
     expect(
       Nmea2000Parser().parse(message),
       BoundValueListMatches([
@@ -607,7 +607,7 @@ void main() {
   });
 
   test('should parse boat referenced true wind packet wrapping angle from bow', () {
-    final message = _testMsg(130306, [0x04, ..._u16(1020), ..._u16(47124), 0x03]);
+    final message = _testMsg(130306, [0x04, ..._u16(1020), ..._u16(47124), 0x03, 0xFF, 0xFF]);
     expect(
       Nmea2000Parser().parse(message),
       BoundValueListMatches([
@@ -618,7 +618,7 @@ void main() {
   });
 
   test('should not parse angle from magnetic ground referenced wind packet', () {
-    final message = _testMsg(130306, [0x04, ..._u16(1020), ..._u16(7854), 0x01]);
+    final message = _testMsg(130306, [0x04, ..._u16(1020), ..._u16(7854), 0x01, 0xFF, 0xFF]);
     expect(
       Nmea2000Parser().parse(message),
       BoundValueListMatches([boundSingleValue(10.2, Property.trueWindSpeed)]),
@@ -627,7 +627,7 @@ void main() {
 
   test('should reject wind packet with angle outside valid range', () {
     final parser = Nmea2000Parser();
-    final message = _testMsg(130306, [0x04, ..._u16(1020), ..._u16(65000), 0x02]);
+    final message = _testMsg(130306, [0x04, ..._u16(1020), ..._u16(65000), 0x02, 0xFF, 0xFF]);
     expect(() => parser.parse(message), throwsFormatException);
     expect(parser.emptyCounts.total, 0);
     expect(parser.successCounts.total, 0);

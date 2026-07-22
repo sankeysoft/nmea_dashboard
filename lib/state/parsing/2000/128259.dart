@@ -12,10 +12,10 @@ class Parser128259 extends PacketParser {
   List<BoundValue> parse(ByteData payload) {
     _validatePayloadLength(payload, 8);
     final stw = _scaleIfNotNull(_readUint16(payload, 1), 0.01);
-    final sog = _scaleIfNotNull(_readUint16(payload, 5), 0.01);
+    final sog = _scaleIfNotNull(_readUint16(payload, 3), 0.01);
     return [
       optionalBoundSingleValue(stw, Property.speedThroughWater),
-      optionalBoundSingleValue(sog, Property.speedOverGround),
+      optionalBoundSingleValue(sog, Property.speedOverGround, tier: 2),
     ].nonNulls.toList();
   }
 }
