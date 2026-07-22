@@ -4,7 +4,7 @@
 
 import 'dart:collection';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/state/common.dart';
@@ -16,12 +16,12 @@ const Duration _logInterval = Duration(minutes: 5);
 
 /// Tracks the count for some set of message types.
 @visibleForTesting
-class MessageCounts {
+class MessageCounts<T> {
   int _total = 0;
-  final _map = SplayTreeMap<String, int>();
+  final _map = SplayTreeMap<T, int>();
 
   /// Increments the count of the supplied type, returning the new count.
-  int increment(String type) {
+  int increment(T type) {
     _total += 1;
     final count = (_map[type] ?? 0) + 1;
     _map[type] = count;
@@ -50,25 +50,69 @@ class MessageCounts {
   }
 }
 
-/// Parses nmea messages into values, keeping track of the count for each message type.
+/// Parses nmea messages into values, count for each message type.
 abstract class MessageParser<M, S> {
   static final _log = Logger('MessageParser');
 
-  final ignoredCounts = MessageCounts();
-  final unsupportedCounts = MessageCounts();
-  final successCounts = MessageCounts();
-  final emptyCounts = MessageCounts();
+  final ignoredCounts = MessageCounts<S>();
+  final unsupportedCounts = MessageCounts<S>();
+  final successCounts = MessageCounts<S>();
+  final errorCounts = MessageCounts<S>();
+  final emptyCounts = MessageCounts<S>();
   DateTime _lastLog;
 
   /// Constructs a new parser for NMEA messages
   MessageParser() : _lastLog = DateTime.now();
 
+  /// Returns the set of message types that should be ignored silently.
+  Set<S> get ignoredTypes;
+
+  /// Returns the set of message types that this parser supports.
+  Set<S> get supportedTypes;
+
   /// Attempts to parse the supplied message, returning one or more bound values if parsing
-  /// the message contents was successful or zero values if parsing was unsuccessful but the
-  /// failure mode should not be logged (e.g. no supported data). Throws a FormatException
-  /// if parsing errors were encountered and the first time a new unsupported message or a
-  /// message with no data is received.
+  /// the message contents was successful or zero values if parsing was unsuccessful. Throws a
+  /// FormatException if parsing errors were encountered. Clients should use parseWithCounting
+  /// rather than this inrternal method.
   List<BoundValue> parse(ValidatedMessage<M, S> message);
+
+  /// Attempts to parse the supplied message, returning one or more bound values if parsing
+  /// the message contents was successful or zero values if no data was found, tracks the number
+  /// of successful, empty, unsupported, and ignored messages. Throws a FormatException if parsing
+  /// errors were encountered.
+  List<BoundValue> parseWithCounting(ValidatedMessage<M, S> message) {
+    // Silently skip ignored messages.
+    if (ignoredTypes.contains(message.type)) {
+      ignoredCounts.increment(message.type);
+      return [];
+    }
+
+    // Don't attempt to process messages unless the type is supported. Log one example of each.
+    if (!supportedTypes.contains(message.type)) {
+      if (unsupportedCounts.increment(message.type) <= 1) {
+        _log.info('Example of unsupported ${message.type}: ${message.payloadToString()}');
+      }
+      return [];
+    }
+
+    try {
+      final values = parse(message);
+      if (values.isEmpty) {
+        if (emptyCounts.increment(message.type) <= 1) {
+          _log.info('Example of empty ${message.type}: ${message.payloadToString()}');
+        }
+      } else {
+        successCounts.increment(message.type);
+      }
+      return values;
+    } on FormatException {
+      // Cap the number of exceptions we raise for each message type.
+      if (errorCounts.increment(message.type) <= 5) {
+        rethrow;
+      }
+      return [];
+    }
+  }
 
   /// If sufficient time has passed since the last count log, logs the current message counts then
   /// resets them.
@@ -84,10 +128,14 @@ abstract class MessageParser<M, S> {
   void logAndClearCounts() {
     final lastLogString = DateFormat('Hms').format(_lastLog);
     if (successCounts.isEmpty) {
-      _log.info('No messages received since $lastLogString');
+      _log.info('No messages successfully received since $lastLogString');
     } else {
       _log.info('Sucessfully parsed ${successCounts.total} messages: ${successCounts.summary}');
       successCounts.clear();
+    }
+    if (!errorCounts.isEmpty) {
+      _log.info('Received ${errorCounts.total} malformed messages: ${errorCounts.summary}');
+      errorCounts.clear();
     }
     if (!emptyCounts.isEmpty) {
       _log.info('Received ${emptyCounts.total} messages without data: ${emptyCounts.summary}');
@@ -100,7 +148,7 @@ abstract class MessageParser<M, S> {
       unsupportedCounts.clear();
     }
     if (!ignoredCounts.isEmpty) {
-      _log.info('Received ${ignoredCounts.total} ignored messages: ${ignoredCounts.summary}');
+      _log.fine('Received ${ignoredCounts.total} ignored messages: ${ignoredCounts.summary}');
       ignoredCounts.clear();
     }
   }

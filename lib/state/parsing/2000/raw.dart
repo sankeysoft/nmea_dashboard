@@ -82,11 +82,6 @@ class YdRawMessageSplitter extends MessageSplitter<ByteData> {
     }
     return null;
   }
-
-  @override
-  String loggable(ByteData message) {
-    return hexString(message);
-  }
 }
 
 /// A validator for the messages output by YdRawMessageSplitter, trivial since the splitter

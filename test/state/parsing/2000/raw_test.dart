@@ -127,10 +127,6 @@ void main() {
       expect(messages, hasLength(1));
     });
 
-    test('loggable returns hex representation', () {
-      final message = ByteData.sublistView(Uint8List.fromList([0x01, 0x02, 0xab]));
-      expect(splitter.loggable(message), '0x0102ab');
-    });
   });
 
   group('YdRawMessageSplitter fast frame assembly', () {

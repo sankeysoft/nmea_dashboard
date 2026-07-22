@@ -23,7 +23,7 @@ void main() {
         .map((f) => f.uri.pathSegments.last)
         .where((name) => name.endsWith('.dart') && name != 'common.dart')
         .map((name) => name.substring(0, name.length - 5).toUpperCase());
-    expect(Nmea0183Parser.supportedTypes.toSet(), fileTypes.toSet());
+    expect(Nmea0183Parser().supportedTypes, fileTypes.toSet());
   });
 
   test('should validate message with correct checksum', () {
@@ -69,59 +69,14 @@ void main() {
     expect(() => Nmea0183Validator(false).validate(r'$YDDPT'), throwsFormatException);
   });
 
-  test('should skip ignored message', () {
+  test('ignoredTypes and supportedTypes are disjoint', () {
     final parser = Nmea0183Parser();
-    expect(
-      parser.parse(_testMsg('GSV', '5,1,18,65,75,281,19,10,69,352,25,88,65,332,27,87,61,137,15')),
-      BoundValueListMatches([]),
-    );
-    expect(parser.ignoredCounts.total, 1);
+    expect(parser.ignoredTypes.intersection(parser.supportedTypes), isEmpty);
+    expect(parser.ignoredTypes, contains('GSV'));
   });
 
-  test('should report (fictional) unsupported message one time', () {
-    final parser = Nmea0183Parser();
-    expect(() => parser.parse(_testMsg('XXX', '4,1,17,N')), throwsFormatException);
-    expect(parser.unsupportedCounts.total, 1);
-    expect(parser.parse(_testMsg('XXX', '4,1,17,N')), BoundValueListMatches([]));
-    expect(parser.unsupportedCounts.total, 2);
-  });
-  test('should not log if check interval has not elapsed', () {
-    Nmea0183Parser().logAndClearIfNeeded();
-  });
-
-  test('should increment message counts', () {
-    final parser = Nmea0183Parser();
-    expect(parser.ignoredCounts.total, 0);
-    expect(parser.unsupportedCounts.total, 0);
-    expect(parser.successCounts.total, 0);
-    expect(() => parser.parse(_testMsg('XXX', '4,1,17,N')), throwsFormatException);
-    parser.parse(_testMsg('DPT', '18.56,-1.61,140.0,'));
-    expect(parser.successCounts.total, 1);
-    parser.parse(_testMsg('GSV', '5,1,18,65,75,281,19,10,69,352,25,88,65,332,27,87,61,137,15'));
-    expect(parser.ignoredCounts.total, 1);
-    parser.logAndClearCounts();
-    expect(parser.ignoredCounts.total, 0);
-    expect(parser.successCounts.total, 0);
-  });
-
-  test('should log no-messages notice when all counts are zero', () {
-    Nmea0183Parser().logAndClearCounts();
-  });
-
-  test('should log and clear empty message counts', () {
-    final parser = Nmea0183Parser();
-    expect(() => parser.parse(_testMsg('DPT', ',0.0')), throwsFormatException);
-    expect(parser.emptyCounts.total, 1);
-    parser.logAndClearCounts();
-    expect(parser.emptyCounts.total, 0);
-  });
-
-  test('should log and clear unsupported message counts', () {
-    final parser = Nmea0183Parser();
-    expect(() => parser.parse(_testMsg('XXX', '4,1,17,N')), throwsFormatException);
-    expect(parser.unsupportedCounts.total, 1);
-    parser.logAndClearCounts();
-    expect(parser.unsupportedCounts.total, 0);
+  test('should throw for unsupported message type', () {
+    expect(() => Nmea0183Parser().parse(_testMsg('XXX', '4,1,17,N')), throwsFormatException);
   });
 
   test('should parse BWR', () {
@@ -137,9 +92,10 @@ void main() {
   });
 
   test('should skip empty RMB ', () {
-    final parser = Nmea0183Parser();
-    expect(() => parser.parse(_testMsg('BWR', ',,N,,E,,T,,M,,N,')), throwsFormatException);
-    expect(parser.emptyCounts.total, 1);
+    expect(
+      Nmea0183Parser().parse(_testMsg('BWR', ',,N,,E,,T,,M,,N,')),
+      BoundValueListMatches([]),
+    );
   });
 
   test('should support DBT', () {
@@ -164,11 +120,7 @@ void main() {
   });
 
   test('should parse DPT without data', () {
-    final parser = Nmea0183Parser();
-    expect(() => parser.parse(_testMsg('DPT', ',0.0')), throwsFormatException);
-    expect(parser.emptyCounts.total, 1);
-    expect(parser.parse(_testMsg('DPT', ',0.0')), BoundValueListMatches([]));
-    expect(parser.emptyCounts.total, 2);
+    expect(Nmea0183Parser().parse(_testMsg('DPT', ',0.0')), BoundValueListMatches([]));
   });
 
   test('should parse HDG with variation', () {
@@ -403,9 +355,10 @@ void main() {
   });
 
   test('should skip empty RMB ', () {
-    final parser = Nmea0183Parser();
-    expect(() => parser.parse(_testMsg('RMB', 'A,,R,,,,N,,E,,,,,')), throwsFormatException);
-    expect(parser.emptyCounts.total, 1);
+    expect(
+      Nmea0183Parser().parse(_testMsg('RMB', 'A,,R,,,,N,,E,,,,,')),
+      BoundValueListMatches([]),
+    );
   });
 
   test('should parse RMC', () {
@@ -453,11 +406,7 @@ void main() {
   });
 
   test('should parse VHW without data', () {
-    final parser = Nmea0183Parser();
-    expect(() => parser.parse(_testMsg('VHW', ',T,,M,,N,,K')), throwsFormatException);
-    expect(parser.emptyCounts.total, 1);
-    expect(parser.parse(_testMsg('VHW', ',T,,M,,N,,K')), BoundValueListMatches([]));
-    expect(parser.emptyCounts.total, 2);
+    expect(Nmea0183Parser().parse(_testMsg('VHW', ',T,,M,,N,,K')), BoundValueListMatches([]));
   });
 
   test('should parse VHW with missing kmph', () {
@@ -533,13 +482,10 @@ void main() {
   });
 
   test('should skip XDR with no known data', () {
-    final parser = Nmea0183Parser();
-    expect(parser.emptyCounts.total, 0);
     expect(
-      () => parser.parse(_testMsg('XDR', 'A,0.0,D,Foo,A,1.00,D,Bar,A,0.25,D,Baz')),
-      throwsFormatException,
+      Nmea0183Parser().parse(_testMsg('XDR', 'A,0.0,D,Foo,A,1.00,D,Bar,A,0.25,D,Baz')),
+      BoundValueListMatches([]),
     );
-    expect(parser.emptyCounts.total, 1);
   });
 
   test('should parse XDR with roll pitch yaw in degrees', () {
@@ -683,9 +629,7 @@ void main() {
   });
 
   test('should skip empty XTE', () {
-    final parser = Nmea0183Parser();
-    expect(() => parser.parse(_testMsg('XTE', 'A,A,,R,N')), throwsFormatException);
-    expect(parser.emptyCounts.total, 1);
+    expect(Nmea0183Parser().parse(_testMsg('XTE', 'A,A,,R,N')), BoundValueListMatches([]));
   });
 
   test('should parse ZDA', () {

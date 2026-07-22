@@ -60,10 +60,6 @@ void main() {
         '\$YDMWV,184.6,R,1.4,M,A*2D\$YDVTG,4.1',
       ]);
     });
-
-    test('loggable returns the message', () {
-      expect(splitter.loggable('\$YDVTG,4.1'), '\$YDVTG,4.1');
-    });
   });
 
   group('DleMessageSplitter', () {
@@ -192,11 +188,6 @@ void main() {
         [0xb2],
       ]);
     });
-
-    test('loggable returns hex representation', () {
-      final message = splitter.read(Uint8List.fromList([dle, stx, 0x01, 0xab, dle, etx])).single;
-      expect(splitter.loggable(message), '0x01ab');
-    });
   });
 
   group('NullSplitter', () {
@@ -206,12 +197,6 @@ void main() {
       expect(messages.length, 1);
       expect(messages[0].lengthInBytes, 3);
       expect(messages[0].getUint8(2), 0xab);
-    });
-
-    test('loggable returns hex representation', () {
-      final splitter = NullSplitter();
-      final message = splitter.read(Uint8List.fromList([0x01, 0x02, 0xab])).single;
-      expect(splitter.loggable(message), '0x0102ab');
     });
   });
 }

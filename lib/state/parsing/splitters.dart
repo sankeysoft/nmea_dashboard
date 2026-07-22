@@ -11,9 +11,6 @@ abstract class MessageSplitter<M> {
   /// Split the supplied data (and potentially remaining data from previous calls) into zero or
   /// data packets of type T.
   List<M> read(Uint8List data);
-
-  /// Returns a string representation of the message suitable for including in a log.
-  String loggable(M message);
 }
 
 /// A splitter that interprets input data as a string and splits input data on terminating CRLF
@@ -59,11 +56,6 @@ class CrlfMessageSplitter extends MessageSplitter<String> {
       return nextStart;
     }
     return -1;
-  }
-
-  @override
-  String loggable(String message) {
-    return message;
   }
 }
 
@@ -116,11 +108,6 @@ class DleMessageSplitter extends MessageSplitter<ByteData> {
     }
     return messages;
   }
-
-  @override
-  String loggable(ByteData message) {
-    return hexString(message);
-  }
 }
 
 /// A splitter that assumes every network packet is a single message.
@@ -129,17 +116,4 @@ class NullSplitter extends MessageSplitter<ByteData> {
   List<ByteData> read(Uint8List data) {
     return [ByteData.sublistView(data)];
   }
-
-  @override
-  String loggable(ByteData message) {
-    return hexString(message);
-  }
-}
-
-String hexString(ByteData data) {
-  final hex = data.buffer
-      .asUint8List(data.offsetInBytes, data.lengthInBytes)
-      .map((b) => b.toRadixString(16).padLeft(2, '0'))
-      .join();
-  return "0x$hex";
 }

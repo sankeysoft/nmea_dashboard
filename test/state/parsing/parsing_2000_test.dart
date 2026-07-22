@@ -109,7 +109,7 @@ void main() {
         .map((f) => f.uri.pathSegments.last)
         .where((name) => pgnFileName.hasMatch(name))
         .map((name) => int.parse(name.substring(0, name.length - 5)));
-    expect(Nmea2000Parser.supportedPgns.toSet(), fileTypes.toSet());
+    expect(Nmea2000Parser().supportedTypes, fileTypes.toSet());
   });
 
   test('should validate packet with correct header', () {
@@ -149,12 +149,13 @@ void main() {
   });
 
   test('should reject NGT packet with incorrect checksum', () {
-    final packet = _makeNgtPacket(
-      127251,
-      0x23,
-      [0x04, ..._i32(-5585054), 0xFF, 0xFF, 0xFF],
-      corruptChecksum: true,
-    );
+    final packet = _makeNgtPacket(127251, 0x23, [
+      0x04,
+      ..._i32(-5585054),
+      0xFF,
+      0xFF,
+      0xFF,
+    ], corruptChecksum: true);
     expect(() => NgtValidator().validate(packet), throwsFormatException);
   });
 
@@ -165,13 +166,15 @@ void main() {
     expect(() => NgtValidator().validate(packet), throwsFormatException);
   });
 
-  test('should only throw on first packet with unsupported PGN', () {
+  test('ignoredTypes and supportedTypes are disjoint', () {
     final parser = Nmea2000Parser();
-    final message = _testMsg(60928, [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
-    expect(() => parser.parse(message), throwsFormatException);
-    expect(parser.parse(message), isEmpty);
-    expect(parser.unsupportedCounts.total, 2);
-    expect(parser.successCounts.total, 0);
+    expect(parser.ignoredTypes.intersection(parser.supportedTypes), isEmpty);
+    expect(parser.ignoredTypes, contains(60928));
+  });
+
+  test('should throw for unsupported PGN', () {
+    final message = _testMsg(65000, [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
+    expect(() => Nmea2000Parser().parse(message), throwsFormatException);
   });
 
   test('should parse valid rate of turn packet', () {
@@ -221,21 +224,16 @@ void main() {
   });
 
   test('should parse valid rudder packet within valid range', () {
-    final parser = Nmea2000Parser();
     final message = _testMsg(127245, [0x01, 0x00, ..._i16(0), ..._i16(-5236), 0xFF, 0xFF]);
     expect(
-      parser.parse(message),
+      Nmea2000Parser().parse(message),
       BoundValueListMatches([boundSingleValue(-30.0001, Property.rudderAngle)]),
     );
-    expect(parser.successCounts.total, 1);
   });
 
   test('should reject valid rudder packet outside valid range', () {
-    final parser = Nmea2000Parser();
     final message = _testMsg(127245, [0x01, 0x00, ..._i16(0), ..._i16(17453), 0xFF, 0xFF]);
-    expect(() => parser.parse(message), throwsFormatException);
-    expect(parser.successCounts.total, 0);
-    expect(parser.emptyCounts.total, 0);
+    expect(() => Nmea2000Parser().parse(message), throwsFormatException);
   });
 
   test('should parse valid rudder position rather than angle order', () {
@@ -276,19 +274,13 @@ void main() {
   });
 
   test('should not parse fluid level packet for unsupported tank', () {
-    final parser = Nmea2000Parser();
     final message = _testMsg(127505, [0x50, ..._i16(12500), 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
-    expect(() => parser.parse(message), throwsFormatException);
-    expect(parser.emptyCounts.total, 1);
-    expect(parser.successCounts.total, 0);
+    expect(Nmea2000Parser().parse(message), isEmpty);
   });
 
   test('should reject fluid level packet outside valid range', () {
-    final parser = Nmea2000Parser();
     final message = _testMsg(127505, [0x00, ..._i16(30000), 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
-    expect(() => parser.parse(message), throwsFormatException);
-    expect(parser.emptyCounts.total, 0);
-    expect(parser.successCounts.total, 0);
+    expect(() => Nmea2000Parser().parse(message), throwsFormatException);
   });
 
   test('should parse valid speed packet', () {
@@ -368,11 +360,8 @@ void main() {
   });
 
   test('should not parse water depth packet with unavailable depth', () {
-    final parser = Nmea2000Parser();
     final message = _testMsg(128267, [0x03, 0xFF, 0xFF, 0xFF, 0xFF, ..._i16(-500), 0xFF]);
-    expect(() => parser.parse(message), throwsFormatException);
-    expect(parser.emptyCounts.total, 1);
-    expect(parser.successCounts.total, 0);
+    expect(Nmea2000Parser().parse(message), isEmpty);
   });
 
   test('should parse valid distance log packet', () {
@@ -440,11 +429,8 @@ void main() {
   });
 
   test('should not parse rapid position packet with unavailable latitude', () {
-    final parser = Nmea2000Parser();
     final message = _testMsg(129025, [..._i32(0x7FFFFFFF), ..._i32(-1225000000)]);
-    expect(() => parser.parse(message), throwsFormatException);
-    expect(parser.emptyCounts.total, 1);
-    expect(parser.successCounts.total, 0);
+    expect(Nmea2000Parser().parse(message), isEmpty);
   });
 
   test('should parse valid GNSS position packet', () {
@@ -567,11 +553,8 @@ void main() {
   });
 
   test('should not parse date/time packet with unavailable date', () {
-    final parser = Nmea2000Parser();
     final message = _testMsg(129033, [0xFF, 0xFF, ..._u32(452960000), 0xFF, 0xFF]);
-    expect(() => parser.parse(message), throwsFormatException);
-    expect(parser.emptyCounts.total, 1);
-    expect(parser.successCounts.total, 0);
+    expect(Nmea2000Parser().parse(message), isEmpty);
   });
 
   // TODO: Add support and tests for waypoint name (PGN 129285).
@@ -626,11 +609,8 @@ void main() {
   });
 
   test('should reject wind packet with angle outside valid range', () {
-    final parser = Nmea2000Parser();
     final message = _testMsg(130306, [0x04, ..._u16(1020), ..._u16(65000), 0x02, 0xFF, 0xFF]);
-    expect(() => parser.parse(message), throwsFormatException);
-    expect(parser.emptyCounts.total, 0);
-    expect(parser.successCounts.total, 0);
+    expect(() => Nmea2000Parser().parse(message), throwsFormatException);
   });
 
   test('should parse valid humidity packet', () {
@@ -658,11 +638,8 @@ void main() {
   });
 
   test('should not parse pressure packet for unsupported source', () {
-    final parser = Nmea2000Parser();
     final message = _testMsg(130314, [0xFF, 0x00, 0x02, ..._i32(1013250), 0xFF]);
-    expect(() => parser.parse(message), throwsFormatException);
-    expect(parser.emptyCounts.total, 1);
-    expect(parser.successCounts.total, 0);
+    expect(Nmea2000Parser().parse(message), isEmpty);
   });
 
   test('should parse valid extended temperature packets for each supported source', () {

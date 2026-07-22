@@ -148,17 +148,21 @@ PacketProcessor makePacketProcessingFunction<M, S>(
           try {
             validated = validator.validate(message);
           } on FormatException catch (e) {
-            _log.warning('Error validating ${splitter.loggable(message)}: ${e.message}');
+            final fakeValidated = ValidatedMessage(0, 0, message);
+            _log.warning('Error validating ${fakeValidated.payloadToString()}: ${e.message}');
           }
           if (validated == null) {
             continue;
           }
           try {
-            for (final value in parser.parse(validated)) {
+            for (final value in parser.parseWithCounting(validated)) {
               yield value;
             }
           } on FormatException catch (e) {
-            _log.warning('Error parsing ${splitter.loggable(message)}: ${e.message}');
+            _log.warning(
+              'Error parsing ${validated.type}/${validated.sender} '
+              '${validated.payloadToString()}: ${e.message}',
+            );
           }
         }
       }

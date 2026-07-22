@@ -142,6 +142,22 @@ class Nmea2000Parser extends MessageParser<ByteData, int> {
     Parser130316(),
   ];
 
+  /// The list of message types that are silently ignored.
+  @override
+  Set<int> get ignoredTypes => {
+    // Ignore ISO device to device interactions and address management.
+    59904, 60160, 60416, 60928,
+    // Ignore heartbeats.
+    126993,
+    // Ignore all AIS data.
+    129038, 129039, 129040, 129041, 129793, 129794, 129795, 129796, 129797, 129798,
+    129800, 129801, 129802, 129803, 129804, 129805, 129806, 129807, 129809, 129810,
+    129811, 129812, 129813, 129814, 129815, 129816,
+    // Ignore detailed satellite information and GPS datum.
+    129538, 129540, 129541, 129542, 129545, 129546, 129547, 129549, 129550, 129551,
+    129556, 129792,
+  };
+
   static final Map<int, PacketParser> _parserMap = {
     for (final parser in _allParsers) parser.pgn: parser,
   };
@@ -153,35 +169,21 @@ class Nmea2000Parser extends MessageParser<ByteData, int> {
       .map((p) => p.pgn)
       .toSet();
 
-  /// The PGNs this parser supports.
-  static Set<int> get supportedPgns => _supportedPgns;
+  @override
+  Set<int> get supportedTypes => _supportedPgns;
 
   /// The PGNs this parser supports that require fast frame assembly.
   static Set<int> get fastFramePgns => _fastFramePgns;
 
   @override
   List<BoundValue> parse(ValidatedMessage<ByteData, int> message) {
-    final pgnString = message.type.toString();
+    // Lookup a parser for this sentence type, the base class should only call us for messages
+    // we support so throw an exception if we don't find one.
     final parser = _parserMap[message.type];
     if (parser == null) {
-      // Only cause logging of each unsupported PGN once per interval.
-      if (unsupportedCounts.increment(pgnString) <= 1) {
-        throw FormatException('Unsupported PGN $pgnString');
-      }
-      return [];
+      throw FormatException('Unsupported PGN');
     }
-
-    final values = parser.parse(message.payload);
-    if (values.isEmpty) {
-      // Only cause logging of each empty PGN once per interval.
-      if (emptyCounts.increment(pgnString) <= 1) {
-        throw FormatException('No data found in PGN $pgnString');
-      }
-      return [];
-    }
-
-    successCounts.increment(pgnString);
-    return values;
+    return parser.parse(message.payload);
   }
 }
 

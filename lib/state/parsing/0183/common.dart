@@ -5,7 +5,6 @@
 import 'dart:collection';
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart';
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/parsing/common.dart';
 import 'package:nmea_dashboard/state/parsing/validators.dart';
@@ -35,19 +34,6 @@ part 'vwt.dart';
 part 'xdr.dart';
 part 'xte.dart';
 part 'zda.dart';
-
-/// The list of message types that are silently ignored.
-const _ignoredMessages = {
-  // Ignore most things related to waypoints and routes except active waypoint.
-  'AAM', 'BOD', 'BWC', 'BRW', 'BWW', 'R00', 'RTE', 'WCV', 'WNC',
-  'WPL', 'XTR', 'WDC', 'WDR', 'WFM', 'WNR',
-  // Ignore autopilot control messages.
-  'APA', 'APB',
-  // Ignore detailed satellite information and GPS datum.
-  'ALM', 'GBS', 'GSA', 'GSV', 'DTM', 'GRS',
-  // Ignore other messages that haven't been explicitly requested.
-  'DBK', 'DBS', 'HDT',
-};
 
 /// A validator for NMEA0183 messages.
 class Nmea0183Validator extends MessageValidator<String, String> {
@@ -129,44 +115,40 @@ class Nmea0183Parser extends MessageParser<String, String> {
     ZdaParser(),
   ];
 
+  /// The list of message types that are silently ignored.
+  @override
+  Set<String> get ignoredTypes => {
+    // Ignore most things related to waypoints and routes except active waypoint.
+    'AAM', 'BOD', 'BWC', 'BRW', 'BWW', 'R00', 'RTE', 'WCV', 'WNC',
+    'WPL', 'XTR', 'WDC', 'WDR', 'WFM', 'WNR',
+    // Ignore autopilot control messages.
+    'APA', 'APB',
+    // Ignore detailed satellite information and GPS datum.
+    'ALM', 'GBS', 'GSA', 'GSV', 'DTM', 'GRS',
+    // Ignore other messages that haven't been explicitly requested.
+    'DBK', 'DBS', 'HDT',
+  };
+
   static final Map<String, SentenceParser> _parserMap = {
     for (final parser in _allParsers) parser.type: parser,
   };
 
-  /// The sentence types this parser supports.
-  @visibleForTesting
-  static Iterable<String> get supportedTypes => _parserMap.keys;
+  static final Set<String> _supportedTypes = _parserMap.keys.toSet();
+
+  @override
+  Set<String> get supportedTypes => _supportedTypes;
 
   @override
   List<BoundValue> parse(ValidatedMessage<String, String> message) {
-    // Silently skip ignored sentence types.
-    if (_ignoredMessages.contains(message.type)) {
-      ignoredCounts.increment(message.type);
-      return [];
-    }
-
-    // Lookup a parser for this sentence type.
+    // Lookup a parser for this sentence type, the base class should only call us for messages
+    // we support so throw an exception if we don't find one.
     final parser = _parserMap[message.type];
     if (parser == null) {
-      // Only cause logging of each unsupported type once per interval.
-      if (unsupportedCounts.increment(message.type) <= 1) {
-        throw const FormatException('Unsupported message type');
-      }
-      return [];
+      throw const FormatException('Unsupported message type');
     }
 
     final fields = message.payload.split(',');
-    final values = parser.parse(fields);
-    if (values.isEmpty) {
-      // Only cause logging of each empty type once per interval.
-      if (emptyCounts.increment(message.type) <= 1) {
-        throw const FormatException('No data found');
-      }
-      return [];
-    }
-
-    successCounts.increment(message.type);
-    return values;
+    return parser.parse(fields);
   }
 }
 
