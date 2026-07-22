@@ -9,6 +9,9 @@ class Parser128275 extends PacketParser {
   final pgn = 128275;
 
   @override
+  bool get fastFrame => true;
+
+  @override
   List<BoundValue> parse(ByteData payload) {
     _validatePayloadLength(payload, 14);
     final log = _readUint32(payload, 6)?.toDouble();

@@ -9,6 +9,9 @@ class Parser129029 extends PacketParser {
   final pgn = 129029;
 
   @override
+  bool get fastFrame => true;
+
+  @override
   List<BoundValue> parse(ByteData payload) {
     _validateMinPayloadLength(payload, 31);
     final days = _readUint16(payload, 1);

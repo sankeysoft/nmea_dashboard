@@ -133,6 +133,191 @@ void main() {
     });
   });
 
+  group('YdRawMessageSplitter fast frame assembly', () {
+    late YdRawMessageSplitter splitter;
+
+    setUp(() {
+      splitter = YdRawMessageSplitter();
+    });
+
+    // PGN 128275 (Distance Log) is currently the only PGN registered as requiring fast frame
+    // assembly, so it is used to exercise the splitter's fast frame handling below.
+    final ffHeader = _header(pduFormat: 0xF5, pduSpecific: 0x13, dataPage: 1, source: 0x10);
+
+    /// Splits a full NMEA2000 payload into the CAN frame byte lists a Yacht Devices fast frame
+    /// sequence would carry it in: a counter and total length in the first frame, then a counter
+    /// and up to 7 data bytes in each subsequent frame.
+    List<List<int>> fastFrames(List<int> payload) {
+      final frames = <List<int>>[
+        [0, payload.length, ...payload.take(6)],
+      ];
+      var offset = payload.length < 6 ? payload.length : 6;
+      var counter = 1;
+      while (offset < payload.length) {
+        final chunk = payload.skip(offset).take(7).toList();
+        frames.add([counter, ...chunk]);
+        offset += chunk.length;
+        counter++;
+      }
+      return frames;
+    }
+
+    /// Feeds a set of already built CAN frames through the splitter as a single read call.
+    List<ByteData> readFrames(String header, List<List<int>> frames) {
+      final lines = frames.map((f) => _line(header, data: f)).join('\n');
+      return splitter.read(_pkt('$lines\n'));
+    }
+
+    /// Like [fastFrames], but stamps every frame counter with the supplied sequence id (the
+    /// upper 3 bits), so the resulting frames can be distinguished from a concurrent sequence
+    /// sharing the same PGN and source.
+    List<List<int>> fastFramesWithSeqId(int seqId, List<int> payload) {
+      return fastFrames(payload).map((frame) {
+        final counter = (seqId << 5) | frame[0];
+        return [counter, ...frame.skip(1)];
+      }).toList();
+    }
+
+    test('buffers a fast frame message until all frames have been received', () {
+      final payload = List<int>.generate(14, (i) => i + 1);
+      final frames = fastFrames(payload);
+      expect(frames, hasLength(3)); // 6 + 7 + 1 bytes across 3 CAN frames.
+
+      expect(readFrames(ffHeader, [frames[0]]), isEmpty);
+      expect(readFrames(ffHeader, [frames[1]]), isEmpty);
+      final messages = readFrames(ffHeader, [frames[2]]);
+
+      expect(messages, hasLength(1));
+      final validated = YdRawMessageValidator().validate(messages.single)!;
+      expect(validated.type, 128275);
+      expect(validated.sender, 0x10);
+      expect(Uint8List.sublistView(validated.payload), payload);
+    });
+
+    test('assembles a fast frame message delivered within a single read call', () {
+      final payload = List<int>.generate(20, (i) => i + 1);
+      final frames = fastFrames(payload);
+      expect(frames, hasLength(3)); // 6 + 7 + 7 bytes across 3 CAN frames.
+      final lines = frames.map((f) => _line(ffHeader, data: f)).join('\n');
+
+      // A trailing unterminated fragment forces the CrlfMessageSplitter to flush the final
+      // complete line in this call rather than buffering it awaiting a terminator.
+      final messages = splitter.read(_pkt('$lines\nunterminated'));
+
+      expect(messages, hasLength(1));
+      final validated = YdRawMessageValidator().validate(messages.single)!;
+      expect(Uint8List.sublistView(validated.payload), payload);
+    });
+
+    test('completes immediately when the whole payload fits in the first frame', () {
+      final payload = [0xAA, 0xBB, 0xCC, 0xDD];
+
+      final messages = readFrames(ffHeader, fastFrames(payload));
+
+      expect(messages, hasLength(1));
+      final validated = YdRawMessageValidator().validate(messages.single)!;
+      expect(Uint8List.sublistView(validated.payload), payload);
+    });
+
+    test('tracks independent in-progress messages for different sources', () {
+      final headerA = _header(pduFormat: 0xF5, pduSpecific: 0x13, dataPage: 1, source: 0x10);
+      final headerB = _header(pduFormat: 0xF5, pduSpecific: 0x13, dataPage: 1, source: 0x20);
+      final payloadA = List<int>.generate(14, (i) => i + 1);
+      final payloadB = List<int>.generate(9, (i) => 100 + i);
+      final framesA = fastFrames(payloadA);
+      final framesB = fastFrames(payloadB);
+
+      expect(readFrames(headerA, [framesA[0]]), isEmpty);
+      expect(readFrames(headerB, [framesB[0]]), isEmpty);
+      expect(readFrames(headerA, [framesA[1]]), isEmpty);
+
+      // Complete B before A to show their in-progress state doesn't clash.
+      final messagesB = readFrames(headerB, framesB.skip(1).toList());
+      expect(messagesB, hasLength(1));
+      expect(
+        Uint8List.sublistView(YdRawMessageValidator().validate(messagesB.single)!.payload),
+        payloadB,
+      );
+
+      final messagesA = readFrames(headerA, [framesA[2]]);
+      expect(messagesA, hasLength(1));
+      expect(
+        Uint8List.sublistView(YdRawMessageValidator().validate(messagesA.single)!.payload),
+        payloadA,
+      );
+    });
+
+    test('drops a frame and does not crash when its counter is out of sequence', () {
+      final payload = List<int>.generate(14, (i) => i + 1);
+      final frames = fastFrames(payload);
+      expect(readFrames(ffHeader, [frames[0]]), isEmpty);
+
+      // Frame 1 should have counter 1; jump straight to counter 2 instead.
+      final badFrame = [2, ...frames[1].skip(1)];
+      expect(readFrames(ffHeader, [badFrame]), isEmpty);
+    });
+
+    test('drops a continuation frame that is shorter than the remaining byte count', () {
+      final payload = List<int>.generate(14, (i) => i + 1);
+      final frames = fastFrames(payload);
+      expect(readFrames(ffHeader, [frames[0]]), isEmpty);
+
+      // Frame 1 should carry counter 1 plus 7 data bytes; truncate the data.
+      final shortFrame = frames[1].sublist(0, 4);
+      expect(readFrames(ffHeader, [shortFrame]), isEmpty);
+    });
+
+    test(
+      'abandons an in-progress message and starts a new one when a frame with a different '
+      'sequence id begins a new message',
+      () {
+        final abandonedPayload = List<int>.generate(14, (i) => i + 1);
+        final newPayload = List<int>.generate(9, (i) => 100 + i);
+        final abandonedFrames = fastFrames(abandonedPayload);
+        final newFrames = fastFramesWithSeqId(1, newPayload);
+
+        // Begin assembling the first message but never finish it.
+        expect(readFrames(ffHeader, [abandonedFrames[0]]), isEmpty);
+
+        // A frame with a different sequence id but a starting counter (0) arrives on the same
+        // PGN/source before the first message completes. This should abandon the first message
+        // and start assembling the new one from this frame instead of being dropped outright.
+        expect(readFrames(ffHeader, [newFrames[0]]), isEmpty);
+
+        // The new message should complete normally from here, ignoring the abandoned one.
+        final messages = readFrames(ffHeader, newFrames.skip(1).toList());
+        expect(messages, hasLength(1));
+        final validated = YdRawMessageValidator().validate(messages.single)!;
+        expect(Uint8List.sublistView(validated.payload), newPayload);
+      },
+    );
+
+    test(
+      'drops a frame with a different sequence id that is not itself a valid sequence start',
+      () {
+        final abandonedPayload = List<int>.generate(14, (i) => i + 1);
+        final newPayload = List<int>.generate(14, (i) => i + 1);
+        final abandonedFrames = fastFrames(abandonedPayload);
+        final newFrames = fastFramesWithSeqId(1, newPayload);
+
+        expect(readFrames(ffHeader, [abandonedFrames[0]]), isEmpty);
+
+        // Frame carries a different sequence id (so it can't continue the in-progress message)
+        // but a non-zero counter (so it can't start a new one either); it should be dropped.
+        expect(readFrames(ffHeader, [newFrames[1]]), isEmpty);
+
+        // A properly started sequence afterwards is still assembled correctly, showing the
+        // failed attempt above didn't leave the splitter in a bad state.
+        expect(readFrames(ffHeader, [newFrames[0]]), isEmpty);
+        expect(readFrames(ffHeader, [newFrames[1]]), isEmpty);
+        final messages = readFrames(ffHeader, [newFrames[2]]);
+        expect(messages, hasLength(1));
+        final validated = YdRawMessageValidator().validate(messages.single)!;
+        expect(Uint8List.sublistView(validated.payload), newPayload);
+      },
+    );
+  });
+
   group('YdRawMessageValidator', () {
     late YdRawMessageValidator validator;
 

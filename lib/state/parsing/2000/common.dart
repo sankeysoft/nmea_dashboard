@@ -99,10 +99,8 @@ class NgtValidator extends MessageValidator<ByteData, int> {
   /// Validates that the supplied packet's trailing checksum byte matches its content, throwing
   /// a FormatException if not.
   static void _validateChecksum(ByteData raw) {
-    // The checksum is defined as the 2's complement of the sum of all bytes from byte 0 to
-    // byte n-4 of the original DLE-STX...DLE-ETX frame, i.e. everything except the checksum
-    // itself. The message splitter already strips the framing DLE/STX/ETX bytes from raw, so
-    // we reinstate the leading STX byte here before summing.
+    // Checksum is defined as 2's complement of the sum of all bytes from byte 1 to n-4 of the
+    // original DLE-STX...DLE-ETX frame. Reinstate the leading STX byte before summing.
     const stx = 0x02;
     int sum = stx;
     for (int i = 0; i < raw.lengthInBytes - _packetTrailerLen; i++) {
@@ -150,14 +148,20 @@ class Nmea2000Parser extends MessageParser<ByteData, int> {
 
   static final Set<int> _supportedPgns = _parserMap.keys.toSet();
 
-  /// The sentence types this parser supports.
-  @visibleForTesting
+  static final Set<int> _fastFramePgns = _parserMap.values
+      .where((p) => p.fastFrame)
+      .map((p) => p.pgn)
+      .toSet();
+
+  /// The PGNs this parser supports.
   static Set<int> get supportedPgns => _supportedPgns;
+
+  /// The PGNs this parser supports that require fast frame assembly.
+  static Set<int> get fastFramePgns => _fastFramePgns;
 
   @override
   List<BoundValue> parse(ValidatedMessage<ByteData, int> message) {
     final pgnString = message.type.toString();
-
     final parser = _parserMap[message.type];
     if (parser == null) {
       // Only cause logging of each unsupported PGN once per interval.
@@ -184,6 +188,9 @@ class Nmea2000Parser extends MessageParser<ByteData, int> {
 sealed class PacketParser {
   /// The parameter group number this parser handles.
   int get pgn;
+
+  /// Whether this PGN needs to be assembled from muliple NMEA fast frames.
+  bool get fastFrame => false;
 
   /// Attempts to create zero or more value containing NMEA message contents from the supplied
   /// NMEA 2000 payload, throwing a FormatException if unsuccessful.
