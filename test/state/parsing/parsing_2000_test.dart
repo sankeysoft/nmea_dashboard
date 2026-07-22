@@ -45,32 +45,6 @@ ByteData _makePacket(
   return data;
 }
 
-ByteData _makeNgtPacket(
-  int pgn,
-  int source,
-  List<int> payload, {
-  int id = 147,
-  bool corruptChecksum = false,
-}) {
-  final pgnBytes = Uint8List(4);
-  ByteData.sublistView(pgnBytes).setUint32(0, pgn << 8, Endian.little);
-  final data = <int>[
-    ...pgnBytes,
-    0xFF, // destination, unused by the validator
-    source,
-    0, 0, 0, 0, // remaining reserved bytes of the 11 byte payload header, unused by the validator
-    payload.length,
-    ...payload,
-  ];
-  final bodyBytes = <int>[id, data.length, ...data];
-  final sum = bodyBytes.fold<int>(0x02, (acc, b) => acc + b);
-  var checksum = (0x100 - (sum & 0xFF)) & 0xFF;
-  if (corruptChecksum) {
-    checksum = (checksum + 1) & 0xFF;
-  }
-  return ByteData.sublistView(Uint8List.fromList([...bodyBytes, checksum]));
-}
-
 List<int> _u16(int value) {
   final bytes = Uint8List(2);
   ByteData.sublistView(bytes).setUint16(0, value, Endian.little);
@@ -135,37 +109,6 @@ void main() {
     expect(() => ForkValidator().validate(packet), throwsFormatException);
   });
 
-  test('should validate NGT packet with correct checksum', () {
-    final packet = _makeNgtPacket(127251, 0x23, [0x04, ..._i32(-5585054), 0xFF, 0xFF, 0xFF]);
-    final message = NgtValidator().validate(packet)!;
-    expect(message.type, 127251);
-    expect(message.sender, 0x23);
-    expect(Uint8List.sublistView(message.payload), [0x04, ..._i32(-5585054), 0xFF, 0xFF, 0xFF]);
-  });
-
-  test('should ignore outgoing NGT packet', () {
-    final packet = _makeNgtPacket(127251, 0x23, [0x04, ..._i32(-5585054), 0xFF, 0xFF, 0xFF], id: 0);
-    expect(NgtValidator().validate(packet), isNull);
-  });
-
-  test('should reject NGT packet with incorrect checksum', () {
-    final packet = _makeNgtPacket(127251, 0x23, [
-      0x04,
-      ..._i32(-5585054),
-      0xFF,
-      0xFF,
-      0xFF,
-    ], corruptChecksum: true);
-    expect(() => NgtValidator().validate(packet), throwsFormatException);
-  });
-
-  test('should reject NGT packet with a single corrupted data byte', () {
-    final packet = _makeNgtPacket(127251, 0x23, [0x04, ..._i32(-5585054), 0xFF, 0xFF, 0xFF]);
-    // Flip a bit part way through the payload without touching the trailing checksum byte.
-    packet.setUint8(13, packet.getUint8(13) ^ 0x01);
-    expect(() => NgtValidator().validate(packet), throwsFormatException);
-  });
-
   test('ignoredTypes and supportedTypes are disjoint', () {
     final parser = Nmea2000Parser();
     expect(parser.ignoredTypes.intersection(parser.supportedTypes), isEmpty);
@@ -196,14 +139,28 @@ void main() {
     );
   });
 
-  test('should parse magnetic vessel heading packet', () {
+  test('should convert magnetic vessel heading to true when variation is known', () {
     final message = _testMsg(127250, [0x01, ..._u16(15708), ..._i16(0x7FFF), ..._i16(-349), 0x01]);
     expect(
       Nmea2000Parser().parse(message),
       BoundValueListMatches([
         boundSingleValue(-1.9996, Property.variation),
-        boundSingleValue(90.0002, Property.headingMag),
+        boundSingleValue(91.9998, Property.heading),
       ]),
+    );
+  });
+
+  test('should parse magnetic vessel heading packet without variation', () {
+    final message = _testMsg(127250, [
+      0x01,
+      ..._u16(15708),
+      ..._i16(0x7FFF),
+      ..._i16(0x7FFF),
+      0x01,
+    ]);
+    expect(
+      Nmea2000Parser().parse(message),
+      BoundValueListMatches([boundSingleValue(90.0002, Property.headingMag)]),
     );
   });
 

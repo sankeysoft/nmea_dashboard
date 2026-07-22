@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/state/parsing/0183/common.dart';
 import 'package:nmea_dashboard/state/parsing/2000/common.dart';
+import 'package:nmea_dashboard/state/parsing/2000/ngt.dart';
 import 'package:nmea_dashboard/state/parsing/2000/raw.dart';
 import 'package:nmea_dashboard/state/parsing/common.dart';
 import 'package:nmea_dashboard/state/parsing/splitters.dart';
