@@ -26,7 +26,7 @@ TIER_RE = re.compile(r"\btier:\s*(\d+)")
 TYPE_RE = re.compile(r"final\s+type\s*=\s*'(\w+)'")
 PGN_RE = re.compile(r"final\s+pgn\s*=\s*(\d+)")
 
-TIER_COLORS = {1: "\033[32m", 2: "\033[93m", 3: "\033[38;5;208m"}
+TIER_COLORS = {1: "\033[32m", 2: "\033[93m", 3: "\033[38;5;208m", 4: "\033[31m"}
 RESET = "\033[0m"
 
 
