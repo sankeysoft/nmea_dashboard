@@ -646,21 +646,20 @@ void main() {
     expect(
       Nmea2000Parser().parse(message),
       BoundValueListMatches([
-        boundSingleValue(30.0001, Property.roll),
+        boundSingleValue(30.0001, Property.yaw),
         boundSingleValue(-15.0001, Property.pitch),
-        boundSingleValue(45.0001, Property.yaw),
+        boundSingleValue(45.0001, Property.roll),
       ]),
     );
   });
 
-  // Not present in the PartingTheWaters recording; taken from Perla nmea2000mk2.raw instead.
-  test('should parse real recorded attitude payload with unavailable roll', () {
+  test('should parse real recorded attitude payload with unavailable yaw', () {
     final message = _testHexMsg(127257, "FFFF7F_1D00_6A00_FF");
     expect(
       Nmea2000Parser().parse(message),
       BoundValueListMatches([
         boundSingleValue(0.1662, Property.pitch),
-        boundSingleValue(0.6073, Property.yaw),
+        boundSingleValue(0.6073, Property.roll),
       ]),
     );
   });
@@ -710,7 +709,6 @@ void main() {
     );
   });
 
-  // Not present in the PartingTheWaters recording; taken from Perla nmea2000mk2.raw instead.
   test('should parse real recorded environmental parameters payload', () {
     final message = _testHexMsg(130311, "FFFF_FFFF_FF7F_F703");
     expect(
