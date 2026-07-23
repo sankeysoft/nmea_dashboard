@@ -1,1 +1,1 @@
-*If you're enjoying this free and open source software please consider leaving a review on Google Play or telling a friend about it.*
+*If you're enjoying this free and open source software please consider leaving a review on Google Play or telling a friend about it. If there are things you want, file an issue at the github project: https://github.com/sankeysoft/nmea_dashboard*

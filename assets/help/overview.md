@@ -1,8 +1,9 @@
 # Basics
 
 This app is designed to display real time data from a marine electronics
-network; it isn't much use unless you have hardware that will publish NMEA-0183
-messages onto a Wifi or ethernet network (I use Yacht Device's YDWG-02).
+network; it isn't much use unless you have hardware that will publish NMEA
+0183 or 2000 messages onto a Wifi or ethernet network (I use Yacht Device's
+YDWG-02).
 
 Data is displayed on one or more pages, each containing a grid of data elements.
 Long hold any data element to change the data it is displaying or its format.
@@ -73,3 +74,12 @@ FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+# Acknowledgements
+
+Many thanks to:
+
+* The CANBoat project for their excellent reverse engineering of NMEA2000.
+* YachtDevices for making and supporting the hardware I use in my development.
+* Grigory Morozov for providing the motivation to implement NMEA2000 and for
+  the initial code.
