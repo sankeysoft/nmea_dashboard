@@ -16,6 +16,6 @@ class Parser129025 extends PacketParser {
     if (lat == null || long == null) {
       return [];
     }
-    return [boundDoubleValue(lat, long, Property.gpsPosition, tier: 2)];
+    return [boundDoubleValue(lat, long, Property.gpsPosition)];
   }
 }

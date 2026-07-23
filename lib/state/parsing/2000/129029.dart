@@ -24,14 +24,14 @@ class Parser129029 extends PacketParser {
 
     final values = <BoundValue>[];
     if (lat != null && long != null) {
-      values.add(boundDoubleValue(lat, long, Property.gpsPosition));
+      values.add(boundDoubleValue(lat, long, Property.gpsPosition, tier: 2));
     }
     if (days != null && microseconds != null) {
       final dt = DateTime.utc(1970).add(Duration(days: days, microseconds: microseconds));
-      values.add(boundSingleValue(dt, Property.utcTime));
+      values.add(boundSingleValue(dt, Property.utcTime, tier: 3));
     }
     if (hdop != null) {
-      values.add(boundSingleValue(hdop, Property.gpsHdop));
+      values.add(boundSingleValue(hdop, Property.gpsHdop, tier: 2));
     }
     return values;
   }

@@ -8,9 +8,11 @@ import 'package:nmea_dashboard/state/parsing/common.dart';
 import 'package:nmea_dashboard/state/parsing/validators.dart';
 import 'package:nmea_dashboard/state/values.dart';
 
+part '126992.dart';
 part '127245.dart';
 part '127250.dart';
 part '127251.dart';
+part '127257.dart';
 part '127258.dart';
 part '127505.dart';
 part '128259.dart';
@@ -23,11 +25,15 @@ part '129033.dart';
 part '129283.dart';
 part '129284.dart';
 part '129291.dart';
+part '129539.dart';
 part '130306.dart';
 part '130310.dart';
+part '130311.dart';
+part '130312.dart';
 part '130313.dart';
 part '130314.dart';
 part '130316.dart';
+part '130577.dart';
 
 /// A validator for assembled NMEA2000 messages with a 16 byte header.
 class ForkValidator extends MessageValidator<ByteData, int> {
@@ -61,9 +67,11 @@ class ForkValidator extends MessageValidator<ByteData, int> {
 /// Parses nmea 2000 messages into values, keeping track of the count for each message type.
 class Nmea2000Parser extends MessageParser<ByteData, int> {
   static final List<PacketParser> _allParsers = [
+    Parser126992(),
     Parser127245(),
     Parser127250(),
     Parser127251(),
+    Parser127257(),
     Parser127258(),
     Parser127505(),
     Parser128259(),
@@ -76,11 +84,15 @@ class Nmea2000Parser extends MessageParser<ByteData, int> {
     Parser129283(),
     Parser129284(),
     Parser129291(),
+    Parser129539(),
     Parser130306(),
     Parser130310(),
+    Parser130311(),
+    Parser130312(),
     Parser130313(),
     Parser130314(),
     Parser130316(),
+    Parser130577(),
   ];
 
   /// The list of message types that are silently ignored.

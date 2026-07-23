@@ -355,9 +355,9 @@ void main() {
     expect(
       Nmea2000Parser().parse(message),
       BoundValueListMatches([
-        boundSingleValue(20.4, Property.waterTemperature, tier: 2),
-        boundSingleValue(25.0, Property.airTemperature, tier: 2),
-        boundSingleValue(101300.0, Property.pressure, tier: 2),
+        boundSingleValue(20.4, Property.waterTemperature, tier: 4),
+        boundSingleValue(25.0, Property.airTemperature, tier: 4),
+        boundSingleValue(101300.0, Property.pressure, tier: 3),
       ]),
     );
   });
@@ -371,7 +371,7 @@ void main() {
     final message = _testMsg(129025, [..._i32(375000000), ..._i32(-1225000000)]);
     expect(
       Nmea2000Parser().parse(message),
-      BoundValueListMatches([boundDoubleValue(37.5, -122.5, Property.gpsPosition, tier: 2)]),
+      BoundValueListMatches([boundDoubleValue(37.5, -122.5, Property.gpsPosition)]),
     );
   });
 
@@ -379,9 +379,7 @@ void main() {
     final message = _testHexMsg(129025, "606E9E08_0072B7DB");
     expect(
       Nmea2000Parser().parse(message),
-      BoundValueListMatches([
-        boundDoubleValue(14.4600672, -60.873472, Property.gpsPosition, tier: 2),
-      ]),
+      BoundValueListMatches([boundDoubleValue(14.4600672, -60.873472, Property.gpsPosition)]),
     );
   });
 
@@ -402,8 +400,8 @@ void main() {
     expect(
       Nmea2000Parser().parse(message),
       BoundValueListMatches([
-        boundDoubleValue(37.5, -122.5, Property.gpsPosition),
-        boundSingleValue(DateTime.utc(2024, 10, 4, 12, 34, 56), Property.utcTime),
+        boundDoubleValue(37.5, -122.5, Property.gpsPosition, tier: 2),
+        boundSingleValue(DateTime.utc(2024, 10, 4, 12, 34, 56), Property.utcTime, tier: 3),
       ]),
     );
   });
@@ -424,9 +422,9 @@ void main() {
     expect(
       Nmea2000Parser().parse(message),
       BoundValueListMatches([
-        boundDoubleValue(37.5, -122.5, Property.gpsPosition),
-        boundSingleValue(DateTime.utc(2024, 10, 4, 12, 34, 56), Property.utcTime),
-        boundSingleValue(1.23, Property.gpsHdop),
+        boundDoubleValue(37.5, -122.5, Property.gpsPosition, tier: 2),
+        boundSingleValue(DateTime.utc(2024, 10, 4, 12, 34, 56), Property.utcTime, tier: 3),
+        boundSingleValue(1.23, Property.gpsHdop, tier: 2),
       ]),
     );
   });
@@ -615,6 +613,194 @@ void main() {
     expect(
       parser.parse(dewMessage),
       BoundValueListMatches([boundSingleValue(15.0, Property.dewPoint)]),
+    );
+  });
+
+  test('should parse valid system time packet', () {
+    final message = _testMsg(126992, [0xFF, 0xFF, ..._u16(20000), ..._u32(452960000)]);
+    expect(
+      Nmea2000Parser().parse(message),
+      BoundValueListMatches([
+        boundSingleValue(DateTime.utc(2024, 10, 4, 12, 34, 56), Property.utcTime),
+      ]),
+    );
+  });
+
+  test('should not parse system time packet with unavailable date', () {
+    final message = _testMsg(126992, [0xFF, 0xFF, 0xFF, 0xFF, ..._u32(452960000)]);
+    expect(Nmea2000Parser().parse(message), isEmpty);
+  });
+
+  test('should parse real recorded system time payload', () {
+    final message = _testHexMsg(126992, "FFFF_AF50_5221F604");
+    expect(
+      Nmea2000Parser().parse(message),
+      BoundValueListMatches([
+        boundSingleValue(DateTime.utc(2026, 7, 21, 2, 18, 43, 925), Property.utcTime),
+      ]),
+    );
+  });
+
+  test('should parse valid attitude packet', () {
+    final message = _testMsg(127257, [0xFF, ..._i16(5236), ..._i16(-2618), ..._i16(7854), 0xFF]);
+    expect(
+      Nmea2000Parser().parse(message),
+      BoundValueListMatches([
+        boundSingleValue(30.0001, Property.roll),
+        boundSingleValue(-15.0001, Property.pitch),
+        boundSingleValue(45.0001, Property.yaw),
+      ]),
+    );
+  });
+
+  // Not present in the PartingTheWaters recording; taken from Perla nmea2000mk2.raw instead.
+  test('should parse real recorded attitude payload with unavailable roll', () {
+    final message = _testHexMsg(127257, "FFFF7F_1D00_6A00_FF");
+    expect(
+      Nmea2000Parser().parse(message),
+      BoundValueListMatches([
+        boundSingleValue(0.1662, Property.pitch),
+        boundSingleValue(0.6073, Property.yaw),
+      ]),
+    );
+  });
+
+  test('should parse valid GNSS DOPs packet', () {
+    final message = _testMsg(129539, [0xFF, 0xFF, ..._i16(123), 0xFF, 0xFF, 0xFF, 0xFF]);
+    expect(
+      Nmea2000Parser().parse(message),
+      BoundValueListMatches([boundSingleValue(1.23, Property.gpsHdop)]),
+    );
+  });
+
+  test('should not parse GNSS DOPs packet with unavailable HDOP', () {
+    final message = _testMsg(129539, [0xFF, 0xFF, 0xFF, 0x7F, 0xFF, 0xFF, 0xFF, 0xFF]);
+    expect(Nmea2000Parser().parse(message), isEmpty);
+  });
+
+  test('should parse real recorded GNSS DOPs payload', () {
+    final message = _testHexMsg(129539, "00_DB_3400_4700_2C00");
+    expect(
+      Nmea2000Parser().parse(message),
+      BoundValueListMatches([boundSingleValue(0.52, Property.gpsHdop)]),
+    );
+  });
+
+  test('should parse valid environmental parameters packet', () {
+    final message = _testMsg(130311, [0xFF, 0x00, ..._u16(29355), ..._u16(12500), ..._u16(1013)]);
+    expect(
+      Nmea2000Parser().parse(message),
+      BoundValueListMatches([
+        boundSingleValue(20.4, Property.waterTemperature, tier: 3),
+        boundSingleValue(50.0, Property.relativeHumidity, tier: 2),
+        boundSingleValue(101300.0, Property.pressure, tier: 2),
+      ]),
+    );
+  });
+
+  test('should not parse temperature from environmental parameters packet with unsupported '
+      'source', () {
+    final message = _testMsg(130311, [0xFF, 0x08, ..._u16(29355), ..._u16(12500), ..._u16(1013)]);
+    expect(
+      Nmea2000Parser().parse(message),
+      BoundValueListMatches([
+        boundSingleValue(50.0, Property.relativeHumidity, tier: 2),
+        boundSingleValue(101300.0, Property.pressure, tier: 2),
+      ]),
+    );
+  });
+
+  // Not present in the PartingTheWaters recording; taken from Perla nmea2000mk2.raw instead.
+  test('should parse real recorded environmental parameters payload', () {
+    final message = _testHexMsg(130311, "FFFF_FFFF_FF7F_F703");
+    expect(
+      Nmea2000Parser().parse(message),
+      BoundValueListMatches([boundSingleValue(101500.0, Property.pressure, tier: 2)]),
+    );
+  });
+
+  test('should parse valid single-source temperature packet for each supported source', () {
+    final parser = Nmea2000Parser();
+    final waterMessage = _testMsg(130312, [0xFF, 0xFF, 0x00, ..._u16(29355), 0xFF, 0xFF, 0xFF]);
+    expect(
+      parser.parse(waterMessage),
+      BoundValueListMatches([boundSingleValue(20.4, Property.waterTemperature, tier: 2)]),
+    );
+    final airMessage = _testMsg(130312, [0xFF, 0xFF, 0x01, ..._u16(29815), 0xFF, 0xFF, 0xFF]);
+    expect(
+      parser.parse(airMessage),
+      BoundValueListMatches([boundSingleValue(25.0, Property.airTemperature, tier: 2)]),
+    );
+  });
+
+  test('should not parse single-source temperature packet for unsupported source', () {
+    final message = _testMsg(130312, [0xFF, 0xFF, 0x02, ..._u16(29355), 0xFF, 0xFF, 0xFF]);
+    expect(Nmea2000Parser().parse(message), isEmpty);
+  });
+
+  test('should parse real recorded single-source temperature payload', () {
+    final message = _testHexMsg(130312, "0000_00DD_72FF_FFFF");
+    expect(
+      Nmea2000Parser().parse(message),
+      BoundValueListMatches([boundSingleValue(20.9, Property.waterTemperature, tier: 2)]),
+    );
+  });
+
+  test('should parse valid direction data packet with true directional reference', () {
+    final message = _testMsg(130577, [
+      0xFF,
+      0x00,
+      ..._u16(7854), // cog
+      ..._u16(520), // sog
+      ..._u16(15708), // heading
+      ..._u16(320), // stw
+      ..._u16(7854), // set
+      ..._u16(250), // drift
+    ]);
+    expect(
+      Nmea2000Parser().parse(message),
+      BoundValueListMatches([
+        boundSingleValue(5.2, Property.speedOverGround, tier: 3),
+        boundSingleValue(3.2, Property.speedThroughWater, tier: 2),
+        boundSingleValue(2.5, Property.currentDrift, tier: 2),
+        boundSingleValue(45.0001, Property.courseOverGround, tier: 2),
+        boundSingleValue(90.0002, Property.heading, tier: 2),
+        boundSingleValue(45.0001, Property.currentSet, tier: 2),
+      ]),
+    );
+  });
+
+  test('should not parse directional fields from direction data packet with other reference', () {
+    final message = _testMsg(130577, [
+      0xFF,
+      0x04,
+      ..._u16(7854), // cog
+      ..._u16(520), // sog
+      ..._u16(15708), // heading
+      ..._u16(320), // stw
+      ..._u16(7854), // set
+      ..._u16(250), // drift
+    ]);
+    expect(
+      Nmea2000Parser().parse(message),
+      BoundValueListMatches([
+        boundSingleValue(5.2, Property.speedOverGround, tier: 3),
+        boundSingleValue(3.2, Property.speedThroughWater, tier: 2),
+        boundSingleValue(2.5, Property.currentDrift, tier: 2),
+      ]),
+    );
+  });
+
+  test('should parse real recorded direction data payload', () {
+    final message = _testHexMsg(130577, "C0_52_8467_0100_FFFF_FFFF_1F46_0100");
+    expect(
+      Nmea2000Parser().parse(message),
+      BoundValueListMatches([
+        boundSingleValue(0.01, Property.speedOverGround, tier: 3),
+        boundSingleValue(0.01, Property.currentDrift, tier: 2),
+        boundSingleValue(151.8338, Property.courseOverGround, tier: 2),
+        boundSingleValue(102.8517, Property.currentSet, tier: 2),
+      ]),
     );
   });
 }
