@@ -37,6 +37,13 @@ const _emptyPacketInterval = Duration(seconds: 3);
 /// acting on it, coalescing any further conditions that arrive in the meantime.
 const _reconnectCoalesceDelay = Duration(milliseconds: 1500);
 
+/// How long a connection may receive no data at all before it is assumed to be
+/// dead and rebuilt. Deliberately slow: a working connection carrying no data is
+/// common, e.g. when the instruments are switched off, and the conditions that
+/// usually kill a socket are already handled by reconnecting on the events that
+/// cause them.
+const _idleTimeout = Duration(minutes: 5);
+
 final _log = Logger('Network');
 
 /// A function that converts a stream of network packets into a stream of bound values parsed
@@ -49,11 +56,13 @@ typedef PacketProcessor = Stream<BoundValue?> Function(Stream<Uint8List> packetS
 /// traffic is present to enable cancelling.
 ///
 /// The connection is rebuilt automatically whenever the platform reports a
-/// condition that may have silently invalidated it. Tests may supply a
-/// [customReconnectTrigger] to drive that themselves.
+/// condition that may have silently invalidated it, and whenever no data at all
+/// has been received for _idleTimeout. Tests may supply a
+/// [customReconnectTrigger] and [customIdleTimeout] to drive those themselves.
 Stream<BoundValue?> valuesFromNetwork(
   NetworkSettings settings, {
   ReconnectTrigger? customReconnectTrigger,
+  Duration? customIdleTimeout,
 }) {
   final packetProcessor = switch (settings.protocol) {
     (NetworkProtocol.nmea0183) => makePacketProcessingFunction(
@@ -73,13 +82,15 @@ Stream<BoundValue?> valuesFromNetwork(
     ),
   };
 
+  final idleTimeout = customIdleTimeout ?? _idleTimeout;
   Stream<BoundValue?> connect() => switch (settings.mode) {
     (NetworkMode.tcpConnect) => _valuesFromTcpConnect(
       settings.ipAddress,
       settings.port,
       packetProcessor,
+      idleTimeout,
     ),
-    (NetworkMode.udpListen) => _valuesFromUdpListen(settings.port, packetProcessor),
+    (NetworkMode.udpListen) => _valuesFromUdpListen(settings.port, packetProcessor, idleTimeout),
   };
 
   return _restartOnTrigger(connect, customReconnectTrigger ?? PlatformReconnectTrigger());
@@ -149,6 +160,7 @@ Stream<BoundValue?> _valuesFromTcpConnect(
   InternetAddress ipAddress,
   int portNum,
   PacketProcessor processPackets,
+  Duration idleTimeout,
 ) async* {
   _log.info('Starting TCP stream on $ipAddress:$portNum');
   try {
@@ -156,10 +168,18 @@ Stream<BoundValue?> _valuesFromTcpConnect(
       Socket? socket;
       try {
         socket = await Socket.connect(ipAddress, portNum);
-        await for (final value in processPackets(socket)) {
+        final monitor = _MonitoredPacketStream(socket, idleTimeout);
+        await for (final value in processPackets(monitor.packets)) {
           yield value;
         }
-        _log.info('TCP stream on $ipAddress:$portNum was closed by the peer, reconnecting');
+        if (monitor.endedIdle) {
+          _log.warning(
+            'No data received on TCP stream to $ipAddress:$portNum for '
+            '${idleTimeout.inMinutes} minutes, reconnecting',
+          );
+        } else {
+          _log.info('TCP stream on $ipAddress:$portNum was closed by the peer, reconnecting');
+        }
         yield null;
         await Future.delayed(_networkDisconnectRetry);
       } on SocketException catch (e) {
@@ -182,18 +202,32 @@ Stream<BoundValue?> _valuesFromTcpConnect(
 /// network port, logging any errors, guaranteed to return (potentially null)
 /// values at least every _timeout seconds even if no network traffic is present
 /// to enable cancelling.
-Stream<BoundValue?> _valuesFromUdpListen(int portNum, PacketProcessor processPackets) async* {
+Stream<BoundValue?> _valuesFromUdpListen(
+  int portNum,
+  PacketProcessor processPackets,
+  Duration idleTimeout,
+) async* {
   _log.info('Starting UDP listen stream on $portNum');
   try {
     while (true) {
       UDP? receiver;
       try {
         receiver = await UDP.bind(Endpoint.any(port: Port(portNum)));
-        await for (final value in processPackets(
+        final monitor = _MonitoredPacketStream(
           receiver.asStream().map((d) => d?.data ?? _emptyPacket),
-        )) {
+          idleTimeout,
+        );
+        await for (final value in processPackets(monitor.packets)) {
           yield value;
         }
+        if (monitor.endedIdle) {
+          _log.warning(
+            'No data received on UDP port $portNum for '
+            '${idleTimeout.inMinutes} minutes, rebinding',
+          );
+        }
+        yield null;
+        await Future.delayed(_networkDisconnectRetry);
       } on SocketException catch (e) {
         _log.warning(
           'Exception opening UDP listen on $portNum. '
@@ -212,41 +246,84 @@ Stream<BoundValue?> _valuesFromUdpListen(int portNum, PacketProcessor processPac
 
 final Uint8List _emptyPacket = Uint8List(0);
 
-/// Returns a stream of the packets in the supplied stream with an empty packet inserted every
-/// _emptyPacketInterval so that subscribers always have an opportunity to cancel, completing
-/// when the supplied stream completes.
-Stream<Uint8List> _paddedWithEmptyPackets(Stream<Uint8List> packetStream) {
-  late final StreamSubscription<Uint8List> subscription;
-  late final Timer timer;
-  final controller = StreamController<Uint8List>(
-    onCancel: () {
-      timer.cancel();
-      return subscription.cancel();
-    },
-  );
-  timer = Timer.periodic(_emptyPacketInterval, (_) => controller.add(_emptyPacket));
-  subscription = packetStream.listen(
-    controller.add,
-    onError: controller.addError,
-    onDone: () {
-      timer.cancel();
-      controller.close();
-    },
-  );
-  return controller.stream;
+/// Presents a source of network packets as a stream that always supplies a packet within
+/// _emptyPacketInterval, inserting empty packets while the source is quiet so that subscribers
+/// always have an opportunity to cancel. The stream completes when the source completes, or when
+/// no data at all has been received from the source for the supplied idle timeout.
+class _MonitoredPacketStream {
+  /// How many consecutive quiet intervals are tolerated before declaring the source idle.
+  final int _maxQuietIntervals;
+  late final StreamController<Uint8List> _controller;
+  late final StreamSubscription<Uint8List> _subscription;
+  late final Timer _timer;
+  var _dataSinceLastInterval = false;
+  var _quietIntervals = 0;
+  var _endedIdle = false;
+
+  _MonitoredPacketStream(Stream<Uint8List> source, Duration idleTimeout)
+    : _maxQuietIntervals = (idleTimeout.inMilliseconds / _emptyPacketInterval.inMilliseconds)
+          .ceil()
+          .clamp(1, double.maxFinite.toInt()) {
+    _controller = StreamController<Uint8List>(
+      onCancel: () {
+        _timer.cancel();
+        return _subscription.cancel();
+      },
+    );
+    _timer = Timer.periodic(_emptyPacketInterval, (_) => _onInterval());
+    _subscription = source.listen(
+      _onPacket,
+      onError: _controller.addError,
+      onDone: () {
+        _timer.cancel();
+        _controller.close();
+      },
+    );
+  }
+
+  /// The packets read from the source, padded with empty packets.
+  Stream<Uint8List> get packets => _controller.stream;
+
+  /// Whether the stream completed because the source was idle rather than because it ended.
+  bool get endedIdle => _endedIdle;
+
+  void _onPacket(Uint8List packet) {
+    // Only data counts towards liveness. Some sources supply empty packets of their own when they
+    // have nothing to report, and those say nothing about whether the connection still works.
+    if (packet.isNotEmpty) {
+      _dataSinceLastInterval = true;
+    }
+    _controller.add(packet);
+  }
+
+  void _onInterval() {
+    if (_dataSinceLastInterval) {
+      _dataSinceLastInterval = false;
+      _quietIntervals = 0;
+    } else {
+      _quietIntervals += 1;
+    }
+    if (_quietIntervals >= _maxQuietIntervals) {
+      _endedIdle = true;
+      _timer.cancel();
+      _subscription.cancel();
+      _controller.close();
+    } else {
+      _controller.add(_emptyPacket);
+    }
+  }
 }
 
 /// Returns a function that converts a packet stream into a stream of the valid
 /// values read using the supplied splitter, validator, and parser, logging any
-/// errors, guaranteed to return (potentially null) values at least every
-/// _timeout seconds even if no network traffic is present to enable cancelling.
+/// errors and returning null for every empty packet in the supplied stream.
 PacketProcessor makePacketProcessingFunction<M, S>(
   MessageSplitter<M> splitter,
   MessageValidator<M, S> validator,
   MessageParser<M, S> parser,
 ) {
   return (Stream<Uint8List> packetStream) async* {
-    await for (final packet in _paddedWithEmptyPackets(packetStream)) {
+    await for (final packet in packetStream) {
       parser.logAndClearIfNeeded();
       if (packet.isEmpty) {
         // Empty packets are included in the stream even if no traffic is

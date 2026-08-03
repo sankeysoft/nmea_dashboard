@@ -50,7 +50,7 @@ class DataSet with ChangeNotifier {
   StreamSubscription? _networkSubscription;
 
   /// A chain used to ensure network restarts never overlap.
-  Future<void> _networkRestart = Future.value();
+  Future<void> _networkRestartFuture = Future.value();
 
   /// Whether this dataset has been disposed and should stop collecting.
   bool _disposed = false;
@@ -258,10 +258,10 @@ class DataSet with ChangeNotifier {
   /// serialized so overlapping requests cannot leave more than one
   /// subscription live.
   Future<void> _collectNetworkData() {
-    _networkRestart = _networkRestart
+    _networkRestartFuture = _networkRestartFuture
         .then((_) => _restartNetworkData())
         .catchError((Object e) => _log.severe('Error restarting network collection: $e', e));
-    return _networkRestart;
+    return _networkRestartFuture;
   }
 
   Future<void> _restartNetworkData() async {

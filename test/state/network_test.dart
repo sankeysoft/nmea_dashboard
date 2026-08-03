@@ -11,6 +11,7 @@ import 'package:connectivity_plus_platform_interface/connectivity_plus_platform_
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/state/parsing/0183/common.dart';
 import 'package:nmea_dashboard/state/parsing/splitters.dart';
 import 'package:nmea_dashboard/state/common.dart';
@@ -425,6 +426,143 @@ void main() {
         reuseAddress: false,
       );
       rebind.close();
+    });
+  });
+
+  group('valuesFromNetwork idle watchdog', () {
+    /// Collects every network log message matching [prefix] until cancelled.
+    StreamSubscription collectLogs(List<String> into, {String prefix = ''}) {
+      return Logger.root.onRecord
+          .where((r) => r.loggerName == 'Network' && r.message.startsWith(prefix))
+          .listen((r) => into.add(r.message));
+    }
+
+    test('udp listen rebinds and resumes receiving after no data arrives', () async {
+      final port = await freePort();
+      final settings = (await emptySettings())
+        ..set(mode: NetworkMode.udpListen, port: port, protocol: NetworkProtocol.nmea0183);
+
+      final warnings = <String>[];
+      final logs = collectLogs(warnings, prefix: 'No data received');
+
+      final received = [];
+      final subscription =
+          valuesFromNetwork(
+            settings,
+            customReconnectTrigger: FakeReconnectTrigger(),
+            customIdleTimeout: const Duration(milliseconds: 1),
+          ).listen((v) {
+            if (v != null) received.add(v.property);
+          });
+
+      await waitFor(() => warnings.isNotEmpty);
+      expect(warnings.first, contains('No data received on UDP port $port'));
+
+      // The replacement socket takes the same port and still delivers values.
+      final sender = await UDP.bind(Endpoint.any());
+      final destination = Endpoint.loopback(port: Port(port));
+      await waitFor(() async {
+        await sender.send('$_mtw\r\n'.codeUnits, destination);
+        return received.isNotEmpty;
+      });
+      expect(received, contains(Property.waterTemperature));
+
+      await subscription.cancel();
+      await logs.cancel();
+      sender.close();
+    });
+
+    test('a quiet connection is left alone until the idle timeout expires', () async {
+      final settings = (await emptySettings())
+        ..set(mode: NetworkMode.udpListen, port: await freePort());
+
+      final warnings = <String>[];
+      final logs = collectLogs(warnings, prefix: 'No data received');
+
+      final subscription = valuesFromNetwork(
+        settings,
+        customReconnectTrigger: FakeReconnectTrigger(),
+        customIdleTimeout: const Duration(seconds: 20),
+      ).listen((_) {});
+
+      await Future.delayed(const Duration(seconds: 5));
+      expect(warnings, isEmpty);
+
+      await subscription.cancel();
+      await logs.cancel();
+    });
+
+    test('data that produces no values still counts as a live connection', () async {
+      final port = await freePort();
+      final settings = (await emptySettings())
+        ..set(mode: NetworkMode.udpListen, port: port, protocol: NetworkProtocol.nmea0183);
+
+      final warnings = <String>[];
+      final logs = collectLogs(warnings, prefix: 'No data received');
+
+      final received = [];
+      final subscription =
+          valuesFromNetwork(
+            settings,
+            customReconnectTrigger: FakeReconnectTrigger(),
+            customIdleTimeout: const Duration(seconds: 4),
+          ).listen((v) {
+            if (v != null) received.add(v);
+          });
+
+      // Bytes that never form a sentence, as a misconfigured protocol would give.
+      final sender = await UDP.bind(Endpoint.any());
+      final destination = Endpoint.loopback(port: Port(port));
+      final until = DateTime.now().add(const Duration(seconds: 7));
+      while (DateTime.now().isBefore(until)) {
+        await sender.send([0x01, 0x02, 0x03, 0x04], destination);
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+
+      expect(received, isEmpty);
+      expect(warnings, isEmpty);
+
+      await subscription.cancel();
+      await logs.cancel();
+      sender.close();
+    });
+
+    test('tcp connect reports an idle timeout rather than a peer disconnect', () async {
+      final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      final accepted = StreamQueue(server);
+
+      final settings = (await emptySettings())
+        ..set(
+          mode: NetworkMode.tcpConnect,
+          ipAddress: InternetAddress.loopbackIPv4,
+          port: server.port,
+          protocol: NetworkProtocol.nmea0183,
+        );
+
+      final messages = <String>[];
+      final logs = collectLogs(messages);
+
+      final subscription = valuesFromNetwork(
+        settings,
+        customReconnectTrigger: FakeReconnectTrigger(),
+        customIdleTimeout: const Duration(milliseconds: 1),
+      ).listen((_) {});
+
+      final first = await accepted.next.timeout(const Duration(seconds: 5));
+      var firstClosed = false;
+      first.listen((_) {}, onDone: () => firstClosed = true);
+
+      // The peer sends nothing and never closes, so only the watchdog can end this.
+      await waitFor(() => firstClosed);
+      await accepted.next.timeout(const Duration(seconds: 10));
+
+      expect(messages, contains(startsWith('No data received on TCP stream')));
+      expect(messages.where((m) => m.contains('closed by the peer')), isEmpty);
+
+      await subscription.cancel();
+      await accepted.cancel();
+      await server.close();
+      await logs.cancel();
     });
   });
 
