@@ -49,6 +49,12 @@ class DataSet with ChangeNotifier {
   /// The currently active subscription to network events.
   StreamSubscription? _networkSubscription;
 
+  /// A chain used to ensure network restarts never overlap.
+  Future<void> _networkRestart = Future.value();
+
+  /// Whether this dataset has been disposed and should stop collecting.
+  bool _disposed = false;
+
   /// A single staleness provider used to notify network data elements
   /// how long to wait without updates before going invalid.
   final _networkStaleness = Staleness(_defaultStalenessDuration);
@@ -248,12 +254,24 @@ class DataSet with ChangeNotifier {
   }
 
   /// Collects data from the network using the current network settings,
-  /// cancelling any existing subscription if one exists.
-  Future<void> _collectNetworkData() async {
+  /// cancelling any existing subscription if one exists. Restarts are
+  /// serialized so overlapping requests cannot leave more than one
+  /// subscription live.
+  Future<void> _collectNetworkData() {
+    _networkRestart = _networkRestart
+        .then((_) => _restartNetworkData())
+        .catchError((Object e) => _log.severe('Error restarting network collection: $e', e));
+    return _networkRestart;
+  }
+
+  Future<void> _restartNetworkData() async {
     if (_networkSubscription != null) {
       _log.info('Cancelling previous network subcription');
       await _networkSubscription?.cancel();
       _networkSubscription = null;
+    }
+    if (_disposed) {
+      return;
     }
     // Update the staleness all elements use.
     _networkStaleness.duration = _networkSettings.staleness;
@@ -287,7 +305,7 @@ class DataSet with ChangeNotifier {
         );
         _networkSubscription = null;
         Future.delayed(_networkRestartDelay, () {
-          if (_networkSubscription == null) {
+          if (_networkSubscription == null && !_disposed) {
             _collectNetworkData();
           }
         });
@@ -314,5 +332,12 @@ class DataSet with ChangeNotifier {
   /// could not be found.
   DataElement? find(Source source, String? elementName) {
     return sources[source]?[elementName];
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _networkSubscription?.cancel();
+    super.dispose();
   }
 }

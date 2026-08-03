@@ -7,6 +7,9 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:async/async.dart';
+import 'package:connectivity_plus_platform_interface/connectivity_plus_platform_interface.dart';
+import 'package:fake_async/fake_async.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nmea_dashboard/state/parsing/0183/common.dart';
 import 'package:nmea_dashboard/state/parsing/splitters.dart';
@@ -27,6 +30,61 @@ const _mtw = r'$YDMTW,21.5,C*08';
 const _mtwNoChecksum = r'$YDMTW,21.5,C';
 
 Uint8List _pkt(String s) => Uint8List.fromList(s.codeUnits);
+
+/// A fake platform implementation letting tests drive connectivity events.
+class _FakeConnectivityPlatform extends ConnectivityPlatform {
+  final _controller = StreamController<List<ConnectivityResult>>.broadcast();
+  List<ConnectivityResult> _current;
+
+  _FakeConnectivityPlatform(this._current);
+
+  @override
+  Future<List<ConnectivityResult>> checkConnectivity() async => _current;
+
+  @override
+  Stream<List<ConnectivityResult>> get onConnectivityChanged => _controller.stream;
+
+  void emit(List<ConnectivityResult> results) {
+    _current = results;
+    _controller.add(results);
+  }
+}
+
+/// Drives the binding through a background/foreground cycle.
+void _cycleAppToForeground() {
+  final binding = WidgetsBinding.instance;
+  for (final state in [
+    AppLifecycleState.inactive,
+    AppLifecycleState.hidden,
+    AppLifecycleState.paused,
+    AppLifecycleState.hidden,
+    AppLifecycleState.inactive,
+    AppLifecycleState.resumed,
+  ]) {
+    binding.handleAppLifecycleStateChanged(state);
+  }
+}
+
+/// Runs [body] against a new trigger, returning every reason it reported.
+List<String> _collectReasons(
+  _FakeConnectivityPlatform platform,
+  void Function(FakeAsync async) body,
+) {
+  final reasons = <String>[];
+  late final PlatformReconnectTrigger trigger;
+  fakeAsync((async) {
+    ConnectivityPlatform.instance = platform;
+    trigger = PlatformReconnectTrigger();
+    trigger.reasons.listen(reasons.add);
+    // Let the initial connectivity check complete before the test runs.
+    async.elapse(const Duration(seconds: 1));
+    body(async);
+    async.elapse(const Duration(seconds: 5));
+    trigger.dispose();
+    async.flushTimers();
+  });
+  return reasons;
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -114,9 +172,10 @@ void main() {
         ..set(mode: NetworkMode.udpListen, port: port, protocol: NetworkProtocol.nmea0183);
 
       final received = [];
-      final subscription = valuesFromNetwork(settings).listen((v) {
-        if (v != null) received.add(v.property);
-      });
+      final subscription =
+          valuesFromNetwork(settings, customReconnectTrigger: FakeReconnectTrigger()).listen((v) {
+            if (v != null) received.add(v.property);
+          });
 
       final sender = await UDP.bind(Endpoint.any());
       await Future.delayed(const Duration(milliseconds: 200));
@@ -140,7 +199,13 @@ void main() {
     test('udp listen yields periodic nulls when no traffic is present', () async {
       final settings = (await emptySettings())
         ..set(mode: NetworkMode.udpListen, port: await freePort());
-      expect(await valuesFromNetwork(settings).take(2).toList(), [null, null]);
+      expect(
+        await valuesFromNetwork(
+          settings,
+          customReconnectTrigger: FakeReconnectTrigger(),
+        ).take(2).toList(),
+        [null, null],
+      );
     });
 
     test('udp listen keeps parsing after a malformed packet', () async {
@@ -149,9 +214,10 @@ void main() {
         ..set(mode: NetworkMode.udpListen, port: port, protocol: NetworkProtocol.nmea0183);
 
       final received = [];
-      final subscription = valuesFromNetwork(settings).listen((v) {
-        if (v != null) received.add(v.property);
-      });
+      final subscription =
+          valuesFromNetwork(settings, customReconnectTrigger: FakeReconnectTrigger()).listen((v) {
+            if (v != null) received.add(v.property);
+          });
 
       final sender = await UDP.bind(Endpoint.any());
       final destination = Endpoint.loopback(port: Port(port));
@@ -191,9 +257,10 @@ void main() {
         );
 
       final received = [];
-      final subscription = valuesFromNetwork(settings).listen((v) {
-        if (v != null) received.add(v.property);
-      });
+      final subscription =
+          valuesFromNetwork(settings, customReconnectTrigger: FakeReconnectTrigger()).listen((v) {
+            if (v != null) received.add(v.property);
+          });
 
       final first = await accepted.next.timeout(const Duration(seconds: 5));
       first.add('$_mtw\r\n'.codeUnits);
@@ -230,9 +297,10 @@ void main() {
         );
 
       final received = [];
-      final subscription = valuesFromNetwork(settings).listen((v) {
-        if (v != null) received.add(v.property);
-      });
+      final subscription =
+          valuesFromNetwork(settings, customReconnectTrigger: FakeReconnectTrigger()).listen((v) {
+            if (v != null) received.add(v.property);
+          });
 
       final connection = await accepted.future.timeout(const Duration(seconds: 5));
       connection.add('$_mtw\r\n'.codeUnits);
@@ -243,6 +311,215 @@ void main() {
       // The server only sees the connection end if the client released its socket on cancellation.
       await disconnected.future.timeout(const Duration(seconds: 5));
       await server.close();
+    });
+  });
+
+  group('valuesFromNetwork reconnects', () {
+    test('udp listen rebinds and keeps delivering values when requested', () async {
+      final port = await freePort();
+      final trigger = FakeReconnectTrigger();
+      final settings = (await emptySettings())
+        ..set(mode: NetworkMode.udpListen, port: port, protocol: NetworkProtocol.nmea0183);
+
+      final received = [];
+      final subscription = valuesFromNetwork(settings, customReconnectTrigger: trigger).listen((v) {
+        if (v != null) received.add(v.property);
+      });
+
+      final sender = await UDP.bind(Endpoint.any());
+      final destination = Endpoint.loopback(port: Port(port));
+      await Future.delayed(const Duration(milliseconds: 200));
+      await sender.send('$_mtw\r\n'.codeUnits, destination);
+      await waitFor(() => received.isNotEmpty);
+      received.clear();
+
+      trigger.request('test');
+
+      // The same subscription keeps working over the replacement socket, which
+      // is only possible if the old one released the port.
+      await waitFor(() async {
+        await sender.send('$_mtw\r\n'.codeUnits, destination);
+        return received.isNotEmpty;
+      });
+      expect(received, contains(Property.waterTemperature));
+
+      await subscription.cancel();
+      sender.close();
+    });
+
+    test('tcp connect makes a new connection when requested', () async {
+      final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      final accepted = StreamQueue(server);
+      final trigger = FakeReconnectTrigger();
+
+      final settings = (await emptySettings())
+        ..set(
+          mode: NetworkMode.tcpConnect,
+          ipAddress: InternetAddress.loopbackIPv4,
+          port: server.port,
+          protocol: NetworkProtocol.nmea0183,
+        );
+
+      final received = [];
+      final subscription = valuesFromNetwork(settings, customReconnectTrigger: trigger).listen((v) {
+        if (v != null) received.add(v.property);
+      });
+
+      final first = await accepted.next.timeout(const Duration(seconds: 5));
+      var firstClosed = false;
+      first.listen((_) {}, onDone: () => firstClosed = true);
+      first.add('$_mtw\r\n'.codeUnits);
+      await waitFor(() => received.isNotEmpty);
+      received.clear();
+
+      trigger.request('test');
+
+      // The peer never closed the first connection, so the client must have.
+      await waitFor(() => firstClosed);
+      final second = await accepted.next.timeout(const Duration(seconds: 10));
+      second.add('$_mtw\r\n'.codeUnits);
+      await waitFor(() => received.isNotEmpty);
+      expect(received, contains(Property.waterTemperature));
+
+      await subscription.cancel();
+      await accepted.cancel();
+      await server.close();
+    });
+
+    test('cancelling the subscription disposes the trigger', () async {
+      final trigger = FakeReconnectTrigger();
+      final settings = (await emptySettings())
+        ..set(mode: NetworkMode.udpListen, port: await freePort());
+
+      final subscription = valuesFromNetwork(
+        settings,
+        customReconnectTrigger: trigger,
+      ).listen((_) {});
+      await Future.delayed(const Duration(milliseconds: 200));
+      expect(trigger.disposed, isFalse);
+
+      await subscription.cancel();
+      expect(trigger.disposed, isTrue);
+    });
+
+    test('a reconnect requested during cancellation does not reopen the port', () async {
+      final port = await freePort();
+      final trigger = FakeReconnectTrigger();
+      final settings = (await emptySettings())..set(mode: NetworkMode.udpListen, port: port);
+
+      final subscription = valuesFromNetwork(
+        settings,
+        customReconnectTrigger: trigger,
+      ).listen((_) {});
+      await Future.delayed(const Duration(milliseconds: 200));
+
+      // Request a reconnect that is still in flight when the stream is cancelled.
+      trigger.request('test');
+      await subscription.cancel();
+      await Future.delayed(const Duration(seconds: 4));
+
+      // An exclusive bind only succeeds if no replacement socket was opened.
+      final rebind = await RawDatagramSocket.bind(
+        InternetAddress.anyIPv4,
+        port,
+        reuseAddress: false,
+      );
+      rebind.close();
+    });
+  });
+
+  group('PlatformReconnectTrigger connectivity', () {
+    test('reports a change in connectivity', () {
+      final platform = _FakeConnectivityPlatform([ConnectivityResult.wifi]);
+      final reasons = _collectReasons(platform, (async) {
+        platform.emit([ConnectivityResult.mobile]);
+      });
+      expect(reasons, ['network changed to mobile']);
+    });
+
+    test('does not report the initial state being echoed back', () {
+      final platform = _FakeConnectivityPlatform([ConnectivityResult.wifi]);
+      final reasons = _collectReasons(platform, (async) {
+        platform.emit([ConnectivityResult.wifi]);
+      });
+      expect(reasons, isEmpty);
+    });
+
+    test('reports loss of connectivity', () {
+      final platform = _FakeConnectivityPlatform([ConnectivityResult.wifi]);
+      final reasons = _collectReasons(platform, (async) {
+        platform.emit([ConnectivityResult.none]);
+      });
+      expect(reasons, ['network changed to none']);
+    });
+
+    test('describes multiple simultaneous connections in a stable order', () {
+      final platform = _FakeConnectivityPlatform([ConnectivityResult.none]);
+      final reasons = _collectReasons(platform, (async) {
+        platform.emit([ConnectivityResult.wifi, ConnectivityResult.ethernet]);
+      });
+      expect(reasons, ['network changed to ethernet+wifi']);
+    });
+
+    test('coalesces a rapid burst of changes into one report', () {
+      final platform = _FakeConnectivityPlatform([ConnectivityResult.wifi]);
+      final reasons = _collectReasons(platform, (async) {
+        platform.emit([ConnectivityResult.none]);
+        async.elapse(const Duration(milliseconds: 200));
+        platform.emit([ConnectivityResult.mobile]);
+        async.elapse(const Duration(milliseconds: 200));
+        platform.emit([ConnectivityResult.wifi]);
+      });
+      expect(reasons, ['network changed to wifi']);
+    });
+
+    test('reports changes that are further apart separately', () {
+      final platform = _FakeConnectivityPlatform([ConnectivityResult.wifi]);
+      final reasons = _collectReasons(platform, (async) {
+        platform.emit([ConnectivityResult.none]);
+        async.elapse(const Duration(seconds: 5));
+        platform.emit([ConnectivityResult.wifi]);
+      });
+      expect(reasons, ['network changed to none', 'network changed to wifi']);
+    });
+  });
+
+  group('PlatformReconnectTrigger lifecycle', () {
+    test('reports the app returning to the foreground', () {
+      final platform = _FakeConnectivityPlatform([ConnectivityResult.wifi]);
+      final reasons = _collectReasons(platform, (async) {
+        _cycleAppToForeground();
+      });
+      expect(reasons, ['app resumed']);
+    });
+
+    test('coalesces a resume and a connectivity change into one report', () {
+      final platform = _FakeConnectivityPlatform([ConnectivityResult.none]);
+      final reasons = _collectReasons(platform, (async) {
+        _cycleAppToForeground();
+        async.elapse(const Duration(milliseconds: 200));
+        platform.emit([ConnectivityResult.wifi]);
+      });
+      expect(reasons, ['network changed to wifi']);
+    });
+  });
+
+  group('PlatformReconnectTrigger dispose', () {
+    test('stops reporting once disposed', () {
+      final platform = _FakeConnectivityPlatform([ConnectivityResult.wifi]);
+      final reasons = <String>[];
+      fakeAsync((async) {
+        ConnectivityPlatform.instance = platform;
+        final trigger = PlatformReconnectTrigger();
+        trigger.reasons.listen(reasons.add);
+        async.elapse(const Duration(seconds: 1));
+        trigger.dispose();
+        async.flushMicrotasks();
+        platform.emit([ConnectivityResult.mobile]);
+        _cycleAppToForeground();
+        async.elapse(const Duration(seconds: 5));
+      });
+      expect(reasons, isEmpty);
     });
   });
 }

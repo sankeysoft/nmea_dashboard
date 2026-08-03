@@ -5,7 +5,9 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/state/parsing/0183/common.dart';
 import 'package:nmea_dashboard/state/parsing/2000/common.dart';
@@ -18,12 +20,22 @@ import 'package:nmea_dashboard/state/settings/network.dart';
 import 'package:nmea_dashboard/state/values.dart';
 import 'package:udp/udp.dart';
 
+/// How long to wait before retrying after a connection could not be opened at
+/// all, e.g. because the settings name an unreachable host or the network is
+/// unavailable.
 const _networkErrorRetry = Duration(seconds: 15);
+
+/// How long to wait before reconnecting after a TCP peer closes a connection
+/// that had previously been opened successfully.
 const _networkDisconnectRetry = Duration(seconds: 2);
 
 /// How often an empty packet is inserted into the packet stream to give
 /// subscribers an opportunity to cancel.
 const _emptyPacketInterval = Duration(seconds: 3);
+
+/// How long to wait after a condition that invalidates the connection before
+/// acting on it, coalescing any further conditions that arrive in the meantime.
+const _reconnectCoalesceDelay = Duration(milliseconds: 1500);
 
 final _log = Logger('Network');
 
@@ -35,7 +47,14 @@ typedef PacketProcessor = Stream<BoundValue?> Function(Stream<Uint8List> packetS
 /// in the supplied network settings, logging any errors. Guaranteed to return
 /// (potentially null) values at least every _timeout seconds even if no network
 /// traffic is present to enable cancelling.
-Stream<BoundValue?> valuesFromNetwork(NetworkSettings settings) {
+///
+/// The connection is rebuilt automatically whenever the platform reports a
+/// condition that may have silently invalidated it. Tests may supply a
+/// [customReconnectTrigger] to drive that themselves.
+Stream<BoundValue?> valuesFromNetwork(
+  NetworkSettings settings, {
+  ReconnectTrigger? customReconnectTrigger,
+}) {
   final packetProcessor = switch (settings.protocol) {
     (NetworkProtocol.nmea0183) => makePacketProcessingFunction(
       CrlfMessageSplitter(startRegex: RegExp(r'[\$!]')),
@@ -54,12 +73,72 @@ Stream<BoundValue?> valuesFromNetwork(NetworkSettings settings) {
     ),
   };
 
-  switch (settings.mode) {
-    case NetworkMode.tcpConnect:
-      return _valuesFromTcpConnect(settings.ipAddress, settings.port, packetProcessor);
-    case NetworkMode.udpListen:
-      return _valuesFromUdpListen(settings.port, packetProcessor);
+  Stream<BoundValue?> connect() => switch (settings.mode) {
+    (NetworkMode.tcpConnect) => _valuesFromTcpConnect(
+      settings.ipAddress,
+      settings.port,
+      packetProcessor,
+    ),
+    (NetworkMode.udpListen) => _valuesFromUdpListen(settings.port, packetProcessor),
+  };
+
+  return _restartOnTrigger(connect, customReconnectTrigger ?? PlatformReconnectTrigger());
+}
+
+/// Returns a stream of the values from a connection created by [connect],
+/// replacing that connection with a new one whenever [trigger] reports the
+/// existing one may no longer be usable. The trigger is disposed once the
+/// returned stream is cancelled or its connection ends.
+Stream<BoundValue?> _restartOnTrigger(
+  Stream<BoundValue?> Function() connect,
+  ReconnectTrigger trigger,
+) {
+  late final StreamController<BoundValue?> controller;
+  StreamSubscription<BoundValue?>? valueSubscription;
+  StreamSubscription<String>? triggerSubscription;
+  var stopped = false;
+  var restarting = false;
+
+  void listenToNewConnection() {
+    valueSubscription = connect().listen(
+      controller.add,
+      onError: controller.addError,
+      onDone: () {
+        stopped = true;
+        triggerSubscription?.cancel();
+        trigger.dispose();
+        controller.close();
+      },
+    );
   }
+
+  Future<void> restart(String reason) async {
+    if (stopped || restarting) {
+      return;
+    }
+    restarting = true;
+    _log.info('Rebuilding network connection: $reason');
+    await valueSubscription?.cancel();
+    valueSubscription = null;
+    restarting = false;
+    if (!stopped) {
+      // Keep supplying values while the replacement connection is established.
+      controller.add(null);
+      listenToNewConnection();
+    }
+  }
+
+  controller = StreamController<BoundValue?>(
+    onCancel: () async {
+      stopped = true;
+      await triggerSubscription?.cancel();
+      await trigger.dispose();
+      await valueSubscription?.cancel();
+    },
+  );
+  triggerSubscription = trigger.reasons.listen((reason) => unawaited(restart(reason)));
+  listenToNewConnection();
+  return controller.stream;
 }
 
 /// Returns an infinite stream of valid bound values read from the supplied TCP
@@ -200,4 +279,87 @@ PacketProcessor makePacketProcessingFunction<M, S>(
       }
     }
   };
+}
+
+/// A source of events indicating that any existing network connection may no
+/// longer be usable and should be rebuilt.
+abstract class ReconnectTrigger {
+  /// A broadcast stream of short descriptions of why a reconnect is advised.
+  Stream<String> get reasons;
+
+  /// Releases all resources held by this trigger.
+  Future<void> dispose();
+}
+
+/// A [ReconnectTrigger] driven by the platform conditions that commonly
+/// invalidate a socket without ever reporting an error: the app returning to
+/// the foreground and the device changing network.
+class PlatformReconnectTrigger implements ReconnectTrigger {
+  final _controller = StreamController<String>.broadcast();
+  late final AppLifecycleListener _lifecycleListener;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  Timer? _coalesceTimer;
+  String? _pendingReason;
+  String? _lastConnectivity;
+
+  PlatformReconnectTrigger() {
+    final source = Connectivity();
+    _lifecycleListener = AppLifecycleListener(onResume: () => _report('app resumed'));
+    unawaited(_seedConnectivity(source));
+    _connectivitySubscription = source.onConnectivityChanged.listen(
+      _handleConnectivity,
+      onError: (Object e) => _log.warning('Error monitoring connectivity: $e'),
+    );
+  }
+
+  @override
+  Stream<String> get reasons => _controller.stream;
+
+  /// Records the connectivity present at construction so that a platform which
+  /// echoes the current state on subscription does not look like a change.
+  Future<void> _seedConnectivity(Connectivity source) async {
+    try {
+      _lastConnectivity ??= _describeConnectivity(await source.checkConnectivity());
+    } on Exception catch (e) {
+      _log.warning('Error checking connectivity: $e');
+    }
+  }
+
+  void _handleConnectivity(List<ConnectivityResult> results) {
+    final description = _describeConnectivity(results);
+    final previous = _lastConnectivity;
+    _lastConnectivity = description;
+    if (previous != null && previous != description) {
+      _report('network changed to $description');
+    }
+  }
+
+  /// Reports [reason] once no further events have arrived for
+  /// _reconnectCoalesceDelay.
+  void _report(String reason) {
+    _pendingReason = reason;
+    _coalesceTimer?.cancel();
+    _coalesceTimer = Timer(_reconnectCoalesceDelay, () {
+      final reason = _pendingReason;
+      _pendingReason = null;
+      _coalesceTimer = null;
+      if (reason != null && !_controller.isClosed) {
+        _controller.add(reason);
+      }
+    });
+  }
+
+  @override
+  Future<void> dispose() async {
+    _coalesceTimer?.cancel();
+    _lifecycleListener.dispose();
+    await _connectivitySubscription?.cancel();
+    await _controller.close();
+  }
+}
+
+/// Returns a stable human readable description of a set of connectivity types.
+String _describeConnectivity(List<ConnectivityResult> results) {
+  final names = results.map((result) => result.name).toList()..sort();
+  return names.isEmpty ? 'nothing' : names.join('+');
 }

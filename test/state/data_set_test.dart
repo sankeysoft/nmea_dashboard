@@ -5,6 +5,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/state/alarms.dart';
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/data_element.dart';
@@ -203,6 +204,34 @@ void main() {
       dataSet.addListener(() => count++);
       derived.replaceElements([_depthSpec('Offset Depth')]);
       expect(count, 1);
+    });
+  });
+
+  group('DataSet dispose', () {
+    test('network collection does not restart after dispose', () async {
+      final prefs = await _prefs();
+      final settings = NetworkSettings(prefs);
+      final dataSet = DataSet(
+        settings,
+        DerivedDataSettings(prefs),
+        AlarmSettings(prefs),
+        HistoryManagerImpl(prefs),
+        AlarmManager(),
+      );
+      await pumpEventQueue();
+      dataSet.dispose();
+
+      // Settings changes still reach the disposed dataset, but must not leave a
+      // new subscription running.
+      final messages = <String>[];
+      final logs = Logger.root.onRecord
+          .where((record) => record.loggerName == 'Network')
+          .listen((record) => messages.add(record.message));
+      settings.set(port: 12345);
+      await pumpEventQueue();
+      await logs.cancel();
+
+      expect(messages, isEmpty);
     });
   });
 
