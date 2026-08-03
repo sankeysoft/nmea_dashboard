@@ -2,20 +2,35 @@
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
+import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:async/async.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:nmea_dashboard/state/parsing/0183/common.dart';
 import 'package:nmea_dashboard/state/parsing/splitters.dart';
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/network.dart';
-import 'package:test/test.dart';
+import 'package:nmea_dashboard/state/settings/network.dart';
+import 'package:udp/udp.dart';
+
+import 'network_utils.dart';
 
 // A valid DPT sentence that yields depthWithOffset and depthUncalibrated.
 const _dpt = r'$YDDPT,18.56,-1.61,140.0,*67';
 
+// A valid MTW sentence that yields waterTemperature.
+const _mtw = r'$YDMTW,21.5,C*08';
+
+// The same MTW sentence without its checksum.
+const _mtwNoChecksum = r'$YDMTW,21.5,C';
+
 Uint8List _pkt(String s) => Uint8List.fromList(s.codeUnits);
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('makePacketProcessingFunction', () {
     late PacketProcessor processPackets;
 
@@ -89,6 +104,145 @@ void main() {
       );
       // The FormatException is caught; the subsequent empty packet emits null.
       expect(await stream.take(1).toList(), [null]);
+    });
+  });
+
+  group('valuesFromNetwork', () {
+    test('udp listen receives values and releases the port when cancelled', () async {
+      final port = await freePort();
+      final settings = (await emptySettings())
+        ..set(mode: NetworkMode.udpListen, port: port, protocol: NetworkProtocol.nmea0183);
+
+      final received = [];
+      final subscription = valuesFromNetwork(settings).listen((v) {
+        if (v != null) received.add(v.property);
+      });
+
+      final sender = await UDP.bind(Endpoint.any());
+      await Future.delayed(const Duration(milliseconds: 200));
+      await sender.send('$_mtw\r\n'.codeUnits, Endpoint.loopback(port: Port(port)));
+      await Future.delayed(const Duration(milliseconds: 300));
+      expect(received, isNotEmpty);
+
+      await subscription.cancel();
+      await Future.delayed(const Duration(milliseconds: 200));
+
+      // An exclusive bind only succeeds if the receiver released the port on cancellation.
+      final rebind = await RawDatagramSocket.bind(
+        InternetAddress.anyIPv4,
+        port,
+        reuseAddress: false,
+      );
+      rebind.close();
+      sender.close();
+    });
+
+    test('udp listen yields periodic nulls when no traffic is present', () async {
+      final settings = (await emptySettings())
+        ..set(mode: NetworkMode.udpListen, port: await freePort());
+      expect(await valuesFromNetwork(settings).take(2).toList(), [null, null]);
+    });
+
+    test('udp listen keeps parsing after a malformed packet', () async {
+      final port = await freePort();
+      final settings = (await emptySettings())
+        ..set(mode: NetworkMode.udpListen, port: port, protocol: NetworkProtocol.nmea0183);
+
+      final received = [];
+      final subscription = valuesFromNetwork(settings).listen((v) {
+        if (v != null) received.add(v.property);
+      });
+
+      final sender = await UDP.bind(Endpoint.any());
+      final destination = Endpoint.loopback(port: Port(port));
+      await Future.delayed(const Duration(milliseconds: 200));
+      await sender.send([0xFF, 0xFE, 0x00, 0x80, 0x41], destination);
+      await Future.delayed(const Duration(milliseconds: 100));
+      // The malformed bytes remain buffered ahead of the first sentence, so the split falls on
+      // its leading '$' and a second sentence is needed to flush the first one out.
+      await sender.send('$_mtw\r\n'.codeUnits, destination);
+      await sender.send('$_mtw\r\n'.codeUnits, destination);
+      await Future.delayed(const Duration(milliseconds: 300));
+      expect(received, contains(Property.waterTemperature));
+
+      await subscription.cancel();
+      sender.close();
+    });
+
+    test('udp listen honours the require checksum setting', () async {
+      final packet = '$_mtwNoChecksum\r\n'.codeUnits;
+      expect(
+        await valuesFromUdpPackets(NetworkProtocol.nmea0183, [packet], requireChecksum: false),
+        isNotEmpty,
+      );
+      expect(await valuesFromUdpPackets(NetworkProtocol.nmea0183, [packet]), isEmpty);
+    });
+
+    test('tcp connect reconnects after the peer drops the connection', () async {
+      final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      final accepted = StreamQueue(server);
+
+      final settings = (await emptySettings())
+        ..set(
+          mode: NetworkMode.tcpConnect,
+          ipAddress: InternetAddress.loopbackIPv4,
+          port: server.port,
+          protocol: NetworkProtocol.nmea0183,
+        );
+
+      final received = [];
+      final subscription = valuesFromNetwork(settings).listen((v) {
+        if (v != null) received.add(v.property);
+      });
+
+      final first = await accepted.next.timeout(const Duration(seconds: 5));
+      first.add('$_mtw\r\n'.codeUnits);
+      await Future.delayed(const Duration(milliseconds: 300));
+      expect(received, contains(Property.waterTemperature));
+      received.clear();
+
+      first.destroy();
+
+      final second = await accepted.next.timeout(const Duration(seconds: 10));
+      second.add('$_mtw\r\n'.codeUnits);
+      await Future.delayed(const Duration(milliseconds: 300));
+      expect(received, contains(Property.waterTemperature));
+
+      await subscription.cancel();
+      await accepted.cancel();
+    });
+
+    test('tcp connect receives values and closes the connection when cancelled', () async {
+      final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      final accepted = Completer<Socket>();
+      final disconnected = Completer<void>();
+      server.listen((connection) {
+        accepted.complete(connection);
+        connection.listen((_) {}, onDone: disconnected.complete);
+      });
+
+      final settings = (await emptySettings())
+        ..set(
+          mode: NetworkMode.tcpConnect,
+          ipAddress: InternetAddress.loopbackIPv4,
+          port: server.port,
+          protocol: NetworkProtocol.nmea0183,
+        );
+
+      final received = [];
+      final subscription = valuesFromNetwork(settings).listen((v) {
+        if (v != null) received.add(v.property);
+      });
+
+      final connection = await accepted.future.timeout(const Duration(seconds: 5));
+      connection.add('$_mtw\r\n'.codeUnits);
+      await Future.delayed(const Duration(milliseconds: 300));
+      expect(received, isNotEmpty);
+
+      await subscription.cancel();
+      // The server only sees the connection end if the client released its socket on cancellation.
+      await disconnected.future.timeout(const Duration(seconds: 5));
+      await server.close();
     });
   });
 }

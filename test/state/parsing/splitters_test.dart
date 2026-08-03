@@ -54,6 +54,25 @@ void main() {
       expect(splitter.read(_pkt('${msg.substring(10)}\n')), [msg]);
     });
 
+    test('salvages messages from a packet containing invalid UTF-8', () {
+      // 0xC3 0x28 is an invalid two byte UTF-8 sequence, the trailing fragment forces the second
+      // valid message to be flushed in this call rather than buffered awaiting a terminator.
+      final data = Uint8List.fromList([
+        ...'\$YDMWV,184.6,R,1.4,M,A*2D\n'.codeUnits,
+        0xC3,
+        0x28,
+        ...'\n\$YDMWV,182.8,T,2.4,M,A*20\n\$YD'.codeUnits,
+      ]);
+      expect(
+        splitter.read(data),
+        containsAll(['\$YDMWV,184.6,R,1.4,M,A*2D', '\$YDMWV,182.8,T,2.4,M,A*20']),
+      );
+    });
+
+    test('does not throw on a packet of entirely invalid UTF-8', () {
+      expect(splitter.read(Uint8List.fromList([0xFF, 0xFE, 0xFD, 0x80])), isEmpty);
+    });
+
     test('without start regex only splits on line terminators', () {
       final splitter = CrlfMessageSplitter();
       expect(splitter.read(_pkt('\$YDMWV,184.6,R,1.4,M,A*2D\$YDVTG,4.1\n')), [

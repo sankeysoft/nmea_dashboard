@@ -5,7 +5,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:async/async.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 import 'package:nmea_dashboard/state/parsing/0183/common.dart';
@@ -20,6 +19,11 @@ import 'package:nmea_dashboard/state/values.dart';
 import 'package:udp/udp.dart';
 
 const _networkErrorRetry = Duration(seconds: 15);
+const _networkDisconnectRetry = Duration(seconds: 2);
+
+/// How often an empty packet is inserted into the packet stream to give
+/// subscribers an opportunity to cancel.
+const _emptyPacketInterval = Duration(seconds: 3);
 
 final _log = Logger('Network');
 
@@ -70,12 +74,15 @@ Stream<BoundValue?> _valuesFromTcpConnect(
   _log.info('Starting TCP stream on $ipAddress:$portNum');
   try {
     while (true) {
+      Socket? socket;
       try {
-        var socket = await Socket.connect(ipAddress, portNum);
+        socket = await Socket.connect(ipAddress, portNum);
         await for (final value in processPackets(socket)) {
           yield value;
         }
-        socket.close();
+        _log.info('TCP stream on $ipAddress:$portNum was closed by the peer, reconnecting');
+        yield null;
+        await Future.delayed(_networkDisconnectRetry);
       } on SocketException catch (e) {
         _log.warning(
           'Exception opening TCP stream on $ipAddress:$portNum. '
@@ -83,6 +90,8 @@ Stream<BoundValue?> _valuesFromTcpConnect(
         );
         yield null;
         await Future.delayed(_networkErrorRetry);
+      } finally {
+        socket?.destroy();
       }
     }
   } finally {
@@ -98,8 +107,9 @@ Stream<BoundValue?> _valuesFromUdpListen(int portNum, PacketProcessor processPac
   _log.info('Starting UDP listen stream on $portNum');
   try {
     while (true) {
+      UDP? receiver;
       try {
-        var receiver = await UDP.bind(Endpoint.any(port: Port(portNum)));
+        receiver = await UDP.bind(Endpoint.any(port: Port(portNum)));
         await for (final value in processPackets(
           receiver.asStream().map((d) => d?.data ?? _emptyPacket),
         )) {
@@ -112,6 +122,8 @@ Stream<BoundValue?> _valuesFromUdpListen(int portNum, PacketProcessor processPac
         );
         yield null;
         await Future.delayed(_networkErrorRetry);
+      } finally {
+        receiver?.close();
       }
     }
   } finally {
@@ -121,9 +133,28 @@ Stream<BoundValue?> _valuesFromUdpListen(int portNum, PacketProcessor processPac
 
 final Uint8List _emptyPacket = Uint8List(0);
 
-/// Returns an empty Uint8List periodically.
-Stream<Uint8List> _periodicEmptyPackets() {
-  return Stream.periodic(const Duration(seconds: 3), (_) => _emptyPacket);
+/// Returns a stream of the packets in the supplied stream with an empty packet inserted every
+/// _emptyPacketInterval so that subscribers always have an opportunity to cancel, completing
+/// when the supplied stream completes.
+Stream<Uint8List> _paddedWithEmptyPackets(Stream<Uint8List> packetStream) {
+  late final StreamSubscription<Uint8List> subscription;
+  late final Timer timer;
+  final controller = StreamController<Uint8List>(
+    onCancel: () {
+      timer.cancel();
+      return subscription.cancel();
+    },
+  );
+  timer = Timer.periodic(_emptyPacketInterval, (_) => controller.add(_emptyPacket));
+  subscription = packetStream.listen(
+    controller.add,
+    onError: controller.addError,
+    onDone: () {
+      timer.cancel();
+      controller.close();
+    },
+  );
+  return controller.stream;
 }
 
 /// Returns a function that converts a packet stream into a stream of the valid
@@ -136,7 +167,7 @@ PacketProcessor makePacketProcessingFunction<M, S>(
   MessageParser<M, S> parser,
 ) {
   return (Stream<Uint8List> packetStream) async* {
-    await for (final packet in StreamGroup.merge([packetStream, _periodicEmptyPackets()])) {
+    await for (final packet in _paddedWithEmptyPackets(packetStream)) {
       parser.logAndClearIfNeeded();
       if (packet.isEmpty) {
         // Empty packets are included in the stream even if no traffic is

@@ -4,8 +4,14 @@
 
 import 'dart:typed_data';
 
+import 'package:flutter_test/flutter_test.dart';
+import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/parsing/2000/raw.dart';
-import 'package:test/test.dart';
+import 'package:nmea_dashboard/state/parsing/common.dart';
+import 'package:nmea_dashboard/state/settings/network.dart';
+
+import '../../network_utils.dart';
+import '../../utils.dart';
 
 Uint8List _pkt(String s) => Uint8List.fromList(s.codeUnits);
 
@@ -29,6 +35,8 @@ String _line(String header, {String direction = 'R', List<int> data = const [0x0
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('YdRawMessageSplitter', () {
     late YdRawMessageSplitter splitter;
 
@@ -127,6 +135,23 @@ void main() {
       expect(messages, hasLength(1));
     });
 
+    test('ignores a line with a non hexadecimal header', () {
+      expect(splitter.read(_pkt('16:23:23.404 R NOTAHEX0 01 02\n')), isEmpty);
+    });
+
+    test('ignores a line with non hexadecimal data bytes', () {
+      final header = _header(pduFormat: 0x01, source: 0x01);
+      expect(splitter.read(_pkt('16:23:23.404 R $header 01 ZZ\n')), isEmpty);
+    });
+
+    test('keeps extracting valid lines after a line that fails to parse', () {
+      final header = _header(pduFormat: 0x01, source: 0x01);
+      final goodLine = _line(header, data: [0x11]);
+      final messages = splitter.read(
+        _pkt('16:23:23.404 R NOTAHEX0 01\n$goodLine\nunterminated'),
+      );
+      expect(messages, hasLength(1));
+    });
   });
 
   group('YdRawMessageSplitter fast frame assembly', () {
@@ -253,6 +278,25 @@ void main() {
       expect(readFrames(ffHeader, [badFrame]), isEmpty);
     });
 
+    test('drops a first frame too short to contain a counter and length', () {
+      expect(
+        readFrames(ffHeader, [
+          [0],
+        ]),
+        isEmpty,
+      );
+    });
+
+    test('drops a first frame shorter than its declared payload length', () {
+      // A first frame declaring 14 payload bytes should carry the first 6 of them.
+      expect(
+        readFrames(ffHeader, [
+          [0, 14, 1, 2],
+        ]),
+        isEmpty,
+      );
+    });
+
     test('drops a continuation frame that is shorter than the remaining byte count', () {
       final payload = List<int>.generate(14, (i) => i + 1);
       final frames = fastFrames(payload);
@@ -348,6 +392,24 @@ void main() {
 
     test('rejects a message shorter than the 6 byte header plus 1 byte payload', () {
       expect(() => validator.validate(ByteData(6)), throwsFormatException);
+    });
+  });
+
+  group('YdRawMessageSplitter over the network', () {
+    test('parses a water depth frame received over udp', () async {
+      // PGN 128267 (Water Depth) carrying a depth of 12.34m and an offset of -0.5m.
+      final header = _header(pduFormat: 0xF5, pduSpecific: 0x0B, dataPage: 1, source: 0x23);
+      final line = _line(header, data: [0x03, 0xD2, 0x04, 0x00, 0x00, 0x0C, 0xFE, 0xFF]);
+      final values = await valuesFromUdpPackets(NetworkProtocol.nmea2000raw, [
+        '$line\r\n'.codeUnits,
+      ]);
+      expect(
+        values,
+        BoundValueListMatches([
+          boundSingleValue(12.34, Property.depthUncalibrated),
+          boundSingleValue(11.84, Property.depthWithOffset),
+        ]),
+      );
     });
   });
 }

@@ -24,26 +24,33 @@ class YdRawMessageSplitter extends MessageSplitter<ByteData> {
 
     final lines = _lineSplitter.read(data);
     for (final line in lines) {
-      final parts = line.split(' ');
-      if (parts.length < 4 || parts.length > 11 || parts[1] != 'R') {
-        // Frame line has wrong number of elements or is not received data. Ignore it.
-        continue;
-      }
-      final (pgn, source) = _hexHeaderToPgnSource(parts[2]);
-      final payload = Uint8List.fromList(
-        parts.skip(3).map((h) => int.parse(h, radix: 16)).toList(),
-      );
-
-      if (Nmea2000Parser.fastFramePgns.contains(pgn)) {
-        // Delegate frames that need to be assembled (fast frames) to a separate handler.
-        final message = _handleFastFrame(pgn, source, payload);
+      try {
+        final message = _readLine(line);
         if (message != null) messages.add(message.data);
-      } else {
-        // Return the single frame case directly.
-        messages.add(_SerializedMessage.fromComponents(pgn, source, payload).data);
+      } catch (e) {
+        // Silently discard to avoid overwhelming logs.
       }
     }
     return messages;
+  }
+
+  /// Returns the message contained in or completed by the supplied line, or null if the line is
+  /// not a received frame or does not complete a message.
+  _SerializedMessage? _readLine(String line) {
+    final parts = line.split(' ');
+    if (parts.length < 4 || parts.length > 11 || parts[1] != 'R') {
+      // Frame line has wrong number of elements or is not received data. Ignore it.
+      return null;
+    }
+    final (pgn, source) = _hexHeaderToPgnSource(parts[2]);
+    final payload = Uint8List.fromList(parts.skip(3).map((h) => int.parse(h, radix: 16)).toList());
+
+    if (Nmea2000Parser.fastFramePgns.contains(pgn)) {
+      // Delegate frames that need to be assembled (fast frames) to a separate handler.
+      return _handleFastFrame(pgn, source, payload);
+    }
+    // Return the single frame case directly.
+    return _SerializedMessage.fromComponents(pgn, source, payload);
   }
 
   _SerializedMessage? _handleFastFrame(int pgn, int source, Uint8List payload) {
@@ -140,6 +147,9 @@ class _FastFrameMessage {
   /// Constructs a new _fastFrameMessage from the supplied frame, throwing an exception if the
   /// sequence counter is not zero.
   _FastFrameMessage(this.pgn, this.source, Uint8List firstFrame) {
+    if (firstFrame.length < 2) {
+      throw FormatException("First frame too short. Got ${firstFrame.length}, expected 2");
+    }
     _lastCounter = firstFrame[0];
     if (_lastCounter & 0x1F != 0) {
       throw FormatException("Sequence count ${_lastCounter & 0x1F} not 0.");
@@ -150,6 +160,11 @@ class _FastFrameMessage {
     }
     _payload = Uint8List(_remainingBytes);
     final frameDataLen = min(6, _remainingBytes);
+    if (firstFrame.length < frameDataLen + 2) {
+      throw FormatException(
+        "First frame too short. Got ${firstFrame.length}, expected ${frameDataLen + 2}",
+      );
+    }
     _payload.setRange(0, frameDataLen, firstFrame, 2);
     _remainingBytes -= frameDataLen;
   }
@@ -157,6 +172,9 @@ class _FastFrameMessage {
   /// Attempts the append the supplied frame to the message content, throwing a FormatException on
   /// consistency issues.
   void addFrame(Uint8List frame) {
+    if (frame.isEmpty) {
+      throw FormatException("Frame is empty");
+    }
     final counter = frame[0];
     if (counter >> 5 != _lastCounter >> 5) {
       throw FormatException(

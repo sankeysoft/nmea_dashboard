@@ -81,5 +81,5 @@ Many thanks to:
 
 * The CANBoat project for their excellent reverse engineering of NMEA2000.
 * YachtDevices for making and supporting the hardware I use in my development.
-* Grigory Morozov for providing the motivation to implement NMEA2000 and for
-  the initial code.
+* Grigory Morozov for the motivation to implement NMEA2000 and for the initial
+  code.

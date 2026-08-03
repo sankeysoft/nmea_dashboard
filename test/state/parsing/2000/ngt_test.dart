@@ -4,8 +4,14 @@
 
 import 'dart:typed_data';
 
+import 'package:flutter_test/flutter_test.dart';
+import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/parsing/2000/ngt.dart';
-import 'package:test/test.dart';
+import 'package:nmea_dashboard/state/parsing/common.dart';
+import 'package:nmea_dashboard/state/settings/network.dart';
+
+import '../../network_utils.dart';
+import '../../utils.dart';
 
 List<int> _i32(int value) {
   final bytes = Uint8List(4);
@@ -39,7 +45,22 @@ ByteData _makeNgtPacket(
   return ByteData.sublistView(Uint8List.fromList([...bodyBytes, checksum]));
 }
 
+/// Wraps a NGT packet in the DLE-STX and DLE-ETX markers used on the wire, escaping any DLE
+/// bytes within the packet itself.
+List<int> _dleFramed(ByteData packet) {
+  const dle = 0x10;
+  const stx = 0x02;
+  const etx = 0x03;
+  return [
+    dle, stx,
+    for (final byte in Uint8List.sublistView(packet)) ...(byte == dle ? [dle, dle] : [byte]),
+    dle, etx,
+  ];
+}
+
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('DleMessageSplitter', () {
     const dle = 0x10;
     const stx = 0x02;
@@ -204,6 +225,28 @@ void main() {
       // Flip a bit part way through the payload without touching the trailing checksum byte.
       packet.setUint8(13, packet.getUint8(13) ^ 0x01);
       expect(() => NgtValidator().validate(packet), throwsFormatException);
+    });
+  });
+
+  group('NGT over the network', () {
+    test('parses a water depth packet received over udp', () async {
+      // PGN 128267 (Water Depth) carrying a depth of 12.34m and an offset of -0.5m.
+      final packet = _makeNgtPacket(128267, 0x23, [
+        0x03,
+        0xD2, 0x04, 0x00, 0x00,
+        0x0C, 0xFE,
+        0xFF,
+      ]);
+      final values = await valuesFromUdpPackets(NetworkProtocol.nmea2000ngt, [
+        _dleFramed(packet),
+      ]);
+      expect(
+        values,
+        BoundValueListMatches([
+          boundSingleValue(12.34, Property.depthUncalibrated),
+          boundSingleValue(11.84, Property.depthWithOffset),
+        ]),
+      );
     });
   });
 }

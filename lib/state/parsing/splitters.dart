@@ -5,6 +5,10 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:logging/logging.dart';
+
+final _log = Logger('MessageSplitter');
+
 /// Splits network input packets into zero or more messages of data type M, potentially retaining
 /// partial packets across calls.
 abstract class MessageSplitter<M> {
@@ -26,7 +30,12 @@ class CrlfMessageSplitter extends MessageSplitter<String> {
   List<String> read(Uint8List data) {
     List<String> messages = [];
 
-    remaining += utf8.decode(data);
+    try {
+      remaining += utf8.decode(data);
+    } on FormatException catch (e) {
+      _log.warning('Replacing invalid UTF-8 in ${data.length} byte packet: ${e.message}');
+      remaining += utf8.decode(data, allowMalformed: true);
+    }
 
     // Keep going while the string contains a break into another packet.
     var nextSplit = _findSplit(remaining);

@@ -16,10 +16,10 @@ device sending the NMEA data.
 
 * **Protocol**: The NMEA protocol and IP framing to use. Select:
 
-    * *NMEA0183 Text* for comma separated 0183 format sentences. 
-    * *NMEA2000 ActiSence NGT* for binary assembled NMEA2000 messages using DLE
+    * *"NMEA0183 Text"* for comma separated 0183 format sentences. 
+    * *"NMEA2000 ActiSense NGT"* for binary assembled NMEA2000 messages using DLE
        escapes to delimit mesages (not yet tested with real hardware). 
-    * *NMEA2000 YD RAW* for Yacht Devices' per frame text-based NMEA2000 format
+    * *"NMEA2000 YD RAW"* for Yacht Devices' per frame text-based NMEA2000 format
        (less efficient than the binary NMEA2000 formats).
 
 * **Require checksum**: (Only applies to NMEA0183) Most NMEA 0183 messages

@@ -24,6 +24,10 @@ import 'package:nmea_dashboard/state/values.dart';
 /// until settings are read.
 const _defaultStalenessDuration = Duration(seconds: 10);
 
+/// How long to wait before restarting the network subscription if it ever
+/// terminates unexpectedly.
+const _networkRestartDelay = Duration(seconds: 3);
+
 /// All known elements of marine data, collected from a network, measured
 /// on the current device, or derived from some other element.
 class DataSet with ChangeNotifier {
@@ -255,23 +259,40 @@ class DataSet with ChangeNotifier {
     _networkStaleness.duration = _networkSettings.staleness;
     // Push each value to the appropriate element.
     final networkElements = sources[Source.network]!;
-    _networkSubscription = valuesFromNetwork(_networkSettings).listen((value) {
-      // The presence of periodic null values lets us cancel this subscription
-      // but we can ignore them during the processing.
-      if (value != null) {
-        // Special case sending magnetic heading values to the true heading
-        // data element.
-        final targetProperty = (value.property == Property.headingMag)
-            ? Property.heading
-            : value.property;
-        final element = networkElements[targetProperty.name];
-        if (element == null) {
-          _log.warning('Got unrecognized network value: ${value.property}');
-        } else {
-          element.updateValue(value);
+    _networkSubscription = valuesFromNetwork(_networkSettings).listen(
+      (value) {
+        // The presence of periodic null values lets us cancel this subscription
+        // but we can ignore them during the processing.
+        if (value != null) {
+          // Special case sending magnetic heading values to the true heading
+          // data element.
+          final targetProperty = (value.property == Property.headingMag)
+              ? Property.heading
+              : value.property;
+          final element = networkElements[targetProperty.name];
+          if (element == null) {
+            _log.warning('Got unrecognized network value: ${value.property}');
+          } else {
+            element.updateValue(value);
+          }
         }
-      }
-    });
+      },
+      onError: (Object e) {
+        _log.severe('Error on network subscription: $e', e);
+      },
+      onDone: () {
+        _log.warning(
+          'Network subscription ended unexpectedly, restarting in '
+          '${_networkRestartDelay.inSeconds} seconds',
+        );
+        _networkSubscription = null;
+        Future.delayed(_networkRestartDelay, () {
+          if (_networkSubscription == null) {
+            _collectNetworkData();
+          }
+        });
+      },
+    );
   }
 
   // Start an infinite stream to keep network values up to date by listening
