@@ -1,3 +1,8 @@
+// Copyright Jody M Sankey 2026
+//
+// This software may be modified and distributed under the terms
+// of the MIT license. See the LICENCE.md file for details.
+
 part of 'common.dart';
 
 class Parser128777 extends PacketParser {
@@ -22,23 +27,11 @@ class Parser128777 extends PacketParser {
     final values = <BoundValue>[];
 
     if (rodeCounter != null) {
-      values.add(
-        boundSingleValue(
-          rodeCounter,
-          Property.anchorRodeLength,
-          tier: 1,
-        ),
-      );
+      values.add(boundSingleValue(rodeCounter, Property.anchorRodeLength, tier: 1));
     }
 
     if (motion != 3) {
-      values.add(
-        boundSingleValue(
-          motion,
-          Property.anchorMotion,
-          tier: 1,
-        ),
-      );
+      values.add(boundSingleValue(motion, Property.anchorMotion, tier: 1));
     }
 
     return values;
