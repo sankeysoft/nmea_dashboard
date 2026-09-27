@@ -85,24 +85,13 @@ enum Property {
     Dimension.duration,
     group: Group.systems,
   ),
-  
+
   alternator1Voltage('Alternator 1 Voltage', 'Alt 1', Dimension.voltage, group: Group.systems),
   alternator2Voltage('Alternator 2 Voltage', 'Alt 2', Dimension.voltage, group: Group.systems),
   anchorRodeLength('Anchor Rode Length', 'Anchor', Dimension.depth, group: Group.systems),
   anchorMotion('Anchor Motion', 'Anchor Motion', Dimension.status, group: Group.systems),
-  anchorTopWarning(
-  'Anchor Top Warning',
-  'Anchor Top',
-  Dimension.status,
-  group: Group.systems,
-),
-
-anchorEndWarning(
-  'Anchor End Warning',
-  'Anchor End',
-  Dimension.status,
-  group: Group.systems,
-),
+  anchorTopWarning('Anchor Top Warning', 'Anchor Top', Dimension.status, group: Group.systems),
+  anchorEndWarning('Anchor End Warning', 'Anchor End', Dimension.status, group: Group.systems),
   courseOverGround('Course over ground', 'COG', Dimension.bearing),
   crossTrackError('Cross track error', 'XTE', Dimension.crossTrackError, group: Group.navigation),
   currentSet('Set', 'Set', Dimension.bearing, group: Group.environment),
