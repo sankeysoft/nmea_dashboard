@@ -205,8 +205,7 @@ class VmgWptCalculatedDataElement extends SingleValueDoubleConsistentDataElement
 
 /// Computed warning state for the anchor chain.
 /// 0 = OK, 1 = ALARM.
-class AnchorWarningCalculatedDataElement
-    extends ConsistentDataElement<SingleValue<int>>
+class AnchorWarningCalculatedDataElement extends ConsistentDataElement<SingleValue<int>>
     with WithAlarms<SingleValue<int>, SingleValue<int>> {
   final DataElement<SingleValue<double>, Value> _rodeLength;
   final DataElement<SingleValue<int>, Value> _motion;
@@ -217,16 +216,9 @@ class AnchorWarningCalculatedDataElement
     Property property, {
     required this.warnAtTop,
   }) : _rodeLength =
-           network[Property.anchorRodeLength.name]!
-               as DataElement<SingleValue<double>, Value>,
-       _motion =
-           network[Property.anchorMotion.name]!
-               as DataElement<SingleValue<int>, Value>,
-       super(
-         Source.computed,
-         property,
-         null,
-       ) {
+           network[Property.anchorRodeLength.name]! as DataElement<SingleValue<double>, Value>,
+       _motion = network[Property.anchorMotion.name]! as DataElement<SingleValue<int>, Value>,
+       super(Source.computed, property, null) {
     for (final element in [_rodeLength, _motion]) {
       element.addListener(() {
         final value = _calculateValue();
@@ -234,13 +226,7 @@ class AnchorWarningCalculatedDataElement
         if (value == null) {
           invalidateValue();
         } else {
-          updateValue(
-            BoundValue(
-              Source.computed,
-              property,
-              value,
-            ),
-          );
+          updateValue(BoundValue(Source.computed, property, value));
         }
       });
     }
@@ -270,14 +256,10 @@ class AnchorWarningCalculatedDataElement
 
     if (warnAtTop) {
       // Warnung nur beim Einholen und im letzten Meter.
-      return SingleValue<int>(
-        motion == 2 && length <= 1.0 ? 1 : 0,
-      );
+      return SingleValue<int>(motion == 2 && length <= 1.0 ? 1 : 0);
     }
 
     // Warnung nur beim Ausfahren ab 24 m.
-    return SingleValue<int>(
-      motion == 1 && length >= 24.0 ? 1 : 0,
-    );
+    return SingleValue<int>(motion == 1 && length >= 24.0 ? 1 : 0);
   }
 }
