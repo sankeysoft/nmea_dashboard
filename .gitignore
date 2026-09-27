@@ -51,3 +51,7 @@ key.properties
 
 # Claude config
 /.claude
+
+# Local Android build/crash artifacts
+/android/build/
+/android/*.hprof

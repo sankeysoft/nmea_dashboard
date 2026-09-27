@@ -152,6 +152,8 @@ class ConsistentDataElement<V extends Value> extends DataElement<V, V> {
       return SingleValueDoubleConsistentDataElement(source, property, staleness);
     } else if (property.dimension.storageType == SingleValue<DateTime>) {
       return ConsistentDataElement<SingleValue<DateTime>>(source, property, staleness);
+    } else if (property.dimension.storageType == SingleValue<int>) {
+      return ConsistentDataElement<SingleValue<int>>(source, property, staleness);
     } else if (property.dimension.storageType == DoubleValue<double>) {
       return ConsistentDataElement<DoubleValue<double>>(source, property, staleness);
     } else {

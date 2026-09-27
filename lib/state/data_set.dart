@@ -201,8 +201,26 @@ class DataSet with ChangeNotifier {
   Map<String, DataElement> _createComputedDataElements() {
     Map<String, DataElement> elementMap = {};
     Map<String, DataElement> networkElements = sources[Source.network]!;
-    elementMap[Property.vmgWind.name] = VmgWindCalculatedDataElement(networkElements);
-    elementMap[Property.vmgWaypoint.name] = VmgWptCalculatedDataElement(networkElements);
+
+    elementMap[Property.vmgWind.name] =
+        VmgWindCalculatedDataElement(networkElements);
+    elementMap[Property.vmgWaypoint.name] =
+        VmgWptCalculatedDataElement(networkElements);
+
+    elementMap[Property.anchorTopWarning.name] =
+        AnchorWarningCalculatedDataElement(
+          networkElements,
+          Property.anchorTopWarning,
+          warnAtTop: true,
+        );
+
+    elementMap[Property.anchorEndWarning.name] =
+        AnchorWarningCalculatedDataElement(
+          networkElements,
+          Property.anchorEndWarning,
+          warnAtTop: false,
+        );
+
     for (final element in elementMap.values) {
       if (element is WithHistory) {
         element.registerHistoryManager(_historyManager);
@@ -211,6 +229,7 @@ class DataSet with ChangeNotifier {
         element.registerAlarmManager(_alarmManager);
       }
     }
+
     return elementMap;
   }
 
@@ -284,9 +303,7 @@ class DataSet with ChangeNotifier {
         if (value != null) {
           // Special case sending magnetic heading values to the true heading
           // data element.
-          final targetProperty = (value.property == Property.headingMag)
-              ? Property.heading
-              : value.property;
+          final targetProperty = value.property;
           final element = networkElements[targetProperty.name];
           if (element == null) {
             _log.warning('Got unrecognized network value: ${value.property}');

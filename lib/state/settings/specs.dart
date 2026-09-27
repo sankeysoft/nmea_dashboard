@@ -141,6 +141,10 @@ class DataCellSpec {
   /// The format to use when rendering the element.
   final String format;
 
+  /// How a current value is rendered, e.g. value or gauge.
+  @JsonKey(defaultValue: 'value')
+  final String displayMode;
+
   /// An optional name to override the source name on display.
   @JsonKey(includeIfNull: false)
   final String? name;
@@ -150,6 +154,7 @@ class DataCellSpec {
     this.element,
     this.type,
     this.format, {
+    this.displayMode = 'value',
     this.name,
     this.statsInterval,
     this.historyInterval,

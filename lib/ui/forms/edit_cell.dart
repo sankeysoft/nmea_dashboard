@@ -88,6 +88,7 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
   Group? _group;
   String? _element;
   String? _format;
+  late String _displayMode;
   CellType? _type;
   StatsInterval? _statsInterval;
   HistoryInterval? _historyInterval;
@@ -104,6 +105,7 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
     // We can't validate the format until we've get a dataSet to supply the dimension for any
     // derived data elements.
     _format = widget.spec.format;
+    _displayMode = widget.spec.displayMode;
     _type = CellType.fromString(widget.spec.type);
     _statsInterval = StatsInterval.fromString(widget.spec.statsInterval);
     _historyInterval = HistoryInterval.fromString(widget.spec.historyInterval);
@@ -196,6 +198,7 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
                 _buildSourceField(),
                 _buildElementField(),
                 _buildTypeField(),
+                _buildDisplayModeField(),
                 _buildFormatField(),
                 _buildOverrideNameField(),
                 _buildNameField(),
@@ -212,6 +215,7 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
                 _element ?? '',
                 _type?.name ?? '',
                 _format ?? '',
+                displayMode: _displayMode,
                 name: _isNameOverridden ? _nameController.text : null,
                 statsInterval: _statsInterval?.name,
                 historyInterval: _historyInterval?.name,
@@ -327,6 +331,26 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
           return 'Type must be set';
         }
         return null;
+      },
+    );
+  }
+
+  Widget _buildDisplayModeField() {
+    if (_type != CellType.current) {
+      return const SizedBox.shrink();
+    }
+
+    return buildDropdownBox(
+      label: 'Style',
+      items: [
+        DropdownEntry(value: 'value', text: 'Value'),
+        DropdownEntry(value: 'gauge', text: 'Gauge'),
+      ],
+      initialValue: _displayMode,
+      onChanged: (String? value) {
+        setState(() {
+          _displayMode = value ?? 'value';
+        });
       },
     );
   }

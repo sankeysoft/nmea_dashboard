@@ -24,7 +24,7 @@ const BorderRadius _roundedRadius = BorderRadius.all(Radius.circular(10));
 /// Contrained alphabets for use in a text box.
 enum Alphabet {
   any(null, null),
-  integer(TextInputType.number, r'[0-9]'),
+  integer(TextInputType.numberWithOptions(signed: false, decimal: false), null),
   floatingPoint(TextInputType.numberWithOptions(signed: true, decimal: true), r'[0-9+\-.,]');
 
   final TextInputType? keyboard;

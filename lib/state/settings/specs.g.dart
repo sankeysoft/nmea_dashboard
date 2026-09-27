@@ -44,6 +44,7 @@ DataCellSpec _$DataCellSpecFromJson(Map<String, dynamic> json) => DataCellSpec(
   json['element'] as String,
   json['type'] as String? ?? 'current',
   json['format'] as String,
+  displayMode: json['displayMode'] as String? ?? 'value',
   name: json['name'] as String?,
   statsInterval: json['statsInterval'] as String?,
   historyInterval: json['historyInterval'] as String?,
@@ -57,6 +58,7 @@ Map<String, dynamic> _$DataCellSpecToJson(DataCellSpec instance) =>
       'statsInterval': ?instance.statsInterval,
       'historyInterval': ?instance.historyInterval,
       'format': instance.format,
+      'displayMode': instance.displayMode,
       'name': ?instance.name,
     };
 

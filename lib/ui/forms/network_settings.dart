@@ -185,7 +185,7 @@ class _NetworkSettingsFormState extends StatefulFormState<_NetworkSettingsForm> 
       initialValue: _staleness.inSeconds.toString(),
       suffix: 'seconds',
       maxLength: 4,
-      alphabet: Alphabet.integer,
+      alphabet: Alphabet.any,
       validator: (value) {
         final number = int.tryParse(value ?? '');
         if (number == null || number < 1 || number > 3600) {

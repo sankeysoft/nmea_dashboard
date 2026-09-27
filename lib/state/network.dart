@@ -46,6 +46,27 @@ const _idleTimeout = Duration(minutes: 5);
 
 final _log = Logger('Network');
 
+/// Sends the anchor-chain reset command to a Yacht Devices gateway
+/// using the YD RAW UDP format.
+///
+/// Custom PGN 65300 (0xFF14)
+/// Payload: 41 4E 4B 52 01 = "ANKR" + reset command
+Future<void> sendAnchorResetCommand(InternetAddress ipAddress, int portNum) async {
+  UDP? sender;
+
+  try {
+    sender = await UDP.bind(Endpoint.any());
+
+    const message = '18FF14FE 41 4E 4B 52 01\r\n';
+
+    await sender.send(message.codeUnits, Endpoint.unicast(ipAddress, port: Port(portNum)));
+
+    _log.info('Anchor reset command sent to $ipAddress:$portNum');
+  } finally {
+    sender?.close();
+  }
+}
+
 /// A function that converts a stream of network packets into a stream of bound values parsed
 /// from the NMEA messages contained in those network packets.
 typedef PacketProcessor = Stream<BoundValue?> Function(Stream<Uint8List> packetStream);
