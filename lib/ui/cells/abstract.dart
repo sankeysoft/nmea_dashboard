@@ -170,7 +170,7 @@ class _CellUnits extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = Theme.of(context).textTheme.headlineMedium!;
+    final style = Theme.of(context).textTheme.titleLarge!;
     return FittedBox(
       fit: BoxFit.contain,
       child: Text(units, style: style),
@@ -185,7 +185,7 @@ class _CellHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = Theme.of(context).textTheme.headlineMedium!;
+    final style = Theme.of(context).textTheme.titleLarge!;
     return FittedBox(
       fit: BoxFit.contain,
       child: Text(heading, style: style),

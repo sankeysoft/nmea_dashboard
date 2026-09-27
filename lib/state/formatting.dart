@@ -284,6 +284,17 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
       isDefault: true,
     ),
   },
+  Dimension.magneticBearing: {
+    'magnetic': CustomNumericFormatter<SingleValue<double>>(
+      Dimension.magneticBearing,
+      'magnetic',
+      '°M',
+      conversion: (value) => value.data,
+      unconversion: (number) => SingleValue(number),
+      formatting: (number) => (number == null) ? '---' : _bearingString(number, 'M'),
+      isDefault: true,
+    ),
+  },
   Dimension.crossTrackError: {
     'meters': CustomNumericFormatter<SingleValue<double>>(
       Dimension.crossTrackError,
@@ -315,6 +326,28 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
       isDefault: true,
     ),
   },
+  Dimension.duration: {
+    'hours': SimpleSvdFormatter(
+      Dimension.duration,
+      'hours',
+      'h',
+      '----.-',
+      1.0,
+      1,
+      isDefault: true,
+    ),
+  },
+  Dimension.fuelFlow: {
+    'litersPerHour': SimpleSvdFormatter(
+      Dimension.fuelFlow,
+      'liters/hour',
+      'l/h',
+      '--.-',
+      1.0,
+      1,
+      isDefault: true,
+    ),
+  },
   Dimension.depth: {
     'meters': SimpleSvdFormatter(Dimension.depth, 'meters', 'm', '--.-', 1.0, 1),
     'feet': SimpleSvdFormatter(
@@ -336,6 +369,22 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
       conversion: (value) => value.data.toDouble(),
       unconversion: (number) => SingleValue(number.round()),
       formatting: (value) => (value == null) ? '-' : value.round().toString(),
+      isDefault: true,
+    ),
+  },
+  Dimension.status: {
+    'status': CustomNumericFormatter<SingleValue<int>>(
+      Dimension.status,
+      'status',
+      null,
+      conversion: (value) => value.data.toDouble(),
+      unconversion: (number) => SingleValue(number.round()),
+      formatting: (value) {
+        if (value == null) {
+          return '-';
+        }
+        return value.round() == 0 ? 'OK' : 'ALARM';
+      },
       isDefault: true,
     ),
   },
@@ -452,6 +501,17 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
       'Y-M-D',
       (val) =>
           val == null ? '-------\n--:--:--' : DateFormat('yyyy-MM-dd\nHH:mm:ss').format(val.data),
+    ),
+  },
+  Dimension.current: {
+    'amperes': SimpleSvdFormatter(
+      Dimension.current,
+      'amperes',
+      'A',
+      '---.-',
+      1.0,
+      1,
+      isDefault: true,
     ),
   },
   Dimension.voltage: {
