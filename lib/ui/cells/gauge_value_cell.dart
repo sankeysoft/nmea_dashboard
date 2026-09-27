@@ -8,7 +8,6 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:nmea_dashboard/state/data_element.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
-import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:nmea_dashboard/state/values.dart';
 import 'package:nmea_dashboard/ui/cells/abstract.dart';
 import 'package:provider/provider.dart';
@@ -18,7 +17,7 @@ class GaugeValueCell extends HeadingContentsCell {
   GaugeValueCell({
     required DataElement element,
     required Formatter formatter,
-    required DataCellSpec spec,
+    required super.spec,
     DataElement? externalAlarmElement,
     double minValue = 0.0,
     double maxValue = 6000.0,
@@ -37,7 +36,6 @@ class GaugeValueCell extends HeadingContentsCell {
            ),
          ),
          alarmState: (element is WithAlarms) ? element.alarmState : null,
-         spec: spec,
        );
 }
 
