@@ -82,6 +82,27 @@ void main() {
     expect(HistoryInterval.fortyEightHours.formatTime(dt), 'Jun 15');
   });
 
+  test('HistoryIntervals should have consistent definitions in increasing order', () {
+    Duration? previous;
+    for (final interval in HistoryInterval.values) {
+      final total = interval.segment * interval.count;
+      expect(total.inMicroseconds % interval.tick.inMicroseconds, 0, reason: interval.name);
+      if (previous != null) expect(total, greaterThan(previous), reason: interval.name);
+      previous = total;
+    }
+    expect(HistoryInterval.sixHours.segment * HistoryInterval.sixHours.count, Duration(hours: 6));
+    expect(
+      HistoryInterval.twentyFourHours.segment * HistoryInterval.twentyFourHours.count,
+      Duration(hours: 24),
+    );
+  });
+
+  test('StatsIntervals should be in increasing order', () {
+    final durations = StatsInterval.values.map((i) => i.duration).toList();
+    expect(durations, [...durations]..sort());
+    expect(StatsInterval.fiveSec.duration, Duration(seconds: 5));
+  });
+
   test('StatsInterval should format cell names', () {
     final element = ConsistentDataElement(
       Source.network,

@@ -311,7 +311,9 @@ enum CellType {
 enum HistoryInterval {
   fifteenMin('15 minutes', '15min', Duration(seconds: 10), 90, Duration(minutes: 5), 'HH:mm'),
   twoHours('2 hours', '2hr', Duration(minutes: 1), 120, Duration(hours: 1), 'HH:mm'),
+  sixHours('6 hours', '6hr', Duration(minutes: 3), 120, Duration(hours: 2), 'HH:mm'),
   twelveHours('12 hours', '12hr', Duration(minutes: 6), 120, Duration(hours: 3), 'HH:mm'),
+  twentyFourHours('24 hours', '24hr', Duration(minutes: 15), 96, Duration(hours: 6), 'HH:mm'),
   fortyEightHours('48 hours', '48hr', Duration(minutes: 30), 96, Duration(days: 1), 'MMM d');
 
   /// The string to display.
@@ -360,6 +362,7 @@ enum HistoryInterval {
 
 /// A time interval over which statistics data may be calculated.
 enum StatsInterval {
+  fiveSec('5 seconds', '5s', Duration(seconds: 5)),
   fifteenSec('15 seconds', '15s', Duration(seconds: 15)),
   oneMin('1 minute', '1m', Duration(minutes: 1)),
   fiveMin('5 minutes', '5m', Duration(minutes: 5));
