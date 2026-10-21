@@ -7,6 +7,7 @@ import 'package:nmea_dashboard/state/data_element.dart';
 import 'package:nmea_dashboard/state/data_set.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:nmea_dashboard/state/common.dart';
+import 'package:nmea_dashboard/state/settings/clipboard.dart';
 import 'package:nmea_dashboard/state/settings/format.dart';
 import 'package:nmea_dashboard/state/settings/page.dart';
 import 'package:nmea_dashboard/state/settings/specs.dart';
@@ -26,7 +27,16 @@ class EditCellPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return StatefulFormPage(
       title: 'Edit cell',
-      actions: [_AlarmsButton(_formKey), const HelpButton('edit_cell.md')],
+      actions: [
+        _AlarmsButton(_formKey),
+        CopyButton(kind: ClipboardKind.cell, getText: (_) => _formKey.currentState?.clipboardText),
+        PasteButton(
+          kind: ClipboardKind.cell,
+          isValid: (_, text) => PageSettings.cellFromClipboard(text) != null,
+          onPaste: (_, text) => _formKey.currentState?.paste(text),
+        ),
+        const HelpButton('edit_cell.md'),
+      ],
       child: _EditCellForm(key: _formKey, spec: spec),
     );
   }
@@ -75,28 +85,74 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
   HistoryInterval? _historyInterval;
   bool _isNameOverridden = false;
   final _nameController = TextEditingController();
+  // Incremented on each paste to force all fields to rebuild from the new state.
+  int _pasteCount = 0;
 
   @override
   void initState() {
-    _source = Source.fromString(widget.spec.source);
+    _loadSpec(widget.spec);
+    super.initState();
+  }
+
+  // Sets all the fields in the form state from the supplied spec.
+  void _loadSpec(DataCellSpec spec) {
+    _source = Source.fromString(spec.source);
     // Init group to null now, will set if revelant in build when we have a dataSet.
     _group = null;
     // Derived elements don't have complile-time definitions, so don't sanitize element yet.
-    _element = widget.spec.element;
+    _element = spec.element;
     // We can't validate the format until we've get a dataSet to supply the dimension for any
     // derived data elements.
-    _format = widget.spec.format;
-    _type = CellType.fromString(widget.spec.type);
-    _statsInterval = StatsInterval.fromString(widget.spec.statsInterval);
-    _historyInterval = HistoryInterval.fromString(widget.spec.historyInterval);
-    _isNameOverridden = (widget.spec.name != null);
-    if (widget.spec.name != null) {
-      _nameController.text = widget.spec.name!;
+    _format = spec.format;
+    _type = CellType.fromString(spec.type);
+    _statsInterval = StatsInterval.fromString(spec.statsInterval);
+    _historyInterval = HistoryInterval.fromString(spec.historyInterval);
+    _isNameOverridden = (spec.name != null);
+    if (spec.name != null) {
+      _nameController.text = spec.name!;
     } else {
       // Building the name field will update this to reflect the property.
       _nameController.text = '';
     }
-    super.initState();
+  }
+
+  // Returns a new spec from the current form state, reusing the key of the original spec.
+  DataCellSpec _currentSpec() {
+    return DataCellSpec(
+      _source?.name ?? '',
+      _element ?? '',
+      _type?.name ?? '',
+      _format ?? '',
+      name: _isNameOverridden ? _nameController.text : null,
+      statsInterval: _statsInterval?.name,
+      historyInterval: _historyInterval?.name,
+      key: widget.spec.key,
+    );
+  }
+
+  /// Returns clipboard text for the current form contents, or null if the form is not valid.
+  String? get clipboardText {
+    if (!formKey.currentState!.validate()) {
+      return null;
+    }
+    return PageSettings.cellToClipboard(_currentSpec());
+  }
+
+  /// Replaces the form contents with a cell from clipboard text, returning an error message if
+  /// the cell could not be used.
+  String? paste(String text) {
+    final spec = PageSettings.cellFromClipboard(text);
+    if (spec == null) {
+      return 'Clipboard does not contain valid cell definition json';
+    }
+    if (_dataSet.sources[Source.fromString(spec.source)]?[spec.element] == null) {
+      return 'Clipboard cell uses an element that is not available';
+    }
+    setState(() {
+      _loadSpec(spec);
+      _pasteCount++;
+    });
+    return null;
   }
 
   @override
@@ -188,6 +244,7 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
         children: [
           Expanded(
             child: ListView(
+              key: ValueKey(_pasteCount),
               children: [
                 _buildSourceField(),
                 _buildElementField(),
@@ -204,17 +261,7 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
               // By this stage all the fields will have saved back to our state and we can be
               // confident all the fields are populated. Just create a new spec from these
               // (reusing the previous key) and ask the settings to use it.
-              final cellSpec = DataCellSpec(
-                _source?.name ?? '',
-                _element ?? '',
-                _type?.name ?? '',
-                _format ?? '',
-                name: _isNameOverridden ? _nameController.text : null,
-                statsInterval: _statsInterval?.name,
-                historyInterval: _historyInterval?.name,
-                key: widget.spec.key,
-              );
-              _pageSettings.updateCell(cellSpec);
+              _pageSettings.updateCell(_currentSpec());
               final dimension = _dataSet.sources[_source]?[_element]?.property.dimension;
               _formatPrefs.recordUsage(dimension?.name, _format);
 

@@ -13,6 +13,8 @@ const _pageJson1 =
 const _pageJson2 =
     '[{"name":"p2","cells":[{"source":"local","element":"time","type":"current","format":"hhmm"}]}]';
 
+const _clipboardJson = '{"kind":"pages","data":$_pageJson2}';
+
 Future<SharedPreferences> _prefs([Map<String, Object> initial = const {}]) async {
   SharedPreferences.setMockInitialValues(initial);
   return SharedPreferences.getInstance();
@@ -135,7 +137,7 @@ void main() {
     s.selectPage(0);
     int count = 0;
     s.addListener(() => count++);
-    expect(s.useClipboard(_pageJson2), isTrue);
+    expect(s.useClipboard(_clipboardJson), isTrue);
     expect(s.dataPageSpecs.first.name, 'p2');
     expect(s.selectedPageIndex, isNull);
     expect(count, 1);
@@ -154,9 +156,69 @@ void main() {
     final s = PageSettings(await _prefs(), _pageJson1);
     int count = 0;
     s.addListener(() => count++);
-    expect(s.useClipboard(_pageJson2, dryRun: true), isTrue);
+    expect(s.useClipboard(_clipboardJson, dryRun: true), isTrue);
     expect(s.dataPageSpecs.first.name, 'p1');
     expect(count, 0);
+  });
+
+  test('useClipboard rejects unwrapped or wrong kind JSON', () async {
+    final s = PageSettings(await _prefs(), _pageJson1);
+    expect(s.useClipboard(_pageJson2), isFalse);
+    expect(s.useClipboard('{"kind":"alarms","data":$_pageJson2}'), isFalse);
+    expect(s.dataPageSpecs.first.name, 'p1');
+  });
+
+  test('toClipboard round-trips through useClipboard', () async {
+    final s1 = PageSettings(await _prefs(), _pageJson1);
+    final s2 = PageSettings(await _prefs(), _pageJson2);
+    expect(s2.useClipboard(s1.toClipboard()), isTrue);
+    expect(s2.dataPageSpecs.first.name, 'p1');
+  });
+
+  group('page clipboard', () {
+    test('round-trips a page', () {
+      final spec = DataPageSpec('p', [DataCellSpec('local', 'time', 'current', 'hhmm')]);
+      final parsed = PageSettings.pageFromClipboard(PageSettings.pageToClipboard(spec));
+      expect(parsed, isNotNull);
+      expect(parsed!.name, 'p');
+      expect(parsed.cells.single.element, 'time');
+      expect(parsed.key, isNot(spec.key));
+    });
+
+    test('rejects pages, cells, unwrapped and invalid json', () {
+      final cell = DataCellSpec('local', 'time', 'current', 'hhmm');
+      expect(PageSettings.pageFromClipboard(_clipboardJson), isNull);
+      expect(PageSettings.pageFromClipboard(PageSettings.cellToClipboard(cell)), isNull);
+      expect(PageSettings.pageFromClipboard('{"name":"p","cells":[]}'), isNull);
+      expect(PageSettings.pageFromClipboard('{"kind":"page","data":{"name":"p"}}'), isNull);
+      expect(PageSettings.pageFromClipboard('not json'), isNull);
+    });
+  });
+
+  group('cell clipboard', () {
+    test('round-trips cells', () {
+      for (final spec in [
+        DataCellSpec('local', 'time', 'current', 'hhmm'),
+        DataCellSpec('network', 'depth', 'current', 'feet', name: 'Deep'),
+        DataCellSpec('network', 'depth', 'average', 'feet', statsInterval: 'oneMin'),
+        DataCellSpec('network', 'depth', 'history', 'feet', historyInterval: 'twoHours'),
+      ]) {
+        final parsed = PageSettings.cellFromClipboard(PageSettings.cellToClipboard(spec));
+        expect(parsed, isNotNull);
+        expect(parsed!.toJson(), spec.toJson());
+        expect(parsed.key, isNot(spec.key));
+      }
+    });
+
+    test('rejects pages, unwrapped and invalid json', () {
+      const cell = '{"source":"local","element":"time","type":"current","format":"hhmm"}';
+      expect(PageSettings.cellFromClipboard('{"kind":"cell","data":$cell}'), isNotNull);
+      expect(PageSettings.cellFromClipboard(cell), isNull);
+      expect(PageSettings.cellFromClipboard(_clipboardJson), isNull);
+      expect(PageSettings.cellFromClipboard('{"kind":"page","data":$cell}'), isNull);
+      expect(PageSettings.cellFromClipboard('{"kind":"cell","data":[$cell]}'), isNull);
+      expect(PageSettings.cellFromClipboard('not json'), isNull);
+    });
   });
 
   test('toJson round-trips through construction', () async {

@@ -59,10 +59,11 @@ Cell createCell(DataSet dataset, DataCellSpec spec) {
       }
       if (element is! WithStats) {
         _log.warning('Could not build average cell for non-stats type ${element.property}');
+        return NotFoundCell(spec: spec);
       }
       return AverageValueCell(
         element: element,
-        stats: (element as WithStats).stats(interval),
+        stats: element.stats(interval),
         formatter: formatter,
         spec: spec,
       );
@@ -78,10 +79,11 @@ Cell createCell(DataSet dataset, DataCellSpec spec) {
       }
       if (element is! WithHistory) {
         _log.warning('Could not build history cell for non-history type ${element.property}');
+        return NotFoundCell(spec: spec);
       }
       return HistoryCell(
         element: element,
-        history: (element as WithHistory).history(interval),
+        history: element.history(interval),
         formatter: formatter,
         spec: spec,
       );

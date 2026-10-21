@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
+import 'package:nmea_dashboard/state/settings/clipboard.dart';
 import 'package:nmea_dashboard/state/settings/common.dart';
 import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -28,9 +29,8 @@ class PageSettings with ChangeNotifier {
   /// Creates a settings page from the supplied prefs, or from defaults if
   /// the shared prefs are missing or invalid.
   PageSettings(this._prefs, String defaultJson) {
-    final pagePrefString = _prefs.getString(_prefKey);
-    if (!_fromJson(json: pagePrefString ?? '', source: 'shared preferences')) {
-      _fromJson(json: defaultJson, source: 'defaults');
+    if (!_useJson(prefJson(_prefs, _prefKey, _log), 'shared preferences')) {
+      _useJson(decodeJson(defaultJson, 'default pages', _log), 'defaults');
     }
   }
 
@@ -62,23 +62,66 @@ class PageSettings with ChangeNotifier {
 
   /// Replaces the current set of pages with the defaults.
   void useDefaults() async {
-    _fromJson(json: await _getDefaultPages(), source: 'defaults');
+    _useJson(decodeJson(await _getDefaultPages(), 'default pages', _log), 'defaults');
     _save();
     _selectedPageKey = null;
     notifyListeners();
   }
 
-  /// Replaces the current set of pages with pages from a json encoded string,
-  /// making no changes if the string is not valid or if dryRun is true.
-  /// Returns true on success.
+  /// Replaces the current set of pages with pages from clipboard text, making no changes if the
+  /// text is not valid or if dryRun is true. Returns true on success.
   bool useClipboard(String text, {bool dryRun = false}) {
-    bool success = _fromJson(json: text, source: 'clipboard', dryRun: dryRun);
-    if (!dryRun && success) {
+    final pageSpecs = validateJsonList(
+      clipboardData(text, ClipboardKind.pages),
+      (p) => DataPageSpec.fromJson(p),
+      'pages clipboard',
+      _log,
+      minimumLength: 1,
+    );
+    if (pageSpecs == null) {
+      return false;
+    } else if (!dryRun) {
+      _usePages(pageSpecs, 'clipboard');
       _save();
       _selectedPageKey = null;
       notifyListeners();
     }
-    return success;
+    return true;
+  }
+
+  /// Returns clipboard text containing the configuration of all pages.
+  String toClipboard() {
+    return encodeClipboard(ClipboardKind.pages, _dataPageSpecs.values.toList());
+  }
+
+  /// Returns clipboard text containing the configuration of a single page.
+  static String pageToClipboard(DataPageSpec pageSpec) {
+    return encodeClipboard(ClipboardKind.page, pageSpec);
+  }
+
+  /// Returns a new page spec from clipboard text, or null if the text is not valid.
+  static DataPageSpec? pageFromClipboard(String text) {
+    return validateJsonObject(
+      clipboardData(text, ClipboardKind.page),
+      (p) => DataPageSpec.fromJson(p),
+      'page clipboard',
+      _log,
+    );
+  }
+
+  /// Returns clipboard text containing the configuration of a single cell.
+  static String cellToClipboard(DataCellSpec cellSpec) {
+    return encodeClipboard(ClipboardKind.cell, cellSpec);
+  }
+
+  /// Returns a new cell spec from clipboard text, or null if the text is not valid.
+  static DataCellSpec? cellFromClipboard(String text) {
+    return validateJsonObject(
+      clipboardData(text, ClipboardKind.cell),
+      (c) => DataCellSpec.fromJson(c),
+      'cell clipboard',
+      _log,
+    );
   }
 
   /// Replaces the current set of pages with the supplied specifications.
@@ -127,33 +170,31 @@ class PageSettings with ChangeNotifier {
     return json.encode(jsonIterator);
   }
 
-  /// Overwrites all data with pages from a json encoded string, making no
-  /// changes if the string is not valid or if dryRun is true. Returns true on
-  /// success.
-  bool _fromJson({required String json, required String source, bool dryRun = false}) {
+  /// Overwrites all data with pages from decoded json, making no changes if
+  /// the json is not valid. Returns true on success.
+  bool _useJson(Object? decodedJson, String source) {
     // Use the helper function to convert to a list of bare specs
     final pageSpecs = validateJsonList(
-      json,
+      decodedJson,
       (p) => DataPageSpec.fromJson(p),
       'page settings',
       _log,
       minimumLength: 1,
     );
-    // Leave with a failure if this didn't work or success we're dry running and
-    // it did.
     if (pageSpecs == null) {
       return false;
-    } else if (dryRun) {
-      return true;
     }
+    _usePages(pageSpecs, source);
+    return true;
+  }
 
-    // If we're not dry run and have specs use them to create a map.
+  /// Replaces the map of pages with the supplied specs.
+  void _usePages(List<DataPageSpec> pageSpecs, String source) {
     _dataPageSpecs.clear();
     for (final spec in pageSpecs) {
       _dataPageSpecs[spec.key] = spec;
     }
     _log.info('Loaded ${pageSpecs.length} pages from $source');
-    return true;
   }
 
   /// Saves the configuration of all data pages into shared prefs.

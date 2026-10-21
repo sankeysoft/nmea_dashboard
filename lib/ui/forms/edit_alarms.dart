@@ -3,11 +3,11 @@
 // of the MIT license. See the LICENCE.md file for details.
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:nmea_dashboard/state/alarms.dart';
 import 'package:nmea_dashboard/state/data_element.dart';
 import 'package:nmea_dashboard/state/data_set.dart';
 import 'package:nmea_dashboard/state/settings/alarm.dart';
+import 'package:nmea_dashboard/state/settings/clipboard.dart';
 import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:nmea_dashboard/ui/forms/edit_alarm.dart';
 import 'package:nmea_dashboard/ui/forms/abstract.dart';
@@ -19,62 +19,32 @@ class EditAlarmsPage extends StatelessFormPage {
     : super(
         title: element == null ? 'Edit alarms' : 'Edit ${element.property.shortName} alarms',
         actions: element == null
-            ? [_CopyButton(), _PasteButton(), const HelpButton('edit_alarms.md')]
+            ? [
+                CopyButton(
+                  kind: ClipboardKind.alarms,
+                  getText: (context) =>
+                      Provider.of<AlarmSettings>(context, listen: false).toClipboard(),
+                ),
+                PasteButton(
+                  kind: ClipboardKind.alarms,
+                  isValid: (context, text) => Provider.of<AlarmSettings>(
+                    context,
+                    listen: false,
+                  ).useClipboard(text, dryRun: true),
+                  onPaste: (context, text) {
+                    Provider.of<AlarmSettings>(context, listen: false).useClipboard(text);
+                    return null;
+                  },
+                  confirmTitle: 'Load alarms from clipboard?',
+                  confirmContent:
+                      'Do you want to replace all alarms with the clipboard data? '
+                      'This action cannot be undone.',
+                ),
+                const HelpButton('edit_alarms.md'),
+              ]
             : [const HelpButton('edit_alarms.md')],
         content: _EditAlarmsContent(element),
       );
-}
-
-class _CopyButton extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final settings = Provider.of<AlarmSettings>(context);
-    final sm = ScaffoldMessenger.of(context);
-    return IconButton(
-      icon: const Icon(Icons.copy_all_outlined),
-      onPressed: () {
-        Clipboard.setData(
-          ClipboardData(text: settings.toJson()),
-        ).then((_) => showSnackBar(sm, 'Alarm definitions copied to clipboard'));
-      },
-    );
-  }
-}
-
-class _PasteButton extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final settings = Provider.of<AlarmSettings>(context);
-    final sm = ScaffoldMessenger.of(context);
-    return IconButton(
-      icon: const Icon(Icons.content_paste_outlined),
-      onPressed: () async {
-        final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
-        if (!context.mounted) return;
-        final text = clipboardData?.text;
-        if (text == null) {
-          showSnackBar(sm, 'Clipboard does not contain text');
-        } else if (!settings.useClipboard(text, dryRun: true)) {
-          showSnackBar(sm, 'Clipboard does not contain valid alarm definition json');
-        } else {
-          showDialog(
-            context: context,
-            builder: (context) => buildConfirmationDialog(
-              context: context,
-              title: 'Load alarms from clipboard?',
-              content:
-                  'Do you want to replace all alarms with the clipboard data? '
-                  'This action cannot be undone.',
-              onPressed: () {
-                settings.useClipboard(text);
-                showSnackBar(sm, 'Pasted alarm definitions from clipboard');
-              },
-            ),
-          );
-        }
-      },
-    );
-  }
 }
 
 class _EditAlarmsContent extends StatelessWidget {

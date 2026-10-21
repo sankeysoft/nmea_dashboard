@@ -110,29 +110,43 @@ class PrefMappedValue<P, N> {
   }
 }
 
-/// Validates the supplied input is non null and contains a json list,
-/// logging detailed messages containing `target` and returning null if
-/// any problems are found.
+/// Returns the decoded json in the supplied text, or null if it is not valid json.
+Object? decodeJson(String text, String target, Logger log) {
+  try {
+    return json.decode(text);
+  } on FormatException catch (ex) {
+    log.warning('Could not json decode $target: $ex');
+    return null;
+  }
+}
+
+/// Returns the decoded json stored in a shared pref key, or null if the key is
+/// missing or does not contain valid json.
+Object? prefJson(SharedPreferences prefs, String key, Logger log) {
+  final text = prefs.getString(key);
+  if (text == null || text.isEmpty) {
+    log.info('No $key found in shared preferences');
+    return null;
+  }
+  return decodeJson(text, key, log);
+}
+
+/// Validates the supplied already decoded json is a list of entries that can
+/// be decoded, logging detailed messages containing `target` and returning
+/// null if any problems are found. Returns null (without logging) if the json is
+/// null.
 List<T>? validateJsonList<T>(
-  String input,
+  dynamic decodedJson,
   T Function(Map<String, dynamic>) decoder,
   String target,
   Logger log, {
   int minimumLength = 0,
 }) {
-  if (input.isEmpty) {
-    log.info('No $target found in shared preferences');
-    return null;
-  }
-  final dynamic decodedJson;
-  try {
-    decodedJson = json.decode(input);
-  } on FormatException catch (ex) {
-    log.warning('Could not json decode $target: $ex');
+  if (decodedJson == null) {
     return null;
   }
   if (decodedJson is! List<dynamic>) {
-    log.warning('$target did not decode to a json list: $input');
+    log.warning('$target did not decode to a json list: $decodedJson');
     return null;
   }
   if (decodedJson.length < minimumLength) {
@@ -150,4 +164,29 @@ List<T>? validateJsonList<T>(
     }
   }
   return returnList;
+}
+
+/// Validates the supplied already decoded json is an object that can be
+/// decoded, logging detailed messages containing `target` and returning null
+/// if any problems are found. Returns null without logging if the json is
+/// null, since the source of the json is responsible for logging why it is missing.
+T? validateJsonObject<T>(
+  dynamic decodedJson,
+  T Function(Map<String, dynamic>) decoder,
+  String target,
+  Logger log,
+) {
+  if (decodedJson == null) {
+    return null;
+  }
+  if (decodedJson is! Map<String, dynamic>) {
+    log.warning('$target did not decode to a json object: $decodedJson');
+    return null;
+  }
+  try {
+    return decoder(decodedJson);
+  } on TypeError catch (ex) {
+    log.warning('$target did not decode: $ex');
+    return null;
+  }
 }

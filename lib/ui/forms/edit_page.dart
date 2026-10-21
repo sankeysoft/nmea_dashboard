@@ -5,6 +5,8 @@
 import 'package:flutter/material.dart';
 
 import 'package:nmea_dashboard/state/common.dart';
+import 'package:nmea_dashboard/state/settings/clipboard.dart';
+import 'package:nmea_dashboard/state/settings/page.dart';
 import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:nmea_dashboard/ui/forms/abstract.dart';
 
@@ -21,21 +23,39 @@ DataPageSpec _createPageSpec() {
 /// A function called on successful creation of a DataPageSpec.
 typedef CreatePageSpecFunction = void Function(DataPageSpec spec);
 
-/// A form that lets the user edit a single page.
-class EditPagePage extends StatefulFormPage {
-  EditPagePage({DataPageSpec? pageSpec, required CreatePageSpecFunction onCreate, super.key})
-    : super(
-        title: 'Edit page',
-        actions: [const HelpButton('edit_page.md')],
-        child: _EditPageForm(pageSpec, onCreate),
-      );
+/// A form that lets the user edit a single page. Defined as a StatelessWidget to share
+/// a form key between the clipboard buttons and the Form.
+class EditPagePage extends StatelessWidget {
+  final DataPageSpec pageSpec;
+  final CreatePageSpecFunction onCreate;
+  final _formKey = GlobalKey<_EditPageFormState>();
+
+  EditPagePage({DataPageSpec? pageSpec, required this.onCreate, super.key})
+    : pageSpec = pageSpec ?? _createPageSpec();
+
+  @override
+  Widget build(BuildContext context) {
+    return StatefulFormPage(
+      title: 'Edit page',
+      actions: [
+        CopyButton(kind: ClipboardKind.page, getText: (_) => _formKey.currentState?.clipboardText),
+        PasteButton(
+          kind: ClipboardKind.page,
+          isValid: (_, text) => PageSettings.pageFromClipboard(text) != null,
+          onPaste: (_, text) => _formKey.currentState?.paste(text),
+        ),
+        const HelpButton('edit_page.md'),
+      ],
+      child: _EditPageForm(pageSpec, onCreate, key: _formKey),
+    );
+  }
 }
 
 class _EditPageForm extends StatefulWidget {
   final CreatePageSpecFunction _onCreate;
   final DataPageSpec _pageSpec;
 
-  _EditPageForm(DataPageSpec? pageSpec, this._onCreate) : _pageSpec = pageSpec ?? _createPageSpec();
+  const _EditPageForm(this._pageSpec, this._onCreate, {super.key});
 
   @override
   State<_EditPageForm> createState() => _EditPageFormState();
@@ -44,12 +64,52 @@ class _EditPageForm extends StatefulWidget {
 class _EditPageFormState extends StatefulFormState<_EditPageForm> {
   late String _name;
   late int _size;
+  late List<DataCellSpec> _cells;
+  // Incremented on each paste to force all fields to rebuild from the new state.
+  int _pasteCount = 0;
 
   @override
   void initState() {
     _name = widget._pageSpec.name;
     _size = widget._pageSpec.cells.length;
+    _cells = widget._pageSpec.cells;
     super.initState();
+  }
+
+  // Returns the cells, truncated or grown with empty cells to match the current size.
+  List<DataCellSpec> _resizedCells() {
+    if (_size < _cells.length) {
+      // Truncate the existing list.
+      return _cells.sublist(0, _size);
+    } else {
+      // Grow the existing list with empty cells.
+      return _cells + List.generate(_size - _cells.length, (_) => _createCellSpec());
+    }
+  }
+
+  /// Returns clipboard text for the current form contents, or null if the form is not valid.
+  String? get clipboardText {
+    if (!formKey.currentState!.validate()) {
+      return null;
+    }
+    formKey.currentState!.save();
+    return PageSettings.pageToClipboard(DataPageSpec(_name, _resizedCells()));
+  }
+
+  /// Replaces the form contents with a page from clipboard text, returning an error message if
+  /// the page could not be used.
+  String? paste(String text) {
+    final spec = PageSettings.pageFromClipboard(text);
+    if (spec == null) {
+      return 'Clipboard does not contain valid page definition json';
+    }
+    setState(() {
+      _name = spec.name;
+      _size = spec.cells.length;
+      _cells = spec.cells;
+      _pasteCount++;
+    });
+    return null;
   }
 
   @override
@@ -60,23 +120,16 @@ class _EditPageFormState extends StatefulFormState<_EditPageForm> {
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(child: ListView(children: [_buildNameField(), _buildSizeField()])),
+          Expanded(
+            child: ListView(
+              key: ValueKey(_pasteCount),
+              children: [_buildNameField(), _buildSizeField()],
+            ),
+          ),
           buildSaveButton(
             postSaver: () {
-              final originalCells = widget._pageSpec.cells;
-              final originalKey = widget._pageSpec.key;
-              List<DataCellSpec> cells;
-              if (_size < originalCells.length) {
-                // Truncate the existing list.
-                cells = originalCells.sublist(0, _size);
-              } else {
-                // Grow the existing list with empty cells.
-                cells =
-                    originalCells +
-                    List.generate(_size - originalCells.length, (_) => _createCellSpec());
-              }
-              // Call the function we were told to call.
-              widget._onCreate(DataPageSpec(_name, cells, key: originalKey));
+              // Call the function we were told to call, keeping the original page key.
+              widget._onCreate(DataPageSpec(_name, _resizedCells(), key: widget._pageSpec.key));
               Navigator.pop(context);
             },
           ),

@@ -6,6 +6,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
+import 'package:nmea_dashboard/state/settings/clipboard.dart';
 import 'package:nmea_dashboard/state/settings/common.dart';
 import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -21,9 +22,16 @@ class AlarmSettings with ChangeNotifier {
   /// Creates settings from the supplied prefs, starting empty if
   /// the shared prefs are missing or invalid.
   AlarmSettings(this._prefs) {
-    final prefString = _prefs.getString(_prefKey);
+    final specs = validateJsonList(
+      prefJson(_prefs, _prefKey, _log),
+      (e) => AlarmSpec.fromJson(e),
+      'alarm settings',
+      _log,
+    );
     // Stick with the default empty map if load fails.
-    _fromJson(json: prefString ?? '', source: 'shared preferences');
+    if (specs != null) {
+      _useSpecs(specs, 'shared preferences');
+    }
   }
 
   /// An iterator over the alarm specs in order.
@@ -53,16 +61,28 @@ class AlarmSettings with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Replaces the current set of alarms with specs from a json encoded string,
-  /// making no changes if the string is not valid or if dryRun is true.
-  /// Returns true on success.
+  /// Replaces the current set of alarms with specs from clipboard text, making no changes if
+  /// the text is not valid or if dryRun is true. Returns true on success.
   bool useClipboard(String text, {bool dryRun = false}) {
-    bool success = _fromJson(json: text, source: 'clipboard', dryRun: dryRun);
-    if (!dryRun && success) {
+    final specs = validateJsonList(
+      clipboardData(text, ClipboardKind.alarms),
+      (e) => AlarmSpec.fromJson(e),
+      'alarm clipboard',
+      _log,
+    );
+    if (specs == null) {
+      return false;
+    } else if (!dryRun) {
+      _useSpecs(specs, 'clipboard');
       _save();
       notifyListeners();
     }
-    return success;
+    return true;
+  }
+
+  /// Returns clipboard text containing the configuration of all alarms.
+  String toClipboard() {
+    return encodeClipboard(ClipboardKind.alarms, _alarmSpecs.values.toList());
   }
 
   /// Returns a json string containing the configuration of all alarms.
@@ -71,33 +91,13 @@ class AlarmSettings with ChangeNotifier {
     return json.encode(jsonIterator);
   }
 
-  /// Overwrites all data with elements from a json encoded string, making no
-  /// changes if the string is not valid or if dryRun is true. Returns true on
-  /// success.
-  bool _fromJson({required String json, required String source, bool dryRun = false}) {
-    // Use the helper function to convert to a list of bare specs
-    final specs = validateJsonList(
-      json,
-      (e) => AlarmSpec.fromJson(e),
-      'alarm settings',
-      _log,
-      minimumLength: 0,
-    );
-    // Leave with a failure if this didn't work or success if we're dry running and
-    // it did.
-    if (specs == null) {
-      return false;
-    } else if (dryRun) {
-      return true;
-    }
-
-    // If we're not dry run use the specs to repopulate the map.
+  /// Replaces the map of alarms with the supplied specs.
+  void _useSpecs(List<AlarmSpec> specs, String source) {
     _alarmSpecs.clear();
     for (final spec in specs) {
       _alarmSpecs[spec.key] = spec;
     }
     _log.info('Loaded ${specs.length} alarms from $source');
-    return true;
   }
 
   /// Saves the configuration of all alarms into shared prefs.

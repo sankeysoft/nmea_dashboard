@@ -2,6 +2,8 @@
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nmea_dashboard/state/alarms.dart';
@@ -365,6 +367,126 @@ void main() {
       await tester.pump();
 
       expect(getDropdownByLabel('Format:', tester).value, 'metersPerSec');
+    });
+
+    Future<void> tapAndSettle(WidgetTester tester, IconData icon) async {
+      await tester.tap(find.byIcon(icon));
+      await tester.pump();
+      await tester.pump();
+    }
+
+    testWidgets('copy copies the current unsaved form contents', (tester) async {
+      String? copied;
+      mockClipboard(tester, onSet: (text) => copied = text);
+      final spec = DataCellSpec(
+        'network',
+        'speedOverGround',
+        'average',
+        'knots',
+        statsInterval: 'oneMin',
+      );
+      await pumpForm(tester, spec);
+
+      await tester.tap(find.text('1 minute'));
+      await tester.pump();
+      await tester.tap(find.text('5 minutes').last);
+      await tester.pump();
+      await tapAndSettle(tester, Icons.copy_all_outlined);
+
+      expect(find.text('Cell definition copied to clipboard'), findsOneWidget);
+      expect(json.decode(copied!), {
+        'kind': 'cell',
+        'data': {
+          'source': 'network',
+          'element': 'speedOverGround',
+          'type': 'average',
+          'statsInterval': 'fiveMin',
+          'format': 'knots',
+        },
+      });
+      expect(pageSettings.dataPageSpecs.first.cells.first.statsInterval, 'oneMin');
+    });
+
+    testWidgets('copy of an incomplete form shows snackbar', (tester) async {
+      String? copied;
+      mockClipboard(tester, onSet: (text) => copied = text);
+      await pumpForm(tester, DataCellSpec('network', 'doesNotExist', 'current', 'knots'));
+
+      await tapAndSettle(tester, Icons.copy_all_outlined);
+
+      expect(find.text('Complete the cell definition before copying'), findsOneWidget);
+      expect(copied, isNull);
+    });
+
+    testWidgets('paste with page definitions shows snackbar', (tester) async {
+      mockClipboard(tester, text: PageSettings.pageToClipboard(DataPageSpec('p', [])));
+      await pumpForm(tester, DataCellSpec('network', 'speedOverGround', 'current', 'knots'));
+
+      await tapAndSettle(tester, Icons.content_paste_outlined);
+
+      expect(
+        find.text('Clipboard contains a page definition, not a cell definition'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('paste with an unavailable element shows snackbar', (tester) async {
+      mockClipboard(
+        tester,
+        text: PageSettings.cellToClipboard(DataCellSpec('derived', 'missing', 'current', 'x')),
+      );
+      await pumpForm(tester, DataCellSpec('network', 'speedOverGround', 'current', 'knots'));
+
+      await tapAndSettle(tester, Icons.content_paste_outlined);
+
+      expect(find.text('Clipboard cell uses an element that is not available'), findsOneWidget);
+      expect(find.text('SOG'), findsOneWidget);
+    });
+
+    testWidgets('paste updates fields immediately without saving', (tester) async {
+      mockClipboard(
+        tester,
+        text: PageSettings.cellToClipboard(
+          DataCellSpec('local', 'localTime', 'current', 'hms', name: 'Clock'),
+        ),
+      );
+      final spec = DataCellSpec('network', 'speedOverGround', 'current', 'knots');
+      await pumpForm(tester, spec);
+      expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse);
+
+      await tapAndSettle(tester, Icons.content_paste_outlined);
+
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.text('Pasted a cell definition from clipboard'), findsOneWidget);
+      expect(find.text('Local device'), findsOneWidget);
+      expect(find.text('Clock'), findsOneWidget);
+      expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
+      expect(pageSettings.dataPageSpecs.first.cells.first.source, 'network');
+    });
+
+    testWidgets('paste sets interval and SAVE keeps the original key', (tester) async {
+      mockClipboard(
+        tester,
+        text: PageSettings.cellToClipboard(
+          DataCellSpec('network', 'speedOverGround', 'average', 'knots', statsInterval: 'oneMin'),
+        ),
+      );
+      final spec = DataCellSpec('network', 'speedOverGround', 'current', 'knots', name: 'Old');
+      await pumpForm(tester, spec);
+
+      await tapAndSettle(tester, Icons.content_paste_outlined);
+      expect(find.text('Average Value'), findsOneWidget);
+      expect(find.text('1 minute'), findsOneWidget);
+      expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse);
+
+      await tester.tap(find.text('SAVE'));
+      await tester.pump();
+
+      final saved = pageSettings.dataPageSpecs.first.cells.first;
+      expect(saved.key, spec.key);
+      expect(saved.type, 'average');
+      expect(saved.statsInterval, 'oneMin');
+      expect(saved.name, isNull);
     });
   });
 }

@@ -11,6 +11,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 const _alarmSpecJson =
     '[{"source":"network","element":"depth","type":"caution","format":"feet","min": 10.0}]';
 
+const _clipboardJson = '{"kind":"alarms","data":$_alarmSpecJson}';
+
 Future<SharedPreferences> _prefs([Map<String, Object> initial = const {}]) async {
   SharedPreferences.setMockInitialValues(initial);
   return SharedPreferences.getInstance();
@@ -102,7 +104,7 @@ void main() {
     final s = AlarmSettings(await _prefs());
     int count = 0;
     s.addListener(() => count++);
-    expect(s.useClipboard(_alarmSpecJson), isTrue);
+    expect(s.useClipboard(_clipboardJson), isTrue);
     expect(s.alarmSpecs.length, 1);
     expect(count, 1);
   });
@@ -121,15 +123,39 @@ void main() {
     final s = AlarmSettings(await _prefs());
     int count = 0;
     s.addListener(() => count++);
-    expect(s.useClipboard(_alarmSpecJson, dryRun: true), isTrue);
+    expect(s.useClipboard(_clipboardJson, dryRun: true), isTrue);
     expect(s.alarmSpecs, isEmpty);
     expect(count, 0);
   });
 
+  test('useClipboard rejects unwrapped or wrong kind JSON', () async {
+    final s = AlarmSettings(await _prefs());
+    expect(s.useClipboard(_alarmSpecJson), isFalse);
+    expect(s.useClipboard('{"kind":"derivedData","data":$_alarmSpecJson}'), isFalse);
+    expect(s.alarmSpecs, isEmpty);
+  });
+
+  test('toClipboard round-trips through useClipboard', () async {
+    final s1 = AlarmSettings(await _prefs());
+    s1.setAlarm(AlarmSpec('network', 'depth', 'caution', 'feet', min: 10.0));
+    final s2 = AlarmSettings(await _prefs());
+    expect(s2.useClipboard(s1.toClipboard()), isTrue);
+    expect(s2.alarmSpecs.first.element, 'depth');
+  });
+
   test('toJson round-trips through construction', () async {
     final s1 = AlarmSettings(await _prefs());
-    s1.setAlarm(AlarmSpec('network', 'depth', 'caution', 'feet',
-        averagingInterval: 'oneMinute', min: 10.0, max: 150.0));
+    s1.setAlarm(
+      AlarmSpec(
+        'network',
+        'depth',
+        'caution',
+        'feet',
+        averagingInterval: 'oneMinute',
+        min: 10.0,
+        max: 150.0,
+      ),
+    );
     final s2 = AlarmSettings(await _prefs({'alarm_v1': s1.toJson()}));
     expect(s2.alarmSpecs.first.element, 'depth');
     expect(s2.alarmSpecs.first.averagingInterval, 'oneMinute');

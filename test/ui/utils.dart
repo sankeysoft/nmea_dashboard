@@ -23,13 +23,15 @@ class TestNavObserver extends NavigatorObserver {
 
 /// Mocks the clipboard platform channel for the duration of a test.
 /// Pass [text] to simulate text on the clipboard, or omit it for an empty
-/// clipboard. Automatically restores the real handler on teardown.
-void mockClipboard(WidgetTester tester, {String? text}) {
+/// clipboard. Pass [onSet] to receive any text copied to the clipboard.
+/// Automatically restores the real handler on teardown.
+void mockClipboard(WidgetTester tester, {String? text, void Function(String)? onSet}) {
   tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (
     MethodCall methodCall,
   ) async {
     switch (methodCall.method) {
       case 'Clipboard.setData':
+        onSet?.call((methodCall.arguments as Map)['text'] as String);
         return null;
       case 'Clipboard.getData':
         return text != null ? <String, dynamic>{'text': text} : null;

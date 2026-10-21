@@ -138,8 +138,19 @@ void main() {
       expect(find.text('Clipboard does not contain text'), findsOneWidget);
     });
 
-    testWidgets('paste with invalid json shows snackbar', (tester) async {
+    testWidgets('paste with non app data shows snackbar', (tester) async {
       mockClipboard(tester, text: 'not valid json');
+      await pumpPage(tester);
+
+      await tester.tap(find.byIcon(Icons.content_paste_outlined));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Clipboard does not contain NMEA Dashboard data'), findsOneWidget);
+    });
+
+    testWidgets('paste with invalid data shows snackbar', (tester) async {
+      mockClipboard(tester, text: '{"kind":"alarms","data":{}}');
       await pumpPage(tester);
 
       await tester.tap(find.byIcon(Icons.content_paste_outlined));
@@ -149,8 +160,22 @@ void main() {
       expect(find.text('Clipboard does not contain valid alarm definition json'), findsOneWidget);
     });
 
+    testWidgets('paste with wrong kind shows snackbar', (tester) async {
+      mockClipboard(tester, text: '{"kind":"derivedData","data":[]}');
+      await pumpPage(tester);
+
+      await tester.tap(find.byIcon(Icons.content_paste_outlined));
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        find.text('Clipboard contains derived data definitions, not alarm definitions'),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('paste with valid json shows confirmation dialog', (tester) async {
-      mockClipboard(tester, text: '[]');
+      mockClipboard(tester, text: '{"kind":"alarms","data":[]}');
       await pumpPage(tester);
 
       await tester.tap(find.byIcon(Icons.content_paste_outlined));
@@ -161,7 +186,7 @@ void main() {
     });
 
     testWidgets('confirm paste updates settings and shows snackbar', (tester) async {
-      mockClipboard(tester, text: '[]');
+      mockClipboard(tester, text: '{"kind":"alarms","data":[]}');
       await pumpPage(tester);
 
       await tester.tap(find.byIcon(Icons.content_paste_outlined));
@@ -174,9 +199,7 @@ void main() {
     });
 
     testWidgets('shows warning icon for valid warning alarm', (tester) async {
-      alarmSettings.setAlarm(
-        AlarmSpec('network', 'speedOverGround', 'warning', 'knots', min: 5.0),
-      );
+      alarmSettings.setAlarm(AlarmSpec('network', 'speedOverGround', 'warning', 'knots', min: 5.0));
       await pumpPage(tester);
       expect(find.byIcon(Icons.warning), findsOneWidget);
     });
@@ -234,12 +257,8 @@ void main() {
 
     testWidgets('lists only alarms for the matching element', (tester) async {
       // A matching alarm (network/speedOverGround) and a non-matching one (network/trueWindSpeed).
-      alarmSettings.setAlarm(
-        AlarmSpec('network', 'speedOverGround', 'warning', 'knots', min: 5.0),
-      );
-      alarmSettings.setAlarm(
-        AlarmSpec('network', 'trueWindSpeed', 'caution', 'knots', min: 5.0),
-      );
+      alarmSettings.setAlarm(AlarmSpec('network', 'speedOverGround', 'warning', 'knots', min: 5.0));
+      alarmSettings.setAlarm(AlarmSpec('network', 'trueWindSpeed', 'caution', 'knots', min: 5.0));
       await pumpPage(tester);
 
       // The matching warning alarm is shown (warning icon); the caution alarm for the

@@ -15,3 +15,14 @@ change the data, long hold a cell while the page is being displayed.
 
 * **Save**: Save the changes and close the form. Alternatively tap the back
   arrow (at the top left) to close the form without saving changes.
+
+# Toolbar
+
+At the top right there are three buttons:
+
+1.  **Copy to clipboard**. Tapping this copies the page name, cell count, and
+    the definition of every cell on the page to text in the clipboard.
+2.  **Paste from clipboard**. Tapping this replaces the contents of the form
+    with a page from the clipboard. The contents of the clipboard must have
+    been created using the "copy to clipboard" button on this form.
+3.  **Help**. Displays this text.

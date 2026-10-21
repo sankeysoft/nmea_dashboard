@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import 'package:nmea_dashboard/state/settings/clipboard.dart';
 import 'package:nmea_dashboard/ui/forms/view_help.dart';
 
 typedef FormPostSaver = void Function();
@@ -221,6 +222,99 @@ AlertDialog buildConfirmationDialog({
       TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
     ],
   );
+}
+
+/// A toolbar button that copies one kind of data to the clipboard.
+class CopyButton extends StatelessWidget {
+  final ClipboardKind kind;
+
+  /// Returns the clipboard text, or null if the data is not complete enough to copy.
+  final String? Function(BuildContext context) getText;
+
+  const CopyButton({required this.kind, required this.getText, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final sm = ScaffoldMessenger.of(context);
+    return IconButton(
+      icon: const Icon(Icons.copy_all_outlined),
+      onPressed: () {
+        final text = getText(context);
+        if (text == null) {
+          showSnackBar(sm, 'Complete the ${kind.shortName} definition before copying');
+          return;
+        }
+        Clipboard.setData(
+          ClipboardData(text: text),
+        ).then((_) => showSnackBar(sm, '${kind.title} copied to clipboard'));
+      },
+    );
+  }
+}
+
+/// A toolbar button that pastes one kind of data from the clipboard, optionally after asking
+/// the user to confirm.
+class PasteButton extends StatelessWidget {
+  final ClipboardKind kind;
+
+  /// Returns true if the clipboard text contains valid data of the expected kind.
+  final bool Function(BuildContext context, String text) isValid;
+
+  /// Uses the clipboard text, returning an error message if it could not be used.
+  final String? Function(BuildContext context, String text) onPaste;
+
+  /// The title for a confirmation dialog, if null the paste is applied without confirmation.
+  final String? confirmTitle;
+  final String? confirmContent;
+
+  const PasteButton({
+    required this.kind,
+    required this.isValid,
+    required this.onPaste,
+    this.confirmTitle,
+    this.confirmContent,
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final sm = ScaffoldMessenger.of(context);
+    return IconButton(
+      icon: const Icon(Icons.content_paste_outlined),
+      onPressed: () async {
+        final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
+        if (!context.mounted) return;
+        final text = clipboardData?.text;
+        final actualKind = (text == null) ? null : clipboardKind(text);
+        if (text == null) {
+          showSnackBar(sm, 'Clipboard does not contain text');
+        } else if (actualKind == null) {
+          showSnackBar(sm, 'Clipboard does not contain NMEA Dashboard data');
+        } else if (actualKind != kind) {
+          showSnackBar(sm, 'Clipboard contains ${actualKind.description}, not ${kind.description}');
+        } else if (!isValid(context, text)) {
+          showSnackBar(sm, 'Clipboard does not contain valid ${kind.shortName} definition json');
+        } else if (confirmTitle == null) {
+          _paste(context, sm, text);
+        } else {
+          showDialog(
+            context: context,
+            builder: (dialogContext) => buildConfirmationDialog(
+              context: dialogContext,
+              title: confirmTitle!,
+              content: confirmContent,
+              onPressed: () => _paste(context, sm, text),
+            ),
+          );
+        }
+      },
+    );
+  }
+
+  void _paste(BuildContext context, ScaffoldMessengerState sm, String text) {
+    final error = onPaste(context, text);
+    showSnackBar(sm, error ?? 'Pasted ${kind.description} from clipboard');
+  }
 }
 
 class HelpButton extends StatelessWidget {

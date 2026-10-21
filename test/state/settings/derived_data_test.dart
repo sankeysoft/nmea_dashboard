@@ -11,6 +11,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 const _derivedDataSpecJson =
     '[{"name":"d1","inputSource":"network","inputElement":"depth","inputFormat":"feet","operation":"+","operand":1.5}]';
 
+const _clipboardJson = '{"kind":"derivedData","data":$_derivedDataSpecJson}';
+
 Future<SharedPreferences> _prefs([Map<String, Object> initial = const {}]) async {
   SharedPreferences.setMockInitialValues(initial);
   return SharedPreferences.getInstance();
@@ -101,7 +103,7 @@ void main() {
     final s = DerivedDataSettings(await _prefs());
     int count = 0;
     s.addListener(() => count++);
-    expect(s.useClipboard(_derivedDataSpecJson), isTrue);
+    expect(s.useClipboard(_clipboardJson), isTrue);
     expect(s.derivedDataSpecs.length, 1);
     expect(count, 1);
   });
@@ -120,9 +122,24 @@ void main() {
     final s = DerivedDataSettings(await _prefs());
     int count = 0;
     s.addListener(() => count++);
-    expect(s.useClipboard(_derivedDataSpecJson, dryRun: true), isTrue);
+    expect(s.useClipboard(_clipboardJson, dryRun: true), isTrue);
     expect(s.derivedDataSpecs, isEmpty);
     expect(count, 0);
+  });
+
+  test('useClipboard rejects unwrapped or wrong kind JSON', () async {
+    final s = DerivedDataSettings(await _prefs());
+    expect(s.useClipboard(_derivedDataSpecJson), isFalse);
+    expect(s.useClipboard('{"kind":"alarms","data":$_derivedDataSpecJson}'), isFalse);
+    expect(s.derivedDataSpecs, isEmpty);
+  });
+
+  test('toClipboard round-trips through useClipboard', () async {
+    final s1 = DerivedDataSettings(await _prefs());
+    s1.setElement(DerivedDataSpec('d1', 'network', 'depth', 'feet', '+', 1.5));
+    final s2 = DerivedDataSettings(await _prefs());
+    expect(s2.useClipboard(s1.toClipboard()), isTrue);
+    expect(s2.derivedDataSpecs.first.name, 'd1');
   });
 
   test('toJson round-trips through construction', () async {

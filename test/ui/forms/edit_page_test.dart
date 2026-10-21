@@ -2,8 +2,11 @@
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nmea_dashboard/state/settings/page.dart';
 import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:nmea_dashboard/ui/forms/edit_page.dart';
 
@@ -128,6 +131,81 @@ void main() {
       for (int i = 0; i < 3; i++) {
         expect(createdSpec?.cells[i].key, cells[i].key);
       }
+    });
+
+    Future<void> tapAndSettle(WidgetTester tester, IconData icon) async {
+      await tester.tap(find.byIcon(icon));
+      await tester.pump();
+      await tester.pump();
+    }
+
+    testWidgets('copy copies the current unsaved form contents', (tester) async {
+      String? copied;
+      mockClipboard(tester, onSet: (text) => copied = text);
+      await pumpForm(tester, DataPageSpec('MyPage', List.generate(3, (_) => _makeCell())));
+
+      await tester.enterText(find.byType(TextFormField).at(0), 'Renamed');
+      await tester.enterText(find.byType(TextFormField).at(1), '2');
+      await tapAndSettle(tester, Icons.copy_all_outlined);
+
+      expect(find.text('Page definition copied to clipboard'), findsOneWidget);
+      final decoded = json.decode(copied!);
+      expect(decoded['kind'], 'page');
+      expect(decoded['data']['name'], 'Renamed');
+      expect(decoded['data']['cells'].length, 2);
+      expect(decoded['data']['cells'][0]['element'], 'speedOverGround');
+    });
+
+    testWidgets('copy of an incomplete form shows snackbar', (tester) async {
+      String? copied;
+      mockClipboard(tester, onSet: (text) => copied = text);
+      await pumpForm(tester, null);
+
+      await tapAndSettle(tester, Icons.copy_all_outlined);
+
+      expect(find.text('Complete the page definition before copying'), findsOneWidget);
+      expect(copied, isNull);
+    });
+
+    testWidgets('paste with a cell definition shows snackbar', (tester) async {
+      mockClipboard(tester, text: PageSettings.cellToClipboard(_makeCell()));
+      await pumpForm(tester, null);
+
+      await tapAndSettle(tester, Icons.content_paste_outlined);
+
+      expect(
+        find.text('Clipboard contains a cell definition, not a page definition'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('paste updates fields immediately and SAVE uses pasted cells', (tester) async {
+      final pasted = DataPageSpec('Pasted', [
+        DataCellSpec('local', 'localTime', 'current', 'hms'),
+        _makeCell(),
+        _makeCell(),
+      ]);
+      mockClipboard(tester, text: PageSettings.pageToClipboard(pasted));
+      final spec = DataPageSpec('MyPage', [_makeCell()]);
+      DataPageSpec? createdSpec;
+      await pumpForm(tester, spec, onCreate: (s) => createdSpec = s);
+
+      await tapAndSettle(tester, Icons.content_paste_outlined);
+
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.text('Pasted a page definition from clipboard'), findsOneWidget);
+      expect(find.text('Pasted'), findsOneWidget);
+      expect(find.text('3'), findsOneWidget);
+      expect(createdSpec, isNull);
+
+      await tester.enterText(find.byType(TextFormField).at(1), '2');
+      await tester.tap(find.text('SAVE'));
+      await tester.pump();
+
+      expect(createdSpec?.key, spec.key);
+      expect(createdSpec?.name, 'Pasted');
+      expect(createdSpec?.cells.length, 2);
+      expect(createdSpec?.cells[0].element, 'localTime');
     });
   });
 }

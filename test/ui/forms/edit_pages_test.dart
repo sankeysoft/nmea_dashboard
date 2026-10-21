@@ -20,7 +20,7 @@ import '../utils.dart';
 
 const _emptyPagesJson = '[]';
 // Valid page JSON (minimum one page required for useClipboard to accept).
-const _validPagesJson = '[{"name":"TestPage","cells":[]}]';
+const _validPagesJson = '{"kind":"pages","data":[{"name":"TestPage","cells":[]}]}';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -152,7 +152,7 @@ void main() {
       expect(find.text('Clipboard does not contain text'), findsOneWidget);
     });
 
-    testWidgets('paste with invalid json shows snackbar', (tester) async {
+    testWidgets('paste with non app data shows snackbar', (tester) async {
       mockClipboard(tester, text: 'not valid json');
       await pumpPage(tester);
 
@@ -160,7 +160,32 @@ void main() {
       await tester.pump();
       await tester.pump();
 
+      expect(find.text('Clipboard does not contain NMEA Dashboard data'), findsOneWidget);
+    });
+
+    testWidgets('paste with invalid data shows snackbar', (tester) async {
+      mockClipboard(tester, text: '{"kind":"pages","data":[]}');
+      await pumpPage(tester);
+
+      await tester.tap(find.byIcon(Icons.content_paste_outlined));
+      await tester.pump();
+      await tester.pump();
+
       expect(find.text('Clipboard does not contain valid page definition json'), findsOneWidget);
+    });
+
+    testWidgets('paste with wrong kind shows snackbar', (tester) async {
+      mockClipboard(tester, text: '{"kind":"cell","data":{}}');
+      await pumpPage(tester);
+
+      await tester.tap(find.byIcon(Icons.content_paste_outlined));
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        find.text('Clipboard contains a cell definition, not page definitions'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('paste with valid json shows confirmation dialog', (tester) async {

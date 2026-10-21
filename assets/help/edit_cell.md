@@ -40,7 +40,12 @@ This form lets you define one of the cells on a data page.
 
 # Toolbar
 
-At the top right there are two buttons:
+At the top right there are four buttons:
 
 1.  **Alarms**. Tapping this edits the alarms for this source and element.
-2.  **Help**. Displays this text.
+2.  **Copy to clipboard**. Tapping this copies the definition of this cell,
+    to text in the clipboard.
+3.  **Paste from clipboard**. Tapping this replaces the contents of the form
+    with a cell from the clipboard. The contents of the clipboard must have
+    been created using the "copy to clipboard" button on this form.
+4.  **Help**. Displays this text.

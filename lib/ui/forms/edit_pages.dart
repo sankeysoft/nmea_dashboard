@@ -3,7 +3,7 @@
 // of the MIT license. See the LICENCE.md file for details.
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:nmea_dashboard/state/settings/clipboard.dart';
 import 'package:nmea_dashboard/state/settings/page.dart';
 import 'package:provider/provider.dart';
 
@@ -16,7 +16,27 @@ class EditPagesPage extends StatelessFormPage {
   EditPagesPage({super.key})
     : super(
         title: 'Edit pages',
-        actions: [_CopyButton(), _PasteButton(), _ResetButton(), const HelpButton('edit_pages.md')],
+        actions: [
+          CopyButton(
+            kind: ClipboardKind.pages,
+            getText: (context) => Provider.of<PageSettings>(context, listen: false).toClipboard(),
+          ),
+          PasteButton(
+            kind: ClipboardKind.pages,
+            isValid: (context, text) =>
+                Provider.of<PageSettings>(context, listen: false).useClipboard(text, dryRun: true),
+            onPaste: (context, text) {
+              Provider.of<PageSettings>(context, listen: false).useClipboard(text);
+              return null;
+            },
+            confirmTitle: 'Load pages from clipboard?',
+            confirmContent:
+                'Do you want to replace all pages and contents '
+                'with the clipboard data? This action cannot be undone.',
+          ),
+          _ResetButton(),
+          const HelpButton('edit_pages.md'),
+        ],
         content: _EditPagesContent(),
       );
 }
@@ -42,58 +62,6 @@ class _ResetButton extends StatelessWidget {
           },
         ),
       ),
-    );
-  }
-}
-
-class _CopyButton extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final settings = Provider.of<PageSettings>(context);
-    final sm = ScaffoldMessenger.of(context);
-    return IconButton(
-      icon: const Icon(Icons.copy_all_outlined),
-      onPressed: () {
-        Clipboard.setData(
-          ClipboardData(text: settings.toJson()),
-        ).then((_) => showSnackBar(sm, 'Page definitions copied to clipboard'));
-      },
-    );
-  }
-}
-
-class _PasteButton extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final settings = Provider.of<PageSettings>(context);
-    final sm = ScaffoldMessenger.of(context);
-    return IconButton(
-      icon: const Icon(Icons.content_paste_outlined),
-      onPressed: () async {
-        final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
-        if (!context.mounted) return;
-        final text = clipboardData?.text;
-        if (text == null) {
-          showSnackBar(sm, 'Clipboard does not contain text');
-        } else if (!settings.useClipboard(text, dryRun: true)) {
-          showSnackBar(sm, 'Clipboard does not contain valid page definition json');
-        } else {
-          showDialog(
-            context: context,
-            builder: (context) => buildConfirmationDialog(
-              context: context,
-              title: 'Load pages from clipboard?',
-              content:
-                  'Do you want to replace all pages and contents '
-                  'with the clipboard data? This action cannot be undone.',
-              onPressed: () {
-                settings.useClipboard(text);
-                showSnackBar(sm, 'Pasted page definitions from clipboard');
-              },
-            ),
-          );
-        }
-      },
     );
   }
 }
