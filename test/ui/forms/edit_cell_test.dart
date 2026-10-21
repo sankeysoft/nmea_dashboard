@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nmea_dashboard/state/alarms.dart';
+import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/data_element_history.dart';
 import 'package:nmea_dashboard/state/data_set.dart';
 import 'package:nmea_dashboard/state/settings/alarm.dart';
@@ -128,7 +129,66 @@ void main() {
         statsInterval: 'oneMin',
       );
       await pumpForm(tester, spec);
-      expect(find.text('Average - 1 minute'), findsOneWidget);
+      expect(find.text('Average Value'), findsOneWidget);
+      expect(find.text('1 minute'), findsOneWidget);
+    });
+
+    testWidgets('disables interval for current value type', (tester) async {
+      final spec = DataCellSpec('network', 'speedOverGround', 'current', 'knots');
+      await pumpForm(tester, spec);
+      final interval = getTypedDropdownByLabel<Enum>('Interval:', tester);
+      expect(interval.value, isNull);
+      expect(interval.onChanged, isNull);
+    });
+
+    testWidgets('changing display type sets default intervals', (tester) async {
+      final spec = DataCellSpec('network', 'speedOverGround', 'current', 'knots');
+      await pumpForm(tester, spec);
+
+      await tester.tap(find.text('Current Value'));
+      await tester.pump();
+      await tester.tap(find.text('Average Value').last);
+      await tester.pump();
+      expect(getTypedDropdownByLabel<Enum>('Interval:', tester).value, StatsInterval.fifteenSec);
+      expect(getTypedDropdownByLabel<Enum>('Interval:', tester).onChanged, isNotNull);
+
+      await tester.tap(find.text('Average Value'));
+      await tester.pump();
+      await tester.tap(find.text('History Graph').last);
+      await tester.pump();
+      expect(getTypedDropdownByLabel<Enum>('Interval:', tester).value, HistoryInterval.twoHours);
+      expect(find.text('SOG (2hr)'), findsOneWidget);
+
+      await tester.tap(find.text('History Graph'));
+      await tester.pump();
+      await tester.tap(find.text('Current Value').last);
+      await tester.pump();
+      expect(getTypedDropdownByLabel<Enum>('Interval:', tester).value, isNull);
+      expect(find.text('SOG'), findsOneWidget);
+    });
+
+    testWidgets('SAVE stores selected interval and clears the other', (tester) async {
+      final spec = DataCellSpec(
+        'network',
+        'speedOverGround',
+        'average',
+        'knots',
+        statsInterval: 'oneMin',
+        historyInterval: 'fifteenMin',
+      );
+      await pumpForm(tester, spec);
+
+      await tester.tap(find.text('1 minute'));
+      await tester.pump();
+      await tester.tap(find.text('5 minutes').last);
+      await tester.pump();
+      await tester.tap(find.text('SAVE'));
+      await tester.pump();
+
+      final saved = pageSettings.dataPageSpecs.first.cells.first;
+      expect(saved.type, 'average');
+      expect(saved.statsInterval, 'fiveMin');
+      expect(saved.historyInterval, isNull);
     });
 
     testWidgets('fails to save when spec references unknown element name', (tester) async {
@@ -140,14 +200,19 @@ void main() {
       expect(find.text('Element must be set'), findsOneWidget);
     });
 
-    testWidgets('fails to save when type doesnt have a required stats', (tester) async {
+    testWidgets('resets type to current when element has no stats support', (tester) async {
       // localTime is ConsistentDataElement<DateTime> which is not WithStats or WithHistory.
-      // _wipeInvalidFields must clear the type, leaving the type field empty.
+      // _wipeInvalidFields resets _type from average to current and clears _statsInterval.
       final spec = DataCellSpec('local', 'localTime', 'average', 'hms', statsInterval: 'oneMin');
-      await pumpForm(tester, spec);
+      final observer = TestNavObserver();
+      await pumpForm(tester, spec, observer: observer);
+      expect(getTypedDropdownByLabel<CellType>('Display:', tester).value, CellType.current);
       await tester.tap(find.text('SAVE'));
       await tester.pump();
-      expect(find.text('Type must be set'), findsOneWidget);
+      expect(observer.popCount, 1);
+      final saved = pageSettings.dataPageSpecs.first.cells.first;
+      expect(saved.type, 'current');
+      expect(saved.statsInterval, isNull);
     });
 
     testWidgets('resets format to preferred default when spec has invalid format key', (
@@ -246,8 +311,7 @@ void main() {
 
     testWidgets('resets type to current when element has no history support', (tester) async {
       // localTime is ConsistentDataElement<DateTime> which does not implement WithHistory.
-      // _wipeInvalidFields resets _type from history to current, leaving _historyInterval set,
-      // which means the intended value is not in the dropdown entries → type appears unset.
+      // _wipeInvalidFields resets _type from history to current and clears _historyInterval.
       final spec = DataCellSpec(
         'local',
         'localTime',
@@ -255,10 +319,15 @@ void main() {
         'hms',
         historyInterval: 'fifteenMin',
       );
-      await pumpForm(tester, spec);
+      final observer = TestNavObserver();
+      await pumpForm(tester, spec, observer: observer);
+      expect(getTypedDropdownByLabel<CellType>('Display:', tester).value, CellType.current);
       await tester.tap(find.text('SAVE'));
       await tester.pump();
-      expect(find.text('Type must be set'), findsOneWidget);
+      expect(observer.popCount, 1);
+      final saved = pageSettings.dataPageSpecs.first.cells.first;
+      expect(saved.type, 'current');
+      expect(saved.historyInterval, isNull);
     });
 
     testWidgets('alarms button navigates to alarms filtered to the cell element', (tester) async {

@@ -25,29 +25,29 @@ class TestNavObserver extends NavigatorObserver {
 /// Pass [text] to simulate text on the clipboard, or omit it for an empty
 /// clipboard. Automatically restores the real handler on teardown.
 void mockClipboard(WidgetTester tester, {String? text}) {
-  tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-    SystemChannels.platform,
-    (MethodCall methodCall) async {
-      switch (methodCall.method) {
-        case 'Clipboard.setData':
-          return null;
-        case 'Clipboard.getData':
-          return text != null ? <String, dynamic>{'text': text} : null;
-        default:
-          return null;
-      }
-    },
-  );
+  tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (
+    MethodCall methodCall,
+  ) async {
+    switch (methodCall.method) {
+      case 'Clipboard.setData':
+        return null;
+      case 'Clipboard.getData':
+        return text != null ? <String, dynamic>{'text': text} : null;
+      default:
+        return null;
+    }
+  });
   addTearDown(() {
-    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-      SystemChannels.platform,
-      null,
-    );
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null);
   });
 }
 
 DropdownButton<String> getDropdownByLabel(String label, WidgetTester tester) {
-  final finder = find.ancestor(of: find.text(label), matching: find.byType(DropdownButton<String>));
+  return getTypedDropdownByLabel<String>(label, tester);
+}
+
+DropdownButton<T> getTypedDropdownByLabel<T>(String label, WidgetTester tester) {
+  final finder = find.ancestor(of: find.text(label), matching: find.byType(DropdownButton<T>));
   expect(finder, findsOneWidget);
   return tester.widget(finder);
 }

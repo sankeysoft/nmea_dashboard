@@ -61,24 +61,6 @@ class _EditCellForm extends StatefulWidget {
   State<_EditCellForm> createState() => _EditCellFormState();
 }
 
-class _CellTypeAndAssociatedFields {
-  final CellType? type;
-  final StatsInterval? statsInterval;
-  final HistoryInterval? historyInterval;
-
-  _CellTypeAndAssociatedFields(this.type, this.statsInterval, this.historyInterval);
-
-  @override
-  bool operator ==(Object other) =>
-      other is _CellTypeAndAssociatedFields &&
-      other.type == type &&
-      other.statsInterval == statsInterval &&
-      other.historyInterval == historyInterval;
-
-  @override
-  int get hashCode => Object.hash(type, statsInterval, historyInterval);
-}
-
 class _EditCellFormState extends StatefulFormState<_EditCellForm> {
   late DataSet _dataSet;
   late PageSettings _pageSettings;
@@ -153,6 +135,20 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
       _type = CellType.current;
     }
 
+    // Clear any interval that doesn't apply to the type, and default to one that does.
+    switch (_type) {
+      case null:
+      case CellType.current:
+        _statsInterval = null;
+        _historyInterval = null;
+      case CellType.average:
+        _statsInterval ??= StatsInterval.fifteenSec;
+        _historyInterval = null;
+      case CellType.history:
+        _statsInterval = null;
+        _historyInterval ??= HistoryInterval.twoHours;
+    }
+
     // Clear the format if there isn't a data element or if the current format needs to support
     // history and doesn't. Set the default format for the dimension if the current format is
     // not valid for the element.
@@ -196,6 +192,7 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
                 _buildSourceField(),
                 _buildElementField(),
                 _buildTypeField(),
+                _buildIntervalField(),
                 _buildFormatField(),
                 _buildOverrideNameField(),
                 _buildNameField(),
@@ -280,51 +277,67 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
   Widget _buildTypeField() {
     final dataElement = _dataSet.sources[_source]?[_element];
 
-    final List<DropdownEntry<_CellTypeAndAssociatedFields>> entries = [];
+    final List<DropdownEntry<CellType>> entries = [];
     if (dataElement != null) {
-      entries.add(
-        DropdownEntry(
-          value: _CellTypeAndAssociatedFields(CellType.current, null, null),
-          text: CellType.current.longName,
-        ),
-      );
+      entries.add(DropdownEntry(value: CellType.current, text: CellType.current.longName));
     }
     if (dataElement is WithStats) {
-      entries.addAll(
-        StatsInterval.values.map(
-          (s) => DropdownEntry(
-            value: _CellTypeAndAssociatedFields(CellType.average, s, null),
-            text: 'Average - ${s.display}',
-          ),
-        ),
-      );
+      entries.add(DropdownEntry(value: CellType.average, text: CellType.average.longName));
     }
     if (dataElement is WithHistory) {
-      entries.addAll(
-        HistoryInterval.values.map(
-          (h) => DropdownEntry(
-            value: _CellTypeAndAssociatedFields(CellType.history, null, h),
-            text: 'History - ${h.display}',
-          ),
-        ),
-      );
+      entries.add(DropdownEntry(value: CellType.history, text: CellType.history.longName));
     }
-    final intended = _CellTypeAndAssociatedFields(_type, _statsInterval, _historyInterval);
 
     return buildDropdownBox(
       label: 'Display',
       items: entries,
-      initialValue: entries.map((e) => e.value).toSet().contains(intended) ? intended : null,
-      onChanged: (_CellTypeAndAssociatedFields? value) {
+      initialValue: entries.any((e) => e.value == _type) ? _type : null,
+      onChanged: (CellType? value) {
         setState(() {
-          _type = value?.type;
-          _statsInterval = value?.statsInterval;
-          _historyInterval = value?.historyInterval;
+          _type = value;
+          _wipeInvalidFields();
         });
       },
       validator: (value) {
         if (value == null) {
           return 'Type must be set';
+        }
+        return null;
+      },
+    );
+  }
+
+  Widget _buildIntervalField() {
+    final List<DropdownEntry<Enum>> entries = switch (_type) {
+      CellType.average =>
+        StatsInterval.values.map((s) => DropdownEntry<Enum>(value: s, text: s.display)).toList(),
+      CellType.history =>
+        HistoryInterval.values.map((h) => DropdownEntry<Enum>(value: h, text: h.display)).toList(),
+      _ => [],
+    };
+    final Enum? value = switch (_type) {
+      CellType.average => _statsInterval,
+      CellType.history => _historyInterval,
+      _ => null,
+    };
+
+    return buildDropdownBox<Enum>(
+      label: 'Interval',
+      items: entries,
+      initialValue: value,
+      enabled: entries.isNotEmpty,
+      onChanged: (Enum? value) {
+        setState(() {
+          if (value is StatsInterval) {
+            _statsInterval = value;
+          } else if (value is HistoryInterval) {
+            _historyInterval = value;
+          }
+        });
+      },
+      validator: (value) {
+        if (entries.isNotEmpty && value == null) {
+          return 'Interval must be set';
         }
         return null;
       },

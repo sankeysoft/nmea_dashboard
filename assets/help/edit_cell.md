@@ -14,10 +14,13 @@ This form lets you define one of the cells on a data page.
   the current value, some elements also support displaying an average value or a
   "history" graph of the value over time. Average values include a change bar
   indicating whether the most recent data is higher or lower than the average.
-  History graphs will take some time to gather initial data before the graph
-  is first displayed - longer history ranges take longer to display the initial
-  data. The app can only track averages and histories while the screen is on and
-  the app is displayed.
+  The app can only track averages and histories while the screen is on and the
+  app is displayed. History graphs will take some time to gather initial data
+  before the graph is first displayed - longer intervals take longer to display
+  the initial data.
+
+* **Interval**: Only used when Display is average or history. The period an
+  average is calculated over, or the time range covered by a history graph. 
 
 * **Format**: Which format and units should be used to display the data. The
   formats in this list depend on the selected element. A default format is
