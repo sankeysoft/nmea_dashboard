@@ -40,6 +40,15 @@ void main() {
     );
   });
 
+  test('should fail non-ASCII content with a specific message', () {
+    expect(
+      () => Nmea0183Validator(true).validate('\$YDDPT,18.56,-1.61,140.0\uFFFD,*67'),
+      throwsA(
+        isA<FormatException>().having((e) => e.message, 'message', contains('non-ASCII')),
+      ),
+    );
+  });
+
   test('should accept missing checksum iff checksum not required', () {
     final message = Nmea0183Validator(false).validate(r'$YDDPT,18.56,-1.61,140.0')!;
     expect(message.type, 'DPT');

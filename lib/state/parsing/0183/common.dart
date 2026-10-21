@@ -68,12 +68,15 @@ class Nmea0183Validator extends MessageValidator<String, String> {
     return ValidatedMessage(raw.substring(3, 6), raw.substring(1, 3), raw.substring(7));
   }
 
-  /// Validates that the supplied content matches the expected ASCII checksum, throwing
-  /// a FormatException if not.
+  /// Validates that the supplied content is ASCII and matches the expected ASCII checksum,
+  /// throwing a FormatException if not.
   static void _validateChecksum(String content, String checksumString) {
     final int checksumInt = int.parse(checksumString, radix: 16);
     int xor = 0;
     for (final codeUnit in content.codeUnits) {
+      if (codeUnit > 0x7f) {
+        throw const FormatException('Contains non-ASCII characters');
+      }
       xor ^= codeUnit;
     }
     if (xor != checksumInt) {
