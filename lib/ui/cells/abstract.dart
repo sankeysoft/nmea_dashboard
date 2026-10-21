@@ -98,13 +98,17 @@ abstract class HeadingContentsCell extends SpecCell {
     super.alarmState,
     super.key,
   }) : super(
-         content: CustomMultiChildLayout(
-           delegate: _CellContentLayoutDelegate(),
-           children: <Widget>[
-             LayoutId(id: _Component.heading, child: _CellHeading(heading)),
-             LayoutId(id: _Component.units, child: _CellUnits(units)),
-             LayoutId(id: _Component.content, child: content),
-           ],
+         content: Builder(
+           builder: (context) => CustomMultiChildLayout(
+             delegate: _CellContentLayoutDelegate(
+               context.select<UiSettings, int>((s) => s.maxHeading.maxHeight).toDouble(),
+             ),
+             children: <Widget>[
+               LayoutId(id: _Component.heading, child: _CellHeading(heading)),
+               LayoutId(id: _Component.units, child: _CellUnits(units)),
+               LayoutId(id: _Component.content, child: content),
+             ],
+           ),
          ),
        );
 }
@@ -115,7 +119,9 @@ class _CellContentLayoutDelegate extends MultiChildLayoutDelegate {
   // The maximum height of the header line as a fraction of cell height.
   static const double _heightFraction = 1 / 5;
   // The maximum absolute height of the header line.
-  static const double _maxHeight = 48;
+  final double _maxHeight;
+
+  _CellContentLayoutDelegate(this._maxHeight);
 
   @override
   Size getSize(BoxConstraints constraints) {
@@ -157,9 +163,8 @@ class _CellContentLayoutDelegate extends MultiChildLayoutDelegate {
   }
 
   @override
-  bool shouldRelayout(covariant MultiChildLayoutDelegate oldDelegate) {
-    // The class is stateless so a change in instance never leads to relayout.
-    return false;
+  bool shouldRelayout(covariant _CellContentLayoutDelegate oldDelegate) {
+    return oldDelegate._maxHeight != _maxHeight;
   }
 }
 

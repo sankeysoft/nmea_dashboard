@@ -32,6 +32,7 @@ class _UiSettingsForm extends StatefulWidget {
 class _UiSettingsFormState extends StatefulFormState<_UiSettingsForm> {
   late String _valueFont;
   late String _headingFont;
+  late HeadingSize _maxHeading;
   late bool _darkTheme;
   late bool _keepScreenAwake;
 
@@ -39,6 +40,7 @@ class _UiSettingsFormState extends StatefulFormState<_UiSettingsForm> {
   void initState() {
     _valueFont = widget._settings.valueFont;
     _headingFont = widget._settings.headingFont;
+    _maxHeading = widget._settings.maxHeading;
     _darkTheme = widget._settings.darkTheme;
     _keepScreenAwake = widget._settings.keepScreenAwake;
     super.initState();
@@ -57,6 +59,7 @@ class _UiSettingsFormState extends StatefulFormState<_UiSettingsForm> {
               children: [
                 _buildValueField(),
                 _buildHeadingField(),
+                _buildMaxHeadingField(),
                 _buildDarkThemeField(),
                 _buildKeepScreenAwakeField(),
               ],
@@ -65,6 +68,7 @@ class _UiSettingsFormState extends StatefulFormState<_UiSettingsForm> {
           buildSaveButton(
             postSaver: () {
               widget._settings.setFonts(valueFont: _valueFont, headingFont: _headingFont);
+              widget._settings.setMaxHeading(_maxHeading);
               widget._settings.setDarkTheme(_darkTheme);
               widget._settings.setKeepScreenAwake(_keepScreenAwake);
               Navigator.pop(context);
@@ -101,6 +105,21 @@ class _UiSettingsFormState extends StatefulFormState<_UiSettingsForm> {
         setState(() {
           if (value != null) {
             _headingFont = value;
+          }
+        });
+      },
+    );
+  }
+
+  Widget _buildMaxHeadingField() {
+    return buildDropdownBox(
+      label: 'Max heading',
+      items: HeadingSize.values.map((s) => DropdownEntry(value: s, text: s.description)).toList(),
+      initialValue: _maxHeading,
+      onChanged: (value) {
+        setState(() {
+          if (value != null) {
+            _maxHeading = value;
           }
         });
       },

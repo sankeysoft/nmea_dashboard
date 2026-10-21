@@ -8,8 +8,11 @@ import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/data_element.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:nmea_dashboard/state/settings/specs.dart';
+import 'package:nmea_dashboard/state/settings/ui.dart';
 import 'package:nmea_dashboard/state/values.dart';
 import 'package:nmea_dashboard/ui/cells/current_value_cell.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../utils.dart';
 
@@ -37,11 +40,16 @@ void main() {
     CurrentValueCell cell, {
     TestNavObserver? observer,
   }) async {
+    SharedPreferences.setMockInitialValues({});
+    final settings = UiSettings(await SharedPreferences.getInstance());
     await tester.pumpWidget(
-      MaterialApp(
-        navigatorObservers: [?observer],
-        home: Scaffold(
-          body: SizedBox(width: 200, height: 150, child: Row(children: [cell])),
+      ChangeNotifierProvider<UiSettings>.value(
+        value: settings,
+        child: MaterialApp(
+          navigatorObservers: [?observer],
+          home: Scaffold(
+            body: SizedBox(width: 200, height: 150, child: Row(children: [cell])),
+          ),
         ),
       ),
     );

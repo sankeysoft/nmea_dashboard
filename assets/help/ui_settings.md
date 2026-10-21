@@ -8,6 +8,10 @@ This form lets you change the basic properties of the user interface.
 * **Heading font**: The font to use for displaying the cell names and units.
   Select from one of the standard fonts included with the app.
 
+* **Max heading**: The largest size that cell names and units may grow to in
+  large cells. This usually only has an effect when displaying a small number
+  of cells on a large screen.
+
 * **Dark theme**: When enabled (the default), day mode is light text on a dark
   background. When disabled, day mode is dark text on a light background. Night
   mode is always red text on a dark background.

@@ -24,11 +24,7 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: SizedBox(
-              width: 200,
-              height: 100,
-              child: Row(children: [EmptyCell()]),
-            ),
+            body: SizedBox(width: 200, height: 100, child: Row(children: [EmptyCell()])),
           ),
         ),
       );
@@ -65,9 +61,7 @@ void main() {
                 width: 200,
                 height: 150,
                 child: Row(
-                  children: [
-                    CurrentValueCell(element: element, formatter: formatter, spec: spec),
-                  ],
+                  children: [CurrentValueCell(element: element, formatter: formatter, spec: spec)],
                 ),
               ),
             ),
@@ -99,6 +93,61 @@ void main() {
       element.alarmState.set(null);
       await tester.pump();
       expect(surfaceColor(), Colors.grey.shade900);
+    });
+  });
+
+  group('HeadingContentsCell heading size', () {
+    Future<UiSettings> pumpLargeCell(WidgetTester tester, Map<String, Object> prefs) async {
+      // Use a cell big enough that the heading height is limited by the max heading setting.
+      tester.view.physicalSize = const Size(1200, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      SharedPreferences.setMockInitialValues(prefs);
+      final settings = UiSettings(await SharedPreferences.getInstance());
+      final element = ConsistentDataElement.newForProperty(
+        Source.network,
+        Property.depthWithOffset,
+        Staleness(const Duration(seconds: 10)),
+      );
+      final formatter = formattersFor(Property.depthWithOffset.dimension)['feet']!;
+      final spec = DataCellSpec('network', 'depthWithOffset', 'current', 'feet', name: 'HEAD');
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<UiSettings>.value(
+          value: settings,
+          child: MaterialApp(
+            home: Scaffold(
+              body: Row(
+                children: [CurrentValueCell(element: element, formatter: formatter, spec: spec)],
+              ),
+            ),
+          ),
+        ),
+      );
+      return settings;
+    }
+
+    double headingHeight(WidgetTester tester) => tester
+        .getSize(find.ancestor(of: find.text('HEAD'), matching: find.byType(FittedBox)))
+        .height;
+
+    for (final size in HeadingSize.values) {
+      testWidgets('limits heading to ${size.maxHeight} for ${size.name}', (tester) async {
+        await pumpLargeCell(tester, {'ui_max_heading_height': size.maxHeight});
+        expect(headingHeight(tester), size.maxHeight.toDouble());
+      });
+    }
+
+    testWidgets('relayouts when the setting changes', (tester) async {
+      final settings = await pumpLargeCell(tester, {});
+      expect(headingHeight(tester), 48.0);
+      settings.setMaxHeading(HeadingSize.large);
+      await tester.pump();
+      expect(headingHeight(tester), 96.0);
+      settings.setMaxHeading(HeadingSize.small);
+      await tester.pump();
+      expect(headingHeight(tester), 24.0);
     });
   });
 }

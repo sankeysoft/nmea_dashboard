@@ -31,6 +31,7 @@ void main() {
     expect(s.darkTheme, isTrue);
     expect(s.valueFont, 'Lexend');
     expect(s.headingFont, 'Manrope');
+    expect(s.maxHeading, HeadingSize.medium);
     expect(s.keepScreenAwake, isFalse);
     expect(s.alarmSilenceTime, isNull);
   });
@@ -45,6 +46,7 @@ void main() {
         'ui_dark_theme': !defaults.darkTheme,
         'ui_value_font': 'Orbitron',
         'ui_heading_font': 'Kanit',
+        'ui_max_heading_height': 96,
         'ui_keep_screen_awake': !defaults.keepScreenAwake,
         'ui_alarm_silence_seconds': 300,
       }),
@@ -55,6 +57,7 @@ void main() {
     expect(s.darkTheme, isNot(defaults.darkTheme));
     expect(s.valueFont, 'Orbitron');
     expect(s.headingFont, 'Kanit');
+    expect(s.maxHeading, HeadingSize.large);
     expect(s.keepScreenAwake, isNot(defaults.keepScreenAwake));
     expect(s.alarmSilenceTime, const Duration(seconds: 300));
   });
@@ -150,6 +153,44 @@ void main() {
     s.setFonts(valueFont: 'Orbitron', headingFont: 'Kanit');
     expect(s.valueFont, 'Orbitron');
     expect(s.headingFont, 'Kanit');
+    expect(count, 1);
+  });
+
+  test('reads stored max heading heights by snapping to the closest size', () async {
+    final cases = {
+      24: HeadingSize.small,
+      48: HeadingSize.medium,
+      96: HeadingSize.large,
+      30: HeadingSize.small,
+      40: HeadingSize.medium,
+      80: HeadingSize.large,
+      // Ties snap to the smaller size.
+      36: HeadingSize.small,
+      72: HeadingSize.medium,
+      0: HeadingSize.small,
+      -10: HeadingSize.small,
+      1000: HeadingSize.large,
+    };
+    for (final MapEntry(key: height, value: expected) in cases.entries) {
+      final s = UiSettings(await _prefs({'ui_max_heading_height': height}));
+      expect(s.maxHeading, expected, reason: 'stored height $height');
+    }
+  });
+
+  test('HeadingSize.closest returns the exact match for each size', () {
+    for (final size in HeadingSize.values) {
+      expect(HeadingSize.closest(size.maxHeight), size);
+    }
+  });
+
+  test('setMaxHeading stores the height and notifies', () async {
+    final p = await _prefs();
+    final s = UiSettings(p);
+    int count = 0;
+    s.addListener(() => count++);
+    s.setMaxHeading(HeadingSize.large);
+    expect(s.maxHeading, HeadingSize.large);
+    expect(p.getInt('ui_max_heading_height'), 96);
     expect(count, 1);
   });
 

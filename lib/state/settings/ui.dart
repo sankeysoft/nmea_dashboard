@@ -15,6 +15,7 @@ class UiSettings with ChangeNotifier {
   final PrefValue<bool> _darkTheme;
   final PrefValue<String> _valueFont;
   final PrefValue<String> _headingFont;
+  final PrefMappedValue<int, HeadingSize> _maxHeading;
   final PrefValue<bool> _keepScreenAwake;
   final PrefValue<int> _alarmSilenceSeconds;
 
@@ -38,6 +39,13 @@ class UiSettings with ChangeNotifier {
       _darkTheme = PrefValue(prefs, 'ui_dark_theme', true),
       _valueFont = PrefValue(prefs, 'ui_value_font', 'Lexend'),
       _headingFont = PrefValue(prefs, 'ui_heading_font', 'Manrope'),
+      _maxHeading = PrefMappedValue(
+        prefs,
+        'ui_max_heading_height',
+        HeadingSize.medium,
+        HeadingSize.closest,
+        (n) => n.maxHeight,
+      ),
       _keepScreenAwake = PrefValue(prefs, 'ui_keep_screen_awake', false),
       _alarmSilenceSeconds = PrefValue(prefs, 'ui_alarm_silence_seconds', 0);
 
@@ -47,6 +55,7 @@ class UiSettings with ChangeNotifier {
   bool get darkTheme => _darkTheme.value;
   String get valueFont => _valueFont.value;
   String get headingFont => _headingFont.value;
+  HeadingSize get maxHeading => _maxHeading.value;
   bool get keepScreenAwake => _keepScreenAwake.value;
   Duration? get alarmSilenceTime =>
       _alarmSilenceSeconds.value == 0 ? null : Duration(seconds: _alarmSilenceSeconds.value);
@@ -85,6 +94,11 @@ class UiSettings with ChangeNotifier {
     notifyListeners();
   }
 
+  void setMaxHeading(HeadingSize size) {
+    _maxHeading.set(size);
+    notifyListeners();
+  }
+
   void setKeepScreenAwake(bool keepAwake) {
     _keepScreenAwake.set(keepAwake);
     WakelockPlus.toggle(enable: keepAwake);
@@ -95,4 +109,25 @@ class UiSettings with ChangeNotifier {
     _alarmSilenceSeconds.set(duration == null ? 0 : duration.inSeconds);
     notifyListeners();
   }
+}
+
+// The supported limits on the height of the heading line in a cell.
+enum HeadingSize {
+  small('Small', 24),
+  medium('Medium', 48),
+  large('Large', 96);
+
+  final String description;
+  final int maxHeight;
+  const HeadingSize(this.description, this.maxHeight);
+
+  /// Returns the size whose height is closest to `height`, preferring the smaller on a tie.
+  static HeadingSize closest(int height) => HeadingSize.values.reduce((best, size) {
+    final distance = (size.maxHeight - height).abs();
+    final bestDistance = (best.maxHeight - height).abs();
+    return (distance < bestDistance ||
+            (distance == bestDistance && size.maxHeight < best.maxHeight))
+        ? size
+        : best;
+  });
 }
