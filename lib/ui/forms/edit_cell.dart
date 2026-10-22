@@ -185,7 +185,7 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
       _type = null;
     } else if (_type == null) {
       _type = CellType.current;
-    } else if (_type == CellType.average && dataElement is! WithStats) {
+    } else if (_type!.usesStats && dataElement is! WithStats) {
       _type = CellType.current;
     } else if (_type == CellType.history && dataElement is! WithHistory) {
       _type = CellType.current;
@@ -198,6 +198,8 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
         _statsInterval = null;
         _historyInterval = null;
       case CellType.average:
+      case CellType.minimum:
+      case CellType.maximum:
         _statsInterval ??= StatsInterval.fifteenSec;
         _historyInterval = null;
       case CellType.history:
@@ -329,7 +331,9 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
       entries.add(DropdownEntry(value: CellType.current, text: CellType.current.longName));
     }
     if (dataElement is WithStats) {
-      entries.add(DropdownEntry(value: CellType.average, text: CellType.average.longName));
+      for (final type in [CellType.average, CellType.minimum, CellType.maximum]) {
+        entries.add(DropdownEntry(value: type, text: type.longName));
+      }
     }
     if (dataElement is WithHistory) {
       entries.add(DropdownEntry(value: CellType.history, text: CellType.history.longName));
@@ -356,14 +360,14 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
 
   Widget _buildIntervalField() {
     final List<DropdownEntry<Enum>> entries = switch (_type) {
-      CellType.average =>
+      CellType.average || CellType.minimum || CellType.maximum =>
         StatsInterval.values.map((s) => DropdownEntry<Enum>(value: s, text: s.display)).toList(),
       CellType.history =>
         HistoryInterval.values.map((h) => DropdownEntry<Enum>(value: h, text: h.display)).toList(),
       _ => [],
     };
     final Enum? value = switch (_type) {
-      CellType.average => _statsInterval,
+      CellType.average || CellType.minimum || CellType.maximum => _statsInterval,
       CellType.history => _historyInterval,
       _ => null,
     };
@@ -433,6 +437,8 @@ class _EditCellFormState extends StatefulFormState<_EditCellForm> {
     if (!_isNameOverridden) {
       if (_historyInterval != null && element != null) {
         _nameController.text = _historyInterval!.shortCellName(element);
+      } else if (_statsInterval != null && _type != null && element != null) {
+        _nameController.text = _statsInterval!.shortCellName(element, _type!);
       } else {
         _nameController.text = element?.shortName ?? '';
       }

@@ -293,11 +293,19 @@ enum Dimension {
 enum CellType {
   current('Current Value'),
   average('Average Value'),
+  minimum('Minimum Value', 'Min'),
+  maximum('Maximum Value', 'Max'),
   history('History Graph');
 
   final String longName;
 
-  const CellType(this.longName);
+  /// A prefix applied to the element name in cells of this type, if any.
+  final String? prefix;
+
+  const CellType(this.longName, [this.prefix]);
+
+  /// Returns true if this cell type displays a statistic over a StatsInterval.
+  bool get usesStats => this == average || this == minimum || this == maximum;
 
   /// Returns a cell type from its unqualified name.
   static CellType? fromString(String? name) {
@@ -383,8 +391,9 @@ enum StatsInterval {
     return StatsInterval.values.asNameMap()[name];
   }
 
-  /// Returns the short name for a cell showing this interval for a property.
-  String shortCellName(DataElement element) {
-    return '${element.shortName} ($short)';
+  /// Returns the short name for a cell of the supplied type showing this interval for a property.
+  String shortCellName(DataElement element, CellType type) {
+    final prefix = type.prefix == null ? '' : '${type.prefix} ';
+    return '$prefix${element.shortName} ($short)';
   }
 }

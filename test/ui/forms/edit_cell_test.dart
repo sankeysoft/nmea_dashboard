@@ -135,6 +135,34 @@ void main() {
       expect(find.text('1 minute'), findsOneWidget);
     });
 
+    testWidgets('shows min and max type selection with stats-interval-based names', (tester) async {
+      final spec = DataCellSpec(
+        'network',
+        'speedOverGround',
+        'maximum',
+        'knots',
+        statsInterval: 'oneMin',
+      );
+      await pumpForm(tester, spec);
+      expect(find.text('Maximum Value'), findsOneWidget);
+      expect(find.text('Max SOG (1m)'), findsOneWidget);
+
+      await tester.tap(find.text('Maximum Value'));
+      await tester.pump();
+      expect(find.text('Average Value').last, findsOneWidget);
+      await tester.tap(find.text('Minimum Value').last);
+      await tester.pump();
+      expect(getTypedDropdownByLabel<Enum>('Interval:', tester).value, StatsInterval.oneMin);
+      expect(find.text('Min SOG (1m)'), findsOneWidget);
+
+      await tester.tap(find.text('SAVE'));
+      await tester.pump();
+      final saved = pageSettings.dataPageSpecs.first.cells.first;
+      expect(saved.type, 'minimum');
+      expect(saved.statsInterval, 'oneMin');
+      expect(saved.historyInterval, isNull);
+    });
+
     testWidgets('disables interval for current value type', (tester) async {
       final spec = DataCellSpec('network', 'speedOverGround', 'current', 'knots');
       await pumpForm(tester, spec);

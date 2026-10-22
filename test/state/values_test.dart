@@ -97,6 +97,150 @@ void main() {
     expect(acc.mean(), null);
   });
 
+  test('NumericAccumulator should track min and max.', () {
+    final acc = NumericAccumulator();
+    expect(acc.min(), null);
+    expect(acc.max(), null);
+    for (final v in [5.0, 3.0, 8.0, 3.0, 6.0, 1.0, 8.0]) {
+      acc.add(v);
+    }
+    expect(acc.min(), 1.0);
+    expect(acc.max(), 8.0);
+    // Remaining after each removal, checking repeated values are handled.
+    final expected = [
+      (1.0, 8.0), // 3, 8, 3, 6, 1, 8
+      (1.0, 8.0), // 8, 3, 6, 1, 8
+      (1.0, 8.0), // 3, 6, 1, 8
+      (1.0, 8.0), // 6, 1, 8
+      (1.0, 8.0), // 1, 8
+      (8.0, 8.0), // 8
+    ];
+    for (final (min, max) in expected) {
+      acc.removeFirst();
+      expect(acc.min(), min);
+      expect(acc.max(), max);
+    }
+    acc.removeFirst();
+    expect(acc.min(), null);
+    expect(acc.max(), null);
+    acc.add(4.0);
+    acc.add(2.0);
+    acc.clear();
+    expect(acc.min(), null);
+    expect(acc.max(), null);
+    acc.add(7.0);
+    expect(acc.min(), 7.0);
+    expect(acc.max(), 7.0);
+  });
+
+  test('NumericAccumulator min and max should follow a sliding window.', () {
+    final acc = NumericAccumulator();
+    acc.add(9.0);
+    acc.add(2.0);
+    acc.add(5.0);
+    expect((acc.min(), acc.max()), (2.0, 9.0));
+    acc.removeFirst();
+    expect((acc.min(), acc.max()), (2.0, 5.0));
+    acc.add(4.0);
+    acc.removeFirst();
+    expect((acc.min(), acc.max()), (4.0, 5.0));
+    acc.add(7.0);
+    expect((acc.min(), acc.max()), (4.0, 7.0));
+  });
+
+  test('NumericAccumulator min and max should handle a repeated value.', () {
+    final acc = NumericAccumulator();
+    for (var i = 0; i < 3; i++) {
+      acc.add(4.0);
+    }
+    expect((acc.min(), acc.max()), (4.0, 4.0));
+    acc.removeFirst();
+    expect((acc.min(), acc.max()), (4.0, 4.0));
+    acc.removeFirst();
+    expect((acc.min(), acc.max()), (4.0, 4.0));
+    acc.removeFirst();
+    expect((acc.min(), acc.max()), (null, null));
+  });
+
+  test('NumericAccumulator min and max should handle repeats of the extremes.', () {
+    final acc = NumericAccumulator();
+    for (final v in [1.0, 1.0, 9.0, 9.0, 5.0, 1.0, 9.0, 5.0]) {
+      acc.add(v);
+    }
+    // Remaining after each removal. The extremes should only change once every copy has gone.
+    final expected = [
+      (1.0, 9.0), // 1, 9, 9, 5, 1, 9, 5
+      (1.0, 9.0), // 9, 9, 5, 1, 9, 5
+      (1.0, 9.0), // 9, 5, 1, 9, 5
+      (1.0, 9.0), // 5, 1, 9, 5
+      (1.0, 9.0), // 1, 9, 5
+      (5.0, 9.0), // 9, 5
+      (5.0, 5.0), // 5
+    ];
+    for (final (min, max) in expected) {
+      acc.removeFirst();
+      expect((acc.min(), acc.max()), (min, max));
+    }
+    acc.removeFirst();
+    expect((acc.min(), acc.max()), (null, null));
+  });
+
+  test('SingleValueAccumulator should give correct min and max.', () {
+    final acc = ValueAccumulator.forType(SingleValue<double>);
+    expect(acc.min(), null);
+    expect(acc.max(), null);
+    acc.add(SingleValue(10.0));
+    acc.add(SingleValue(30.0));
+    acc.add(SingleValue(20.0));
+    expect(acc.min(), ValueMatches(SingleValue(10.0)));
+    expect(acc.max(), ValueMatches(SingleValue(30.0)));
+    acc.removeFirst();
+    expect(acc.min(), ValueMatches(SingleValue(20.0)));
+    expect(acc.max(), ValueMatches(SingleValue(30.0)));
+    acc.clear();
+    acc.add(SingleValue(15.0));
+    acc.add(SingleValue(15.0));
+    expect(acc.min(), ValueMatches(SingleValue(15.0)));
+    expect(acc.max(), ValueMatches(SingleValue(15.0)));
+    acc.removeFirst();
+    expect(acc.min(), ValueMatches(SingleValue(15.0)));
+    expect(acc.max(), ValueMatches(SingleValue(15.0)));
+    acc.removeFirst();
+    expect(acc.min(), null);
+    expect(acc.max(), null);
+  });
+
+  test('AugmentedBearingAccumulator min and max should use naive bearing and last variation', () {
+    final acc = ValueAccumulator.forType(AugmentedBearing);
+    expect(acc.min(), null);
+    expect(acc.max(), null);
+    acc.add(AugmentedBearing(350.0, 5.0));
+    acc.add(AugmentedBearing(10.0, 6.0));
+    acc.add(AugmentedBearing(180.0, null));
+    // Wraparound is deliberately not considered.
+    expect(acc.min(), ValueMatches(AugmentedBearing(10.0, 6.0)));
+    expect(acc.max(), ValueMatches(AugmentedBearing(350.0, 6.0)));
+    acc.removeFirst();
+    expect(acc.min(), ValueMatches(AugmentedBearing(10.0, 6.0)));
+    expect(acc.max(), ValueMatches(AugmentedBearing(180.0, 6.0)));
+    acc.removeFirst();
+    expect(acc.min(), ValueMatches(AugmentedBearing(180.0, null)));
+    expect(acc.max(), ValueMatches(AugmentedBearing(180.0, null)));
+    acc.clear();
+    expect(acc.min(), null);
+    expect(acc.max(), null);
+    acc.add(AugmentedBearing(90.0, 2.0));
+    acc.add(AugmentedBearing(90.0, 3.0));
+    expect(acc.min(), ValueMatches(AugmentedBearing(90.0, 3.0)));
+    expect(acc.max(), ValueMatches(AugmentedBearing(90.0, 3.0)));
+    acc.removeFirst();
+    expect(acc.min(), ValueMatches(AugmentedBearing(90.0, 3.0)));
+    expect(acc.max(), ValueMatches(AugmentedBearing(90.0, 3.0)));
+    acc.removeFirst();
+    expect(acc.min(), null);
+    expect(acc.max(), null);
+  });
+
   test('SingleValueAccumulator should give correct results.', () {
     final acc = ValueAccumulator.forType(SingleValue<double>);
     expect(acc.mean(), null);

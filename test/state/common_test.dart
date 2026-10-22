@@ -109,6 +109,16 @@ void main() {
       Property.speedOverGround,
       Staleness(const Duration(minutes: 1)),
     );
-    expect(StatsInterval.oneMin.shortCellName(element), 'SOG (1m)');
+    expect(StatsInterval.oneMin.shortCellName(element, CellType.average), 'SOG (1m)');
+    expect(StatsInterval.oneMin.shortCellName(element, CellType.minimum), 'Min SOG (1m)');
+    expect(StatsInterval.fiveMin.shortCellName(element, CellType.maximum), 'Max SOG (5m)');
+  });
+
+  test('CellType.usesStats should be true only for statistic types', () {
+    expect(CellType.values.where((t) => t.usesStats), [
+      CellType.average,
+      CellType.minimum,
+      CellType.maximum,
+    ]);
   });
 }

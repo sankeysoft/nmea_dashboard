@@ -14,6 +14,7 @@ import 'package:nmea_dashboard/state/settings/network.dart';
 import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:nmea_dashboard/state/values.dart';
 import 'package:nmea_dashboard/ui/cells/creation.dart';
+import 'package:nmea_dashboard/ui/cells/stats_value_cell.dart';
 import 'package:nmea_dashboard/ui/cells/text_cell.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -37,16 +38,30 @@ void main() {
         ConsistentDataElement<SingleValue<double>>(Source.network, Property.speedOverGround, null);
   });
 
-  test('average cell for an element without stats is not found', () {
-    final spec = DataCellSpec(
-      'network',
-      'speedOverGround',
-      'average',
-      'knots',
-      statsInterval: 'oneMin',
-    );
-    expect(createCell(dataSet, spec), isA<NotFoundCell>());
-  });
+  for (final type in ['average', 'minimum', 'maximum']) {
+    test('$type cell for an element without stats is not found', () {
+      final spec = DataCellSpec(
+        'network',
+        'speedOverGround',
+        type,
+        'knots',
+        statsInterval: 'oneMin',
+      );
+      expect(createCell(dataSet, spec), isA<NotFoundCell>());
+    });
+
+    test('$type cell with an invalid interval is not found', () {
+      final spec = DataCellSpec('network', 'depthWithOffset', type, 'feet', statsInterval: 'nope');
+      expect(createCell(dataSet, spec), isA<NotFoundCell>());
+    });
+
+    test('$type cell is created for numeric and bearing elements', () {
+      for (final (element, format) in [('depthWithOffset', 'feet'), ('courseOverGround', 'true')]) {
+        final spec = DataCellSpec('network', element, type, format, statsInterval: 'oneMin');
+        expect(createCell(dataSet, spec), isA<StatsValueCell>());
+      }
+    });
+  }
 
   test('history cell for an element without history is not found', () {
     final spec = DataCellSpec(

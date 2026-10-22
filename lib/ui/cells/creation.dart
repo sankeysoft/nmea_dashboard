@@ -9,7 +9,7 @@ import 'package:nmea_dashboard/state/data_set.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:nmea_dashboard/ui/cells/abstract.dart';
-import 'package:nmea_dashboard/ui/cells/average_value_cell.dart';
+import 'package:nmea_dashboard/ui/cells/stats_value_cell.dart';
 import 'package:nmea_dashboard/ui/cells/current_value_cell.dart';
 import 'package:nmea_dashboard/ui/cells/history_cell.dart';
 import 'package:nmea_dashboard/ui/cells/text_cell.dart';
@@ -52,18 +52,21 @@ Cell createCell(DataSet dataset, DataCellSpec spec) {
     case CellType.current:
       return CurrentValueCell(element: element, formatter: formatter, spec: spec);
     case CellType.average:
+    case CellType.minimum:
+    case CellType.maximum:
       final StatsInterval? interval = StatsInterval.fromString(spec.statsInterval);
       if (interval == null) {
         _log.warning('Could not find ${spec.statsInterval} interval');
         return NotFoundCell(spec: spec);
       }
       if (element is! WithStats) {
-        _log.warning('Could not build average cell for non-stats type ${element.property}');
+        _log.warning('Could not build ${type.name} cell for non-stats type ${element.property}');
         return NotFoundCell(spec: spec);
       }
-      return AverageValueCell(
+      return StatsValueCell(
         element: element,
         stats: element.stats(interval),
+        type: type,
         formatter: formatter,
         spec: spec,
       );

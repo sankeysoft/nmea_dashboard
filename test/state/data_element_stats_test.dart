@@ -96,6 +96,33 @@ void main() {
     });
   });
 
+  test('Stats should track min and max as data expires', () {
+    final tick = Duration(milliseconds: (_testInterval.duration.inMilliseconds / 5.0).toInt());
+    final stats = Stats<SingleValue<double>>(_testInterval, _testDataId);
+    expect(stats.min, isNull);
+    expect(stats.max, isNull);
+
+    fakeAsync((async) {
+      stats.addValue(SingleValue(30.0));
+      async.elapse(tick);
+      stats.addValue(SingleValue(10.0));
+      async.elapse(tick);
+      stats.addValue(SingleValue(20.0));
+      async.elapse(tick);
+      expect(stats.min, ValueMatches(SingleValue(10.0)));
+      expect(stats.max, ValueMatches(SingleValue(30.0)));
+      async.elapse(tick * 2);
+      expect(stats.min, ValueMatches(SingleValue(10.0)));
+      expect(stats.max, ValueMatches(SingleValue(20.0)));
+      async.elapse(tick);
+      expect(stats.min, ValueMatches(SingleValue(20.0)));
+      expect(stats.max, ValueMatches(SingleValue(20.0)));
+      async.elapse(tick);
+      expect(stats.min, isNull);
+      expect(stats.max, isNull);
+    });
+  });
+
   test('Stats should batch remove data if timer is late', () {
     int eventCount = 0;
     final tick = Duration(milliseconds: (_testInterval.duration.inMilliseconds / 5.0).toInt());

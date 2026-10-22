@@ -14,7 +14,7 @@ import 'package:nmea_dashboard/state/values.dart';
 /// This also sets the maximum rate at which timers will be scheduled.
 const Duration _removalTolerance = Duration(milliseconds: 500);
 
-/// A optionally present statistic tracking average of some property over a
+/// A optionally present statistic tracking statistics of some property over a
 /// time window. Only present when one or more change notifiers are connected.
 class OptionalStats<V extends Value> with ChangeNotifier {
   /// The interval that we store over.
@@ -41,7 +41,7 @@ class OptionalStats<V extends Value> with ChangeNotifier {
   // removed - often its only a resize/redraw before immediately adding a new
   // listener and we don't want to disrupt the recording of stats for this.
   // Not removing means we use a bit more memory than strictly necessary if
-  // the user removes an average, until the next restart.
+  // the user removes a stats cell, until the next restart.
 
   /// Adds a new value into the history.
   void addValue(V newValue) {
@@ -51,8 +51,7 @@ class OptionalStats<V extends Value> with ChangeNotifier {
   Stats? get inner => _inner;
 }
 
-/// A statistic tracking mean of some property over a time window (and
-/// potentially other things like min and max in the future).
+/// A statistic tracking mean, minimum, and maximum of some property over a time window.
 class Stats<V extends Value> with ChangeNotifier {
   /// The interval that we store over.
   final StatsInterval interval;
@@ -65,9 +64,6 @@ class Stats<V extends Value> with ChangeNotifier {
 
   /// A class to accumulate data over an interval.
   final ValueAccumulator<V> _accumulator;
-
-  /// The average value, if any data is valid in the window.
-  V? _mean;
 
   /// A timer to remove the next expiring value.
   Timer? _timer;
@@ -84,8 +80,6 @@ class Stats<V extends Value> with ChangeNotifier {
     _accumulator.add(newValue);
     // Only add an expiry timer if we don't already have one running.
     _timer ??= Timer(interval.duration, () => _handleTimer());
-    // Update the average and notify listeners.
-    _mean = _accumulator.mean();
     notifyListeners();
   }
 
@@ -107,15 +101,20 @@ class Stats<V extends Value> with ChangeNotifier {
     } else {
       _timer = Timer(_expiries.first.difference(now), () => _handleTimer());
     }
-    // Update our tracked average and notify listeners is anything changed.
+    // Notify listeners if anything changed.
     if (removedEntries) {
-      _mean = _accumulator.mean();
       notifyListeners();
     }
   }
 
   /// The average value over the window, if it exists
-  V? get mean => _mean;
+  V? get mean => _accumulator.mean();
+
+  /// The minimum value over the window, if it exists
+  V? get min => _accumulator.min();
+
+  /// The maximum value over the window, if it exists
+  V? get max => _accumulator.max();
 
   /// The most recent value in the window, if it exists
   V? get last => _accumulator.last();

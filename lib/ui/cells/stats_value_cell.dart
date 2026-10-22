@@ -5,6 +5,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/data_element.dart';
 import 'package:nmea_dashboard/state/data_element_stats.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
@@ -21,28 +22,33 @@ const double barWidth = 0.8;
 /// The absolute height of the axis mark between increasing and decreasing.
 const double axisHeight = 4.0;
 
-// Identifiers for the different subwidgets in an AverageValueCell content.
+// Identifiers for the different subwidgets in an average StatsValueCell content.
 enum _Component { value, changeTick }
 
-class AverageValueCell extends HeadingContentsCell {
-  AverageValueCell({
+/// A cell displaying a statistic (average, minimum, or maximum) of an element over an interval.
+/// Average cells also include a change tick comparing the most recent value to the average.
+class StatsValueCell extends HeadingContentsCell {
+  StatsValueCell({
     required DataElement element,
     required OptionalStats stats,
+    required CellType type,
     required formatter,
     required super.spec,
     super.key,
   }) : super(
-         heading: spec.name ?? stats.interval.shortCellName(element),
+         heading: spec.name ?? stats.interval.shortCellName(element, type),
          units: formatter.units ?? ' ',
          content: ChangeNotifierProvider<OptionalStats>.value(
            value: stats,
-           child: CustomMultiChildLayout(
-             delegate: _CellContentLayoutDelegate(),
-             children: [
-               LayoutId(id: _Component.value, child: _Value(formatter)),
-               LayoutId(id: _Component.changeTick, child: _ChangeTick()),
-             ],
-           ),
+           child: (type == CellType.average)
+               ? CustomMultiChildLayout(
+                   delegate: _CellContentLayoutDelegate(),
+                   children: [
+                     LayoutId(id: _Component.value, child: _Value(formatter, type)),
+                     LayoutId(id: _Component.changeTick, child: _ChangeTick()),
+                   ],
+                 )
+               : _Value(formatter, type),
          ),
          alarmState: (element is WithAlarms) ? element.alarmState : null,
        );
@@ -91,8 +97,9 @@ class _CellContentLayoutDelegate extends MultiChildLayoutDelegate {
 
 class _Value extends StatelessWidget {
   final Formatter formatter;
+  final CellType type;
 
-  const _Value(this.formatter);
+  const _Value(this.formatter, this.type);
 
   @override
   Widget build(BuildContext context) {
@@ -105,6 +112,12 @@ class _Value extends StatelessWidget {
       );
     }
 
+    final value = switch (type) {
+      CellType.minimum => stats.min,
+      CellType.maximum => stats.max,
+      _ => stats.mean,
+    };
+
     return DefaultTextStyle(
       style: Theme.of(context).textTheme.headlineLarge!,
       // Let the displayable choose to discard some of the available vertical
@@ -113,7 +126,7 @@ class _Value extends StatelessWidget {
         heightFactor: formatter.heightFraction,
         child: FittedBox(
           fit: BoxFit.contain,
-          child: Text(formatter.format(stats.mean), textAlign: TextAlign.center),
+          child: Text(formatter.format(value), textAlign: TextAlign.center),
         ),
       ),
     );

@@ -161,10 +161,16 @@ class AugmentedBearing extends Value {
   }
 }
 
-/// A class to accumulate values of some type into an average.
+/// A class to accumulate values of some type into an average, minimum, and maximum.
 abstract class ValueAccumulator<V extends Value> {
   /// Returns the average of the values added into this accumulator.
   V? mean();
+
+  /// Returns the minimum of the values added into this accumulator.
+  V? min();
+
+  /// Returns the maximum of the values added into this accumulator.
+  V? max();
 
   /// Returns the most recent value added into this accumulator.
   V? last();
@@ -211,6 +217,18 @@ class SingleValueAccumulator extends ValueAccumulator<SingleValue<double>> {
   }
 
   @override
+  SingleValue<double>? min() {
+    final d = num.min();
+    return d == null ? null : SingleValue(d);
+  }
+
+  @override
+  SingleValue<double>? max() {
+    final d = num.max();
+    return d == null ? null : SingleValue(d);
+  }
+
+  @override
   SingleValue<double>? last() {
     final d = num.last();
     return d == null ? null : SingleValue(d);
@@ -232,11 +250,27 @@ class AugmentedBearingAccumulator extends ValueAccumulator<AugmentedBearing> {
       variation = NumericAccumulator(),
       variationPresent = Queue();
 
+  // Currently mean, min, and max are calculated naively on the bearings,
+  // ignoring wraparound at 360 degrees.
+  // TODO: Consider improving this.
+
   @override
   AugmentedBearing? mean() {
     final b = bearing.mean();
     final v = variation.mean();
     return b == null ? null : AugmentedBearing(b, v);
+  }
+
+  @override
+  AugmentedBearing? min() {
+    final b = bearing.min();
+    return b == null ? null : AugmentedBearing(b, variation.last());
+  }
+
+  @override
+  AugmentedBearing? max() {
+    final b = bearing.max();
+    return b == null ? null : AugmentedBearing(b, variation.last());
   }
 
   @override
@@ -275,45 +309,81 @@ class AugmentedBearingAccumulator extends ValueAccumulator<AugmentedBearing> {
   }
 }
 
-/// A class to accumulate values of some type into an average.
+/// A class to accumulate numeric values into an average, minimum, and maximum.
 class NumericAccumulator {
-  final Queue<double> values;
-  int count;
-  double? total;
+  /// All values added into this accumulator.
+  final Queue<double> _values;
 
-  NumericAccumulator() : values = Queue(), count = 0;
+  /// The sum of _values.
+  double _total;
+
+  /// Candidates for the minimum, in non-decreasing order with the current minimum first.
+  final Queue<double> _minCandidates;
+
+  /// Candidates for the maximum, in non-increasing order with the current maximum first.
+  final Queue<double> _maxCandidates;
+
+  NumericAccumulator()
+    : _values = Queue(),
+      _total = 0.0,
+      _minCandidates = Queue(),
+      _maxCandidates = Queue();
 
   /// Adds a new value into this accumulator.
   void add(double value) {
-    values.add(value);
-    count += 1;
-    total = (total == null) ? value : total! + value;
+    _values.add(value);
+    _total += value;
+    // Earlier values that are beyond the new value can never again be the min or max.
+    while (_minCandidates.isNotEmpty && _minCandidates.last > value) {
+      _minCandidates.removeLast();
+    }
+    _minCandidates.add(value);
+    while (_maxCandidates.isNotEmpty && _maxCandidates.last < value) {
+      _maxCandidates.removeLast();
+    }
+    _maxCandidates.add(value);
   }
 
   /// Removes the first value added into this accumulator, if present.
   void removeFirst() {
-    if (count > 0) {
-      final value = values.removeFirst();
-      count -= 1;
-      total = (count == 0) ? null : total! - value;
+    if (_values.isNotEmpty) {
+      final value = _values.removeFirst();
+      _total = _values.isEmpty ? 0.0 : _total - value;
+      if (_minCandidates.first == value) {
+        _minCandidates.removeFirst();
+      }
+      if (_maxCandidates.first == value) {
+        _maxCandidates.removeFirst();
+      }
     }
+  }
+
+  /// Returns the minimum of the values added into this accumulator.
+  double? min() {
+    return _minCandidates.isEmpty ? null : _minCandidates.first;
+  }
+
+  /// Returns the maximum of the values added into this accumulator.
+  double? max() {
+    return _maxCandidates.isEmpty ? null : _maxCandidates.first;
   }
 
   /// Returns the average of the values added into this accumulator.
   double? mean() {
-    return (total == null) ? null : total! / count;
+    return _values.isEmpty ? null : _total / _values.length;
   }
 
   /// Returns the most recent value added into this accumulator.
   double? last() {
-    return values.isEmpty ? null : values.last;
+    return _values.isEmpty ? null : _values.last;
   }
 
   /// Clears all values;
   void clear() {
-    values.clear();
-    count = 0;
-    total = null;
+    _values.clear();
+    _total = 0.0;
+    _minCandidates.clear();
+    _maxCandidates.clear();
   }
 }
 
