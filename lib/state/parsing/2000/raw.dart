@@ -22,13 +22,16 @@ class YdRawMessageSplitter extends MessageSplitter<ByteData> {
   List<ByteData> read(Uint8List data) {
     List<ByteData> messages = [];
 
+    final lineDiscardsBefore = _lineSplitter.discardCount;
     final lines = _lineSplitter.read(data);
+    discardCount += _lineSplitter.discardCount - lineDiscardsBefore;
     for (final line in lines) {
       try {
         final message = _readLine(line);
         if (message != null) messages.add(message.data);
       } catch (e) {
         // Silently discard to avoid overwhelming logs.
+        discardCount++;
       }
     }
     return messages;
@@ -38,8 +41,12 @@ class YdRawMessageSplitter extends MessageSplitter<ByteData> {
   /// not a received frame or does not complete a message.
   _SerializedMessage? _readLine(String line) {
     final parts = line.split(' ');
-    if (parts.length < 4 || parts.length > 11 || parts[1] != 'R') {
-      // Frame line has wrong number of elements or is not received data. Ignore it.
+    if (parts.length < 4 || parts.length > 11 || (parts[1] != 'R' && parts[1] != 'T')) {
+      // Not a valid frame line, count and discard it.
+      discardCount++;
+      return null;
+    } else if (parts[1] == 'T') {
+      // A valid frame line that is not received data. Ignore it.
       return null;
     }
     final (pgn, source) = _hexHeaderToPgnSource(parts[2]);

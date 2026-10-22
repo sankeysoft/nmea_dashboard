@@ -9,9 +9,16 @@ import 'package:logging/logging.dart';
 
 final _log = Logger('MessageSplitter');
 
+/// The maximum length of unterminated data a CrlfMessageSplitter will retain while waiting for
+/// more input. Comfortably longer than any valid message.
+const _maxRemainingLength = 1024;
+
 /// Splits network input packets into zero or more messages of data type M, potentially retaining
 /// partial packets across calls.
 abstract class MessageSplitter<M> {
+  /// A count of inputs that this splitter discarded because they did not form part of a valid message.
+  int discardCount = 0;
+
   /// Split the supplied data (and potentially remaining data from previous calls) into zero or
   /// data packets of type T.
   List<M> read(Uint8List data);
@@ -46,6 +53,11 @@ class CrlfMessageSplitter extends MessageSplitter<String> {
       if (potentialMessage.isNotEmpty) {
         messages.add(potentialMessage);
       }
+    }
+    if (remaining.length > _maxRemainingLength) {
+      // Data this long without a split cannot be a valid message, don't let it grow forever.
+      remaining = "";
+      discardCount++;
     }
     return messages;
   }

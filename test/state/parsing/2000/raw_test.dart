@@ -152,6 +152,27 @@ void main() {
       );
       expect(messages, hasLength(1));
     });
+
+    test('does not count discards for valid or transmitted frames', () {
+      final header = _header(pduFormat: 0x01, source: 0x01);
+      splitter.read(_pkt('${_line(header)}\n${_line(header, direction: 'T')}\n'));
+      expect(splitter.discardCount, 0);
+    });
+
+    test('counts discards of lines that are not frames', () {
+      splitter.read(_pkt('\$YDMTW,21.5,C*08\n'));
+      expect(splitter.discardCount, 1);
+    });
+
+    test('counts discards of lines that fail to parse', () {
+      splitter.read(_pkt('16:23:23.404 R NOTAHEX0 01\n'));
+      expect(splitter.discardCount, 1);
+    });
+
+    test('counts discards of excessively long unterminated data', () {
+      splitter.read(_pkt('x' * 1030));
+      expect(splitter.discardCount, 1);
+    });
   });
 
   group('YdRawMessageSplitter fast frame assembly', () {

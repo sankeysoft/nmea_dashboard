@@ -27,6 +27,9 @@ class DleMessageSplitter extends MessageSplitter<ByteData> {
       if (_pendingDle) {
         if (byte == stx) {
           // Start of a new message, discarding any unterminated message in progress.
+          if (_message != null) {
+            discardCount++;
+          }
           _message = BytesBuilder();
           _pendingDle = false;
         } else if (byte == etx && _message != null) {
@@ -44,14 +47,18 @@ class DleMessageSplitter extends MessageSplitter<ByteData> {
         } else {
           // An invalid DLE pair, discard any message in progress.
           _message = null;
+          discardCount++;
           _pendingDle = false;
         }
       } else if (byte == dle) {
         // Record any fresh DLE but don't copy into the message.
         _pendingDle = true;
-      } else {
+      } else if (_message != null) {
         // Write normal bytes into the message if one is in progress.
-        _message?.addByte(byte);
+        _message!.addByte(byte);
+      } else {
+        // Discard normal bytes outside a message.
+        discardCount++;
       }
     }
     return messages;

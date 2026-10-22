@@ -166,6 +166,70 @@ void main() {
     });
   });
 
+  group('makePacketProcessingFunction invalid data detection', () {
+    const invalid = 'not nmea\n';
+    late PacketProcessor processPackets;
+
+    setUp(() {
+      processPackets = makePacketProcessingFunction(
+        CrlfMessageSplitter(startRegex: RegExp(r'[\$!]')),
+        Nmea0183Validator(true),
+        Nmea0183Parser(),
+      );
+    });
+
+    /// Processes [packets], returning every invalid data report logged.
+    Future<List<String>> reports(List<String> packets) async {
+      final reports = <String>[];
+      final logs = Logger.root.onRecord
+          .where((r) => r.loggerName == 'Network' && r.message.contains('consecutive invalid'))
+          .listen((r) => reports.add(r.message));
+      await processPackets(Stream.fromIterable(packets.map(_pkt))).drain<void>();
+      await logs.cancel();
+      return reports;
+    }
+
+    test('reports after 50 consecutive invalid packets', () async {
+      expect(await reports(List.filled(49, invalid)), isEmpty);
+      expect(await reports([invalid]), hasLength(1));
+    });
+
+    test('reports only once', () async {
+      expect(await reports(List.filled(200, invalid)), hasLength(1));
+    });
+
+    test('a valid message resets the count', () async {
+      expect(
+        await reports([...List.filled(49, invalid), '$_mtw\n', ...List.filled(49, invalid)]),
+        isEmpty,
+      );
+    });
+
+    test('a packet containing both valid and invalid messages resets the count', () async {
+      expect(
+        await reports([
+          ...List.filled(49, invalid),
+          // The trailing start marker forces the splitter to flush the valid sentence.
+          '$invalid$_mtw\n\$',
+          ...List.filled(49, invalid),
+        ]),
+        isEmpty,
+      );
+    });
+
+    test('packets containing only partial messages do not affect the count', () async {
+      expect(
+        await reports([...List.filled(49, invalid), r'$YDMTW', ...List.filled(49, ',')]),
+        isEmpty,
+      );
+    });
+
+    test('counts data discarded by the splitter', () async {
+      // Packets too long to be a message and with no terminator are discarded by the splitter.
+      expect(await reports(List.filled(50, 'x' * 1030)), hasLength(1));
+    });
+  });
+
   group('valuesFromNetwork', () {
     test('udp listen receives values and releases the port when cancelled', () async {
       final port = await freePort();

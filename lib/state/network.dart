@@ -44,6 +44,10 @@ const _reconnectCoalesceDelay = Duration(milliseconds: 1500);
 /// cause them.
 const _idleTimeout = Duration(minutes: 5);
 
+/// The number of consecutive packets containing invalid data but no valid messages
+/// before a warning is issued.
+const _invalidPacketThreshold = 50;
+
 final _log = Logger('Network');
 
 /// A function that converts a stream of network packets into a stream of bound values parsed
@@ -322,6 +326,9 @@ PacketProcessor makePacketProcessingFunction<M, S>(
   MessageValidator<M, S> validator,
   MessageParser<M, S> parser,
 ) {
+  var consecutiveInvalidPackets = 0;
+  var invalidDataReported = false;
+
   return (Stream<Uint8List> packetStream) async* {
     await for (final packet in packetStream) {
       parser.logAndClearIfNeeded();
@@ -331,11 +338,16 @@ PacketProcessor makePacketProcessingFunction<M, S>(
         // the stream.
         yield null;
       } else {
+        final discardsBefore = splitter.discardCount;
+        var packetHasInvalid = false;
+        var packetHasValid = false;
         for (final message in splitter.read(packet)) {
           ValidatedMessage<M, S>? validated;
           try {
             validated = validator.validate(message);
+            packetHasValid = true;
           } on FormatException catch (e) {
+            packetHasInvalid = true;
             final fakeValidated = ValidatedMessage(0, 0, message);
             _log.warning('Error validating ${fakeValidated.payloadToString()}: ${e.message}');
           }
@@ -350,6 +362,18 @@ PacketProcessor makePacketProcessingFunction<M, S>(
             _log.warning(
               'Error parsing ${validated.type}/${validated.sender} '
               '${validated.payloadToString()}: ${e.message}',
+            );
+          }
+        }
+        if (packetHasValid) {
+          consecutiveInvalidPackets = 0;
+        } else if (packetHasInvalid || splitter.discardCount != discardsBefore) {
+          consecutiveInvalidPackets++;
+          if (consecutiveInvalidPackets >= _invalidPacketThreshold && !invalidDataReported) {
+            invalidDataReported = true;
+            _log.warning(
+              'Received $consecutiveInvalidPackets consecutive invalid packets, '
+              'network protocol setting may be incorrect',
             );
           }
         }

@@ -187,6 +187,27 @@ void main() {
         [0xb2],
       ]);
     });
+
+    test('does not count discards for valid messages', () {
+      read([dle, stx, 0xa1, dle, dle, dle, etx, dle, stx, 0xb2]);
+      read([dle, etx]);
+      expect(splitter.discardCount, 0);
+    });
+
+    test('counts discards of data outside a message', () {
+      read([0x41, 0x42, dle, stx, 0xa1, dle, etx]);
+      expect(splitter.discardCount, greaterThan(0));
+    });
+
+    test('counts discards of an unterminated message', () {
+      read([dle, stx, 0xa1, dle, stx, 0xb2, dle, etx]);
+      expect(splitter.discardCount, greaterThan(0));
+    });
+
+    test('counts discards of an invalid DLE pair', () {
+      read([dle, stx, 0xa1, dle, 0x41]);
+      expect(splitter.discardCount, greaterThan(0));
+    });
   });
 
   group('NgtValidator', () {

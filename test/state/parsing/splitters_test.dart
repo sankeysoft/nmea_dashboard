@@ -73,6 +73,18 @@ void main() {
       expect(splitter.read(Uint8List.fromList([0xFF, 0xFE, 0xFD, 0x80])), isEmpty);
     });
 
+    test('does not count discards for valid messages', () {
+      splitter.read(_pkt('\$YDMWV,184.6,R,1.4,M,A*2D\n\$YDVTG,4.1'));
+      expect(splitter.discardCount, 0);
+    });
+
+    test('discards and counts excessively long unterminated data', () {
+      expect(splitter.read(_pkt('x' * 1030)), isEmpty);
+      expect(splitter.discardCount, 1);
+      // The discarded data is not prepended to subsequent messages.
+      expect(splitter.read(_pkt('\$YDVTG,4.1\n\$')), ['\$YDVTG,4.1']);
+    });
+
     test('without start regex only splits on line terminators', () {
       final splitter = CrlfMessageSplitter();
       expect(splitter.read(_pkt('\$YDMWV,184.6,R,1.4,M,A*2D\$YDVTG,4.1\n')), [
