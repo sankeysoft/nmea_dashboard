@@ -1,0 +1,11 @@
+name: property_support_builder
+description: Generates the set of properties supported by each NMEA protocol from the parser source.
+publish_to: none
+
+environment:
+  sdk: ^3.6.0
+
+dependencies:
+  analyzer: ">=12.0.0 <14.0.0"
+  build: ^4.0.0
+  glob: ^2.1.0

@@ -52,6 +52,8 @@ dev_dependencies:
 
   build_runner: ^2.10.5
   json_serializable: ^6.10.0
+  property_support_builder:
+    path: tool/property_support_builder
   flutter_lints: ^6.0.0
   test: ^1.30.0
   connectivity_plus_platform_interface: ^2.1.0

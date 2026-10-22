@@ -1,0 +1,7 @@
+builders:
+  property_support:
+    import: "package:property_support_builder/builder.dart"
+    builder_factories: ["propertySupportBuilder"]
+    build_extensions: {"$lib$": ["state/parsing/property_sets.g.dart"]}
+    auto_apply: root_package
+    build_to: source

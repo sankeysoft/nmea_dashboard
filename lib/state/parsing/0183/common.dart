@@ -7,6 +7,7 @@ import 'dart:math' as math;
 
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/parsing/common.dart';
+import 'package:nmea_dashboard/state/parsing/property_support.dart';
 import 'package:nmea_dashboard/state/parsing/validators.dart';
 import 'package:nmea_dashboard/state/values.dart';
 
@@ -151,7 +152,13 @@ class Nmea0183Parser extends MessageParser<String, String> {
     }
 
     final fields = message.payload.split(',');
-    return parser.parse(fields);
+    final values = parser.parse(fields);
+    assert(
+      values.every((v) => v.property.supportedBy0183),
+      '${message.type} generated a property missing from property_sets.g.dart, '
+      'run dart run build_runner build',
+    );
+    return values;
   }
 }
 

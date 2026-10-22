@@ -5,6 +5,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/parsing/common.dart';
+import 'package:nmea_dashboard/state/parsing/property_support.dart';
 import 'package:nmea_dashboard/state/parsing/validators.dart';
 import 'package:nmea_dashboard/state/values.dart';
 
@@ -136,7 +137,13 @@ class Nmea2000Parser extends MessageParser<ByteData, int> {
     if (parser == null) {
       throw FormatException('Unsupported PGN');
     }
-    return parser.parse(message.payload);
+    final values = parser.parse(message.payload);
+    assert(
+      values.every((v) => v.property.supportedBy2000),
+      '${message.type} generated a property missing from property_sets.g.dart, '
+      'run dart run build_runner build',
+    );
+    return values;
   }
 }
 
