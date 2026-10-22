@@ -1,4 +1,4 @@
-// Cmpyright Jody M Sankey 2022
+// Copyright Jody M Sankey 2022-2026
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
@@ -303,6 +303,9 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
       isDefault: true,
     ),
   },
+  Dimension.current: {
+    'amps': SimpleSvdFormatter(Dimension.current, 'amps', 'A', '--.-', 1.0, 1, isDefault: true),
+  },
   Dimension.distance: {
     'km': SimpleSvdFormatter(Dimension.distance, 'km', 'km', '---.--', metersToKilometers, 2),
     'nm': SimpleSvdFormatter(
@@ -327,6 +330,44 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
       isDefault: true,
     ),
     'fathoms': SimpleSvdFormatter(Dimension.depth, 'fathoms', 'f', '-.--', metersToFeet / 6, 2),
+  },
+  Dimension.duration: {
+    'hours': SimpleSvdFormatter(
+      Dimension.duration,
+      'hours',
+      'h',
+      '--.-',
+      secondsToHours,
+      1,
+      isDefault: true,
+    ),
+    'hoursMinutes': CustomNumericFormatter<SingleValue<double>>(
+      Dimension.duration,
+      'hours:minutes',
+      'h:m',
+      conversion: (value) => value.data * secondsToHours,
+      unconversion: (number) => SingleValue(number / secondsToHours),
+      formatting: (number) => (number == null) ? '-:--' : _hoursMinutesString(number),
+    ),
+  },
+  Dimension.flowRate: {
+    'litersPerHour': SimpleSvdFormatter(
+      Dimension.flowRate,
+      'liters/hour',
+      'L/h',
+      '--.-',
+      1.0,
+      1,
+      isDefault: true,
+    ),
+    'usGallonsPerHour': SimpleSvdFormatter(
+      Dimension.flowRate,
+      'US gallons/hour',
+      'gal/h',
+      '--.-',
+      litersToUsGallons,
+      1,
+    ),
   },
   Dimension.integer: {
     'default': CustomNumericFormatter<SingleValue<int>>(
@@ -457,11 +498,28 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
   Dimension.voltage: {
     'volts': SimpleSvdFormatter(Dimension.voltage, 'volts', 'V', '--.-', 1.0, 1, isDefault: true),
   },
+  Dimension.volume: {
+    'liters': SimpleSvdFormatter(Dimension.volume, 'liters', 'L', '---', 1.0, 0, isDefault: true),
+    'usGallons': SimpleSvdFormatter(
+      Dimension.volume,
+      'US gallons',
+      'gal',
+      '--.-',
+      litersToUsGallons,
+      1,
+    ),
+  },
 };
 
 String _bearingString(double number, String suffix) {
   int rounded = number.round() % 360;
   return rounded.toString().padLeft(3, '0') + suffix;
+}
+
+String _hoursMinutesString(double hours) {
+  final totalMinutes = (hours * 60).round();
+  final minutes = (totalMinutes % 60).toString().padLeft(2, '0');
+  return '${totalMinutes ~/ 60}:$minutes';
 }
 
 String _xteString(double number, String units) {

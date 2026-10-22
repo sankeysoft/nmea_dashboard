@@ -199,6 +199,50 @@ void main() {
     expect(format(12345.67, 'nm'), equals('6.67'));
   });
 
+  test('current should be formatted appropriately', () {
+    final fmt = formattersFor(Dimension.current)['amps']!;
+    expect(fmt.format(SingleValue(12.34)), equals('12.3'));
+    expect(fmt.format(SingleValue(-5.06)), equals('-5.1'));
+    expect(fmt.format(null), equals('--.-'));
+  });
+
+  test('duration should be formatted appropriately', () {
+    String format(double seconds, String name) {
+      return formattersFor(Dimension.duration)[name]!.format(SingleValue(seconds));
+    }
+
+    expect(format(4500000.0, 'hours'), equals('1250.0'));
+    expect(format(5400.0, 'hours'), equals('1.5'));
+    expect(format(5400.0, 'hoursMinutes'), equals('1:30'));
+    expect(format(45000.0, 'hoursMinutes'), equals('12:30'));
+    expect(format(3599.0, 'hoursMinutes'), equals('1:00'));
+    expect(format(300.0, 'hoursMinutes'), equals('0:05'));
+  });
+
+  test('duration hoursMinutes fromNumber should reverse toNumber', () {
+    final fmt = formattersFor(Dimension.duration)['hoursMinutes']! as NumericFormatter;
+    expect(fmt.toNumber(SingleValue(5400.0)), closeTo(1.5, 0.0001));
+    expect(fmt.fromNumber(1.5), ValueMatches(SingleValue(5400.0)));
+  });
+
+  test('flow rate should be formatted appropriately', () {
+    String format(double number, String name) {
+      return formattersFor(Dimension.flowRate)[name]!.format(SingleValue(number));
+    }
+
+    expect(format(12.34, 'litersPerHour'), equals('12.3'));
+    expect(format(10.0, 'usGallonsPerHour'), equals('2.6'));
+  });
+
+  test('volume should be formatted appropriately', () {
+    String format(double number, String name) {
+      return formattersFor(Dimension.volume)[name]!.format(SingleValue(number));
+    }
+
+    expect(format(123.4, 'liters'), equals('123'));
+    expect(format(100.0, 'usGallons'), equals('26.4'));
+  });
+
   test('depth should be formatted appropriately', () {
     String format(double number, String name) {
       return formattersFor(Property.depthWithOffset.dimension)[name]!.format(SingleValue(number));

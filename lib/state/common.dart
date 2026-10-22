@@ -9,6 +9,7 @@ import 'package:nmea_dashboard/state/data_element.dart';
 import 'package:nmea_dashboard/state/values.dart';
 
 const double barToPascals = 100000;
+const double litersToUsGallons = 0.264172;
 const double metersPerSecondToKnots = 1.94384;
 const double metersPerSecondToKmph = 3.6;
 const double metersToKilometers = 0.001;
@@ -18,6 +19,7 @@ const double pascalsToInchesMercury = 0.0002953;
 const double pascalsToMillibar = 0.01;
 const double pascalsToPsi = 0.000145038;
 const double radiansToDegrees = 180.0 / pi;
+const double secondsToHours = 1.0 / 3600.0;
 const double absoluteZeroInCelcius = -273.15;
 
 const int serializationDp = 4;
@@ -59,7 +61,7 @@ enum Property {
   distanceTotal('Total distance', 'Log', Dimension.distance, group: Group.navigation),
   distanceTrip('Trip distance', 'Trip', Dimension.distance, group: Group.navigation),
   engine1Rpm('Engine 1 Speed', 'Eng Speed', Dimension.rotationalSpeed, group: Group.systems),
-  engine2Rpm('Engine 1 Speed', 'Eng Speed', Dimension.rotationalSpeed, group: Group.systems),
+  engine2Rpm('Engine 2 Speed', 'Eng Speed', Dimension.rotationalSpeed, group: Group.systems),
   engine1OilPressure('Engine 1 Oil Pressure', 'Eng Pres', Dimension.pressure, group: Group.systems),
   engine2OilPressure('Engine 2 Oil Pressure', 'Eng Pres', Dimension.pressure, group: Group.systems),
   engine1Temperature('Engine 1 Coolant Temp', 'Eng Temp', Dimension.temperature, group: _sys),
@@ -220,6 +222,7 @@ enum Dimension {
     maxValue: AugmentedBearing(359.9, 0.0),
   ),
   crossTrackError(type: SingleValue<double>, nativeUnits: 'meters'),
+  current(type: SingleValue<double>, nativeUnits: 'amps', derivationFriendly: true),
   distance(
     type: SingleValue<double>,
     nativeUnits: 'meters',
@@ -227,6 +230,13 @@ enum Dimension {
     minValue: SingleValue(0.0),
   ),
   depth(type: SingleValue<double>, nativeUnits: 'meters', derivationFriendly: true),
+  duration(type: SingleValue<double>, nativeUnits: 'seconds', minValue: SingleValue(0.0)),
+  flowRate(
+    type: SingleValue<double>,
+    nativeUnits: 'liters/hour',
+    derivationFriendly: true,
+    minValue: SingleValue(0.0),
+  ),
   integer(type: SingleValue<int>, nativeUnits: 'N/A'),
   lateralAngle(
     type: SingleValue<double>,
@@ -269,6 +279,12 @@ enum Dimension {
   voltage(
     type: SingleValue<double>,
     nativeUnits: 'volts',
+    derivationFriendly: true,
+    minValue: SingleValue(0.0),
+  ),
+  volume(
+    type: SingleValue<double>,
+    nativeUnits: 'liters',
     derivationFriendly: true,
     minValue: SingleValue(0.0),
   );
