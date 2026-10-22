@@ -20,7 +20,7 @@ class Parser130316 extends PacketParser {
     final property = switch (payload.getUint8(2)) {
       (0) => Property.waterTemperature,
       (1) => Property.airTemperature,
-      (2) => Property.dewPoint,
+      (9) => Property.dewPoint,
       _ => null,
     };
 

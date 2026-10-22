@@ -16,7 +16,7 @@ class Parser130311 extends PacketParser {
     final humidity = _scaleIfNotNull(_readInt16(payload, 4), 0.004);
     final pressure = _scaleIfNotNull(_readUint16(payload, 6), 100);
 
-    final temperatureProperty = switch (source >> 2) {
+    final temperatureProperty = switch (source & 0x3F) {
       (0) => Property.waterTemperature,
       (1) => Property.airTemperature,
       _ => null,

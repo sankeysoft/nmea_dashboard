@@ -609,11 +609,16 @@ void main() {
       parser.parse(airMessage),
       BoundValueListMatches([boundSingleValue(25.0, Property.airTemperature)]),
     );
-    final dewMessage = _testMsg(130316, [0xFF, 0x00, 0x02, 0x96, 0x65, 0x04, 0xFF, 0xFF]);
+    final dewMessage = _testMsg(130316, [0xFF, 0x00, 0x09, 0x96, 0x65, 0x04, 0xFF, 0xFF]);
     expect(
       parser.parse(dewMessage),
       BoundValueListMatches([boundSingleValue(15.0, Property.dewPoint)]),
     );
+  });
+
+  test('should not parse extended temperature packet with unsupported source', () {
+    final message = _testMsg(130316, [0xFF, 0x00, 0x02, 0x96, 0x65, 0x04, 0xFF, 0xFF]);
+    expect(Nmea2000Parser().parse(message), isEmpty);
   });
 
   test('should parse valid system time packet', () {
@@ -691,6 +696,19 @@ void main() {
       Nmea2000Parser().parse(message),
       BoundValueListMatches([
         boundSingleValue(20.4, Property.waterTemperature, tier: 3),
+        boundSingleValue(50.0, Property.relativeHumidity, tier: 2),
+        boundSingleValue(101300.0, Property.pressure, tier: 2),
+      ]),
+    );
+  });
+
+  test('should parse environmental parameters temperature source from low six bits', () {
+    // Outside temperature source (1) with outside humidity source (1) in the top two bits.
+    final message = _testMsg(130311, [0xFF, 0x41, ..._u16(29355), ..._u16(12500), ..._u16(1013)]);
+    expect(
+      Nmea2000Parser().parse(message),
+      BoundValueListMatches([
+        boundSingleValue(20.4, Property.airTemperature, tier: 3),
         boundSingleValue(50.0, Property.relativeHumidity, tier: 2),
         boundSingleValue(101300.0, Property.pressure, tier: 2),
       ]),
