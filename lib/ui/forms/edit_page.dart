@@ -63,6 +63,7 @@ class _EditPageForm extends StatefulWidget {
 
 class _EditPageFormState extends StatefulFormState<_EditPageForm> {
   late String _name;
+  late String _layout;
   late int _size;
   late List<DataCellSpec> _cells;
   // Incremented on each paste to force all fields to rebuild from the new state.
@@ -71,6 +72,7 @@ class _EditPageFormState extends StatefulFormState<_EditPageForm> {
   @override
   void initState() {
     _name = widget._pageSpec.name;
+    _layout = widget._pageSpec.layout;
     _size = widget._pageSpec.cells.length;
     _cells = widget._pageSpec.cells;
     super.initState();
@@ -93,7 +95,7 @@ class _EditPageFormState extends StatefulFormState<_EditPageForm> {
       return null;
     }
     formKey.currentState!.save();
-    return PageSettings.pageToClipboard(DataPageSpec(_name, _resizedCells()));
+    return PageSettings.pageToClipboard(DataPageSpec(_name, _resizedCells(), layout: _layout));
   }
 
   /// Replaces the form contents with a page from clipboard text, returning an error message if
@@ -105,6 +107,7 @@ class _EditPageFormState extends StatefulFormState<_EditPageForm> {
     }
     setState(() {
       _name = spec.name;
+      _layout = spec.layout;
       _size = spec.cells.length;
       _cells = spec.cells;
       _pasteCount++;
@@ -129,7 +132,9 @@ class _EditPageFormState extends StatefulFormState<_EditPageForm> {
           buildSaveButton(
             postSaver: () {
               // Call the function we were told to call, keeping the original page key.
-              widget._onCreate(DataPageSpec(_name, _resizedCells(), key: widget._pageSpec.key));
+              widget._onCreate(
+                DataPageSpec(_name, _resizedCells(), layout: _layout, key: widget._pageSpec.key),
+              );
               Navigator.pop(context);
             },
           ),

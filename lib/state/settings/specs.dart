@@ -78,6 +78,10 @@ class DataPageSpec extends ChangeNotifier {
   /// A short name for the page
   final String name;
 
+  /// The arrangement of cells on the page, currently always 'grid'.
+  @JsonKey(defaultValue: 'grid')
+  final String layout;
+
   /// A map from a CellKey to the list index for fast lookup.
   @JsonKey(includeToJson: false, includeFromJson: false)
   final Map<SpecKey, int> _cellMap;
@@ -85,7 +89,9 @@ class DataPageSpec extends ChangeNotifier {
   /// The data to display in the table
   final List<DataCellSpec> cells;
 
-  DataPageSpec(this.name, this.cells, {SpecKey? key}) : key = key ?? SpecKey.make(), _cellMap = {} {
+  DataPageSpec(this.name, this.cells, {this.layout = 'grid', SpecKey? key})
+    : key = key ?? SpecKey.make(),
+      _cellMap = {} {
     for (int i = 0; i < cells.length; i++) {
       _cellMap[cells[i].key] = i;
     }

@@ -73,6 +73,7 @@ void main() {
     ]);
     expect(pageSpec.toJson(), {
       'name': pageSpec.name,
+      'layout': 'grid',
       'cells': [
         {'source': 'network', 'element': 'element 1', 'type': 'current', 'format': 'feet'},
         {
@@ -125,6 +126,8 @@ void main() {
     }"""),
     );
     expect(pageSpec.name, 'test page');
+    // Layout is missing in the json so should default to grid.
+    expect(pageSpec.layout, 'grid');
     expect(pageSpec.cells.length, 3);
     expect(pageSpec.cells[0].source, 'network');
     expect(pageSpec.cells[0].element, 'element 1');
@@ -199,8 +202,16 @@ void main() {
   });
 
   test('should serialize AlarmSpec', () {
-    final spec = AlarmSpec('network', 'depth', 'caution', 'feet',
-        averagingInterval: 'oneMinute', min: 5.0, max: 50.0, sound: 'beep');
+    final spec = AlarmSpec(
+      'network',
+      'depth',
+      'caution',
+      'feet',
+      averagingInterval: 'oneMinute',
+      min: 5.0,
+      max: 50.0,
+      sound: 'beep',
+    );
     expect(spec.toJson(), {
       'source': 'network',
       'element': 'depth',

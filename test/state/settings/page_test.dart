@@ -2,6 +2,8 @@
 // This software may be modified and distributed under the terms
 // of the MIT license. See the LICENCE.md file for details.
 
+import 'dart:convert';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nmea_dashboard/state/settings/page.dart';
@@ -175,6 +177,12 @@ void main() {
     expect(s2.dataPageSpecs.first.name, 'p1');
   });
 
+  test('toClipboard includes grid layout for each page', () async {
+    final settings = PageSettings(await _prefs(), _pageJson1);
+    final data = (json.decode(settings.toClipboard()) as Map<String, dynamic>)['data'] as List;
+    expect(data.single['layout'], 'grid');
+  });
+
   group('page clipboard', () {
     test('round-trips a page', () {
       final spec = DataPageSpec('p', [DataCellSpec('local', 'time', 'current', 'hhmm')]);
@@ -183,6 +191,11 @@ void main() {
       expect(parsed!.name, 'p');
       expect(parsed.cells.single.element, 'time');
       expect(parsed.key, isNot(spec.key));
+    });
+
+    test('includes grid layout', () {
+      final text = PageSettings.pageToClipboard(DataPageSpec('p', []));
+      expect((json.decode(text) as Map<String, dynamic>)['data']['layout'], 'grid');
     });
 
     test('rejects pages, cells, unwrapped and invalid json', () {
