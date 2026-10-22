@@ -15,7 +15,10 @@ part '127250.dart';
 part '127251.dart';
 part '127257.dart';
 part '127258.dart';
+part '127488.dart';
+part '127489.dart';
 part '127505.dart';
+part '127508.dart';
 part '128259.dart';
 part '128267.dart';
 part '128275.dart';
@@ -74,7 +77,10 @@ class Nmea2000Parser extends MessageParser<ByteData, int> {
     Parser127251(),
     Parser127257(),
     Parser127258(),
+    Parser127488(),
+    Parser127489(),
     Parser127505(),
+    Parser127508(),
     Parser128259(),
     Parser128267(),
     Parser128275(),

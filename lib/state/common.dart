@@ -49,6 +49,8 @@ enum Property {
   apparentWindSpeed('Apparent wind speed', 'AWS', Dimension.speed, group: Group.environment),
   battery1Voltage('Battery 1 Voltage', 'Batt 1', Dimension.voltage, group: Group.systems),
   battery2Voltage('Battery 2 Voltage', 'Batt 2', Dimension.voltage, group: Group.systems),
+  battery1Current('Battery 1 Current', 'Batt 1', Dimension.current, group: Group.systems),
+  battery2Current('Battery 2 Current', 'Batt 2', Dimension.current, group: Group.systems),
   alternator1Voltage('Alternator 1 Voltage', 'Alt 1', Dimension.voltage, group: Group.systems),
   alternator2Voltage('Alternator 2 Voltage', 'Alt 2', Dimension.voltage, group: Group.systems),
   courseOverGround('Course over ground', 'COG', Dimension.bearing),

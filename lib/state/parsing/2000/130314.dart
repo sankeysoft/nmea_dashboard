@@ -13,15 +13,16 @@ class Parser130314 extends PacketParser {
     _validatePayloadLength(payload, 8);
     final pressure = _scaleIfNotNull(_readInt32(payload, 3), 0.1);
 
-    final property = switch (payload.getUint8(2)) {
-      (0) => Property.pressure,
-      (7) => Property.engine1OilPressure,
-      _ => null,
+    // Oil pressure is not necessarily from an engine, so prefer the engine specific PGN 127489.
+    final (property, tier) = switch (payload.getUint8(2)) {
+      (0) => (Property.pressure, 1),
+      (7) => (Property.engine1OilPressure, 2),
+      _ => (null, 0),
     };
 
     if (pressure == null || property == null) {
       return [];
     }
-    return [boundSingleValue(pressure, property)];
+    return [boundSingleValue(pressure, property, tier: tier)];
   }
 }

@@ -30,24 +30,14 @@ void main() {
   });
 
   test('should report expected protocol support for network properties', () {
-    const only0183 = {
-      Property.alternator1Voltage,
-      Property.alternator2Voltage,
-      Property.battery1Voltage,
-      Property.battery2Voltage,
-      Property.engine1Rpm,
-      Property.engine2Rpm,
-      Property.engine1Temperature,
-      Property.engine2Temperature,
-      Property.engine2OilPressure,
-    };
+    const only2000 = {Property.battery1Current, Property.battery2Current};
     for (final property in Property.values.where((p) => p.sources.contains(Source.network))) {
-      expect(property.supportedBy(NetworkStandard.nmea0183), true, reason: '$property 0183');
       expect(
-        property.supportedBy(NetworkStandard.nmea2000),
-        !only0183.contains(property),
-        reason: '$property 2000',
+        property.supportedBy(NetworkStandard.nmea0183),
+        !only2000.contains(property),
+        reason: '$property 0183',
       );
+      expect(property.supportedBy(NetworkStandard.nmea2000), true, reason: '$property 2000');
     }
   });
 

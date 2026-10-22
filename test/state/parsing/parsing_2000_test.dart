@@ -240,6 +240,121 @@ void main() {
     expect(() => Nmea2000Parser().parse(message), throwsFormatException);
   });
 
+  test('should parse valid engine rapid update packet for each engine', () {
+    final parser = Nmea2000Parser();
+    final message1 = _testMsg(127488, [0x00, ..._u16(7200), 0xFF, 0xFF, 0x7F, 0xFF, 0xFF]);
+    expect(
+      parser.parse(message1),
+      BoundValueListMatches([boundSingleValue(1800.0, Property.engine1Rpm)]),
+    );
+    final message2 = _testMsg(127488, [0x01, ..._u16(3000), 0xFF, 0xFF, 0x7F, 0xFF, 0xFF]);
+    expect(
+      parser.parse(message2),
+      BoundValueListMatches([boundSingleValue(750.0, Property.engine2Rpm)]),
+    );
+  });
+
+  test('should not parse engine rapid update packet for unsupported instance or no data', () {
+    final parser = Nmea2000Parser();
+    final message1 = _testMsg(127488, [0x02, ..._u16(7200), 0xFF, 0xFF, 0x7F, 0xFF, 0xFF]);
+    expect(parser.parse(message1), isEmpty);
+    final message2 = _testMsg(127488, [0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x7F, 0xFF, 0xFF]);
+    expect(parser.parse(message2), isEmpty);
+  });
+
+  List<int> engineDynamicPayload(int instance, List<int> oilPres, List<int> temp, List<int> alt) {
+    return [
+      instance,
+      ...oilPres,
+      0xFF, 0xFF, // Oil temperature
+      ...temp,
+      ...alt,
+      0xFF, 0x7F, // Fuel rate
+      0xFF, 0xFF, 0xFF, 0xFF, // Engine hours
+      0xFF, 0xFF, // Coolant pressure
+      0xFF, 0xFF, // Fuel pressure
+      0xFF, // Reserved
+      0x00, 0x00, 0x00, 0x00, // Discrete status
+      0x7F, 0x7F, // Load and torque
+    ];
+  }
+
+  test('should parse valid engine dynamic packet for each engine', () {
+    final parser = Nmea2000Parser();
+    final message1 = _testMsg(127489, engineDynamicPayload(0, _u16(3000), _u16(35315), _i16(1410)));
+    expect(
+      parser.parse(message1),
+      BoundValueListMatches([
+        boundSingleValue(300000.0, Property.engine1OilPressure),
+        boundSingleValue(80.0, Property.engine1Temperature),
+        boundSingleValue(14.1, Property.alternator1Voltage),
+      ]),
+    );
+    final message2 = _testMsg(127489, engineDynamicPayload(1, _u16(2500), _u16(36315), _i16(2820)));
+    expect(
+      parser.parse(message2),
+      BoundValueListMatches([
+        boundSingleValue(250000.0, Property.engine2OilPressure),
+        boundSingleValue(90.0, Property.engine2Temperature),
+        boundSingleValue(28.2, Property.alternator2Voltage),
+      ]),
+    );
+  });
+
+  test('should parse engine dynamic packet with some fields missing', () {
+    final message = _testMsg(
+      127489,
+      engineDynamicPayload(0, _u16(0xFFFF), _u16(35315), _i16(0x7FFF)),
+    );
+    expect(
+      Nmea2000Parser().parse(message),
+      BoundValueListMatches([boundSingleValue(80.0, Property.engine1Temperature)]),
+    );
+  });
+
+  test('should not parse engine dynamic packet for unsupported instance', () {
+    final message = _testMsg(127489, engineDynamicPayload(2, _u16(3000), _u16(35315), _i16(1410)));
+    expect(Nmea2000Parser().parse(message), isEmpty);
+  });
+
+  test('should reject engine dynamic packet with wrong length', () {
+    final message = _testMsg(127489, [0x00, ..._u16(3000), 0xFF, 0xFF, ..._u16(35315)]);
+    expect(() => Nmea2000Parser().parse(message), throwsFormatException);
+  });
+
+  test('should parse valid battery status packet for each battery', () {
+    final parser = Nmea2000Parser();
+    final message1 = _testMsg(127508, [0x00, ..._i16(1275), ..._i16(-52), 0xFF, 0xFF, 0x01]);
+    expect(
+      parser.parse(message1),
+      BoundValueListMatches([
+        boundSingleValue(12.75, Property.battery1Voltage),
+        boundSingleValue(-5.2, Property.battery1Current),
+      ]),
+    );
+    final message2 = _testMsg(127508, [0x01, ..._i16(1310), 0xFF, 0x7F, 0xFF, 0xFF, 0x01]);
+    expect(
+      parser.parse(message2),
+      BoundValueListMatches([boundSingleValue(13.1, Property.battery2Voltage)]),
+    );
+  });
+
+  test('should parse battery status packet with only current', () {
+    final message = _testMsg(127508, [0x00, 0xFF, 0x7F, ..._i16(123), 0xFF, 0xFF, 0x01]);
+    expect(
+      Nmea2000Parser().parse(message),
+      BoundValueListMatches([boundSingleValue(12.3, Property.battery1Current)]),
+    );
+  });
+
+  test('should not parse battery status packet for unsupported instance or no data', () {
+    final parser = Nmea2000Parser();
+    final message1 = _testMsg(127508, [0x02, ..._i16(1275), ..._i16(-52), 0xFF, 0xFF, 0x01]);
+    expect(parser.parse(message1), isEmpty);
+    final message2 = _testMsg(127508, [0x00, 0xFF, 0x7F, 0xFF, 0x7F, 0xFF, 0xFF, 0x01]);
+    expect(parser.parse(message2), isEmpty);
+  });
+
   test('should parse valid speed packet', () {
     final message = _testMsg(128259, [0xFF, ..._u16(320), ..._u16(510), 0xFF, 0xFF, 0xFF]);
     expect(
@@ -588,7 +703,7 @@ void main() {
     final message = _testMsg(130314, [0xFF, 0x00, 0x07, ..._i32(3000000), 0xFF]);
     expect(
       Nmea2000Parser().parse(message),
-      BoundValueListMatches([boundSingleValue(300000.0, Property.engine1OilPressure)]),
+      BoundValueListMatches([boundSingleValue(300000.0, Property.engine1OilPressure, tier: 2)]),
     );
   });
 

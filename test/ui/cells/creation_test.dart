@@ -76,14 +76,20 @@ void main() {
   });
 
   test('network cell unsupported by the standard is unsupported', () {
-    final spec = DataCellSpec('network', 'battery1Voltage', 'current', 'volts');
-    expect(createCell(dataSet, spec, NetworkStandard.nmea2000), isA<UnsupportedCell>());
-    expect(createCell(dataSet, spec, NetworkStandard.nmea0183), isA<CurrentValueCell>());
+    final spec = DataCellSpec('network', 'battery1Current', 'current', 'amps');
+    expect(createCell(dataSet, spec, NetworkStandard.nmea0183), isA<UnsupportedCell>());
+    expect(createCell(dataSet, spec, NetworkStandard.nmea2000), isA<CurrentValueCell>());
   });
 
   test('unsupported check applies to every cell type', () {
-    final spec = DataCellSpec('network', 'engine1Rpm', 'average', 'rpm', statsInterval: 'oneMin');
-    expect(createCell(dataSet, spec, NetworkStandard.nmea2000), isA<UnsupportedCell>());
+    final spec = DataCellSpec(
+      'network',
+      'battery1Current',
+      'average',
+      'amps',
+      statsInterval: 'oneMin',
+    );
+    expect(createCell(dataSet, spec, NetworkStandard.nmea0183), isA<UnsupportedCell>());
   });
 
   test('non-network cells are never unsupported', () {

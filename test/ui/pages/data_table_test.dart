@@ -195,7 +195,7 @@ void main() {
             ChangeNotifierProvider<NetworkSettings>.value(value: networkSettings),
             ChangeNotifierProvider<DataPageSpec>.value(
               value: DataPageSpec('Test page', [
-                DataCellSpec('network', 'battery1Voltage', 'current', 'volts'),
+                DataCellSpec('network', 'battery1Current', 'current', 'amps'),
               ]),
             ),
             ChangeNotifierProvider<PageSettings>.value(value: pageSettings),
@@ -211,18 +211,19 @@ void main() {
       tester,
     ) async {
       await pumpPage(tester);
-      expect(find.text('Batt 1'), findsOneWidget);
-      expect(find.text('--.-'), findsOneWidget);
+      expect(find.text('Batt 1 Amp'), findsOneWidget);
+      expect(find.text('Not available\nfor NMEA0183'), findsOneWidget);
+      expect(find.text('--.-'), findsNothing);
 
       networkSettings.set(protocol: NetworkProtocol.nmea2000raw);
       await tester.pump();
-      expect(find.text('Batt 1'), findsOneWidget);
-      expect(find.text('Not available\nfor NMEA2000'), findsOneWidget);
-      expect(find.text('--.-'), findsNothing);
+      expect(find.text('Batt 1 Amp'), findsOneWidget);
+      expect(find.text('--.-'), findsOneWidget);
 
       networkSettings.set(protocol: NetworkProtocol.nmea0183);
       await tester.pump();
-      expect(find.text('--.-'), findsOneWidget);
+      expect(find.text('Not available\nfor NMEA0183'), findsOneWidget);
+      expect(find.text('--.-'), findsNothing);
     });
   });
 }
