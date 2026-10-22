@@ -14,6 +14,7 @@ import 'package:nmea_dashboard/state/settings/network.dart';
 import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:nmea_dashboard/state/values.dart';
 import 'package:nmea_dashboard/ui/cells/creation.dart';
+import 'package:nmea_dashboard/ui/cells/current_value_cell.dart';
 import 'package:nmea_dashboard/ui/cells/stats_value_cell.dart';
 import 'package:nmea_dashboard/ui/cells/text_cell.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -47,18 +48,18 @@ void main() {
         'knots',
         statsInterval: 'oneMin',
       );
-      expect(createCell(dataSet, spec), isA<NotFoundCell>());
+      expect(createCell(dataSet, spec, NetworkStandard.nmea0183), isA<NotFoundCell>());
     });
 
     test('$type cell with an invalid interval is not found', () {
       final spec = DataCellSpec('network', 'depthWithOffset', type, 'feet', statsInterval: 'nope');
-      expect(createCell(dataSet, spec), isA<NotFoundCell>());
+      expect(createCell(dataSet, spec, NetworkStandard.nmea0183), isA<NotFoundCell>());
     });
 
     test('$type cell is created for numeric and bearing elements', () {
       for (final (element, format) in [('depthWithOffset', 'feet'), ('courseOverGround', 'true')]) {
         final spec = DataCellSpec('network', element, type, format, statsInterval: 'oneMin');
-        expect(createCell(dataSet, spec), isA<StatsValueCell>());
+        expect(createCell(dataSet, spec, NetworkStandard.nmea0183), isA<StatsValueCell>());
       }
     });
   }
@@ -71,6 +72,24 @@ void main() {
       'knots',
       historyInterval: 'twoHours',
     );
-    expect(createCell(dataSet, spec), isA<NotFoundCell>());
+    expect(createCell(dataSet, spec, NetworkStandard.nmea0183), isA<NotFoundCell>());
+  });
+
+  test('network cell unsupported by the standard is unsupported', () {
+    final spec = DataCellSpec('network', 'battery1Voltage', 'current', 'volts');
+    expect(createCell(dataSet, spec, NetworkStandard.nmea2000), isA<UnsupportedCell>());
+    expect(createCell(dataSet, spec, NetworkStandard.nmea0183), isA<CurrentValueCell>());
+  });
+
+  test('unsupported check applies to every cell type', () {
+    final spec = DataCellSpec('network', 'engine1Rpm', 'average', 'rpm', statsInterval: 'oneMin');
+    expect(createCell(dataSet, spec, NetworkStandard.nmea2000), isA<UnsupportedCell>());
+  });
+
+  test('non-network cells are never unsupported', () {
+    final spec = DataCellSpec('local', 'localTime', 'current', 'hms');
+    for (final standard in NetworkStandard.values) {
+      expect(createCell(dataSet, spec, standard), isA<CurrentValueCell>());
+    }
   });
 }

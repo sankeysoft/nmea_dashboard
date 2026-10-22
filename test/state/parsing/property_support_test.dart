@@ -42,15 +42,20 @@ void main() {
       Property.engine2OilPressure,
     };
     for (final property in Property.values.where((p) => p.sources.contains(Source.network))) {
-      expect(property.supportedBy0183, true, reason: '$property 0183');
-      expect(property.supportedBy2000, !only0183.contains(property), reason: '$property 2000');
+      expect(property.supportedBy(NetworkStandard.nmea0183), true, reason: '$property 0183');
+      expect(
+        property.supportedBy(NetworkStandard.nmea2000),
+        !only0183.contains(property),
+        reason: '$property 2000',
+      );
     }
   });
 
   test('should not report support for properties without a network source', () {
     for (final property in [Property.localTime, Property.vmgWind, Property.vmgWaypoint]) {
-      expect(property.supportedBy0183, false, reason: '$property');
-      expect(property.supportedBy2000, false, reason: '$property');
+      for (final standard in NetworkStandard.values) {
+        expect(property.supportedBy(standard), false, reason: '$property $standard');
+      }
     }
   });
 }

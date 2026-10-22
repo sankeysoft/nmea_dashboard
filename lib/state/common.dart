@@ -161,6 +161,17 @@ enum Source {
   }
 }
 
+/// The NMEA standards that network data may be received in.
+enum NetworkStandard {
+  nmea0183('NMEA0183'),
+  nmea2000('NMEA2000');
+
+  /// A short name suitable for display.
+  final String shortName;
+
+  const NetworkStandard(this.shortName);
+}
+
 /// A data element source and optionally a group for sources that use grouping.
 class SourceAndGroup {
   final Source source;

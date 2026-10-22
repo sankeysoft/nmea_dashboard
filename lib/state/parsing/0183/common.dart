@@ -154,7 +154,7 @@ class Nmea0183Parser extends MessageParser<String, String> {
     final fields = message.payload.split(',');
     final values = parser.parse(fields);
     assert(
-      values.every((v) => v.property.supportedBy0183),
+      values.every((v) => v.property.supportedBy(NetworkStandard.nmea0183)),
       '${message.type} generated a property missing from property_sets.g.dart, '
       'run dart run build_runner build',
     );

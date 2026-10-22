@@ -7,6 +7,7 @@ import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/data_element.dart';
 import 'package:nmea_dashboard/state/data_set.dart';
 import 'package:nmea_dashboard/state/formatting.dart';
+import 'package:nmea_dashboard/state/parsing/property_support.dart';
 import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:nmea_dashboard/ui/cells/abstract.dart';
 import 'package:nmea_dashboard/ui/cells/stats_value_cell.dart';
@@ -19,8 +20,8 @@ final _log = Logger('CellCreation');
 
 /// Returns an appropriate concrete cell to display the supplied cell spec,
 /// potentially returning a text cell that displays problems encountered during
-/// lookup.
-Cell createCell(DataSet dataset, DataCellSpec spec) {
+/// lookup or network standard incompatibility.
+Cell createCell(DataSet dataset, DataCellSpec spec, NetworkStandard standard) {
   final source = Source.fromString(spec.source);
   if (source == null) {
     if (spec.source.isNotEmpty) {
@@ -35,6 +36,10 @@ Cell createCell(DataSet dataset, DataCellSpec spec) {
   if (element == null) {
     _log.warning('Could not find ${spec.element} in source ${spec.source}');
     return NotFoundCell(spec: spec);
+  }
+
+  if (source == Source.network && !element.property.supportedBy(standard)) {
+    return UnsupportedCell(element: element, standard: standard, spec: spec);
   }
 
   final Formatter? formatter = formattersFor(element.property.dimension)[spec.format];

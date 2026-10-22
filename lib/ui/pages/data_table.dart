@@ -5,6 +5,7 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:nmea_dashboard/state/alarms.dart';
+import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/data_set.dart';
 import 'package:nmea_dashboard/state/settings/network.dart';
 import 'package:nmea_dashboard/state/settings/page.dart';
@@ -80,6 +81,7 @@ class _DataTablePageState extends State<DataTablePage> {
     final dataSet = Provider.of<DataSet>(context);
     final pageSpec = Provider.of<DataPageSpec>(context);
     final settings = Provider.of<UiSettings>(context);
+    final standard = context.select<NetworkSettings, NetworkStandard>((s) => s.protocol.standard);
 
     if (settings.keepScreenAwake) {
       // Force screen awake every draw in case the OS has released the lock. Disable happens
@@ -95,7 +97,9 @@ class _DataTablePageState extends State<DataTablePage> {
           builder: (context, constraints) {
             return SizedBox.expand(
               child: _Grid(
-                cells: pageSpec.cells.map((cellSpec) => createCell(dataSet, cellSpec)).toList(),
+                cells: pageSpec.cells
+                    .map((cellSpec) => createCell(dataSet, cellSpec, standard))
+                    .toList(),
                 numColumns: _decideNumColumns(constraints, pageSpec.cells.length),
               ),
             );
@@ -274,7 +278,9 @@ class _SilenceSplitButton extends StatelessWidget {
               backgroundColor: background,
               foregroundColor: foreground,
               padding: const EdgeInsets.all(20),
-              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.horizontal(left: Radius.circular(20))),
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.horizontal(left: Radius.circular(20)),
+              ),
             ),
             onPressed: onPressed,
             // Stack all labels so the button reserves the width of the longest option
@@ -389,9 +395,11 @@ class _DrawerContent extends StatelessWidget {
           title: Text('Network', style: enabledStyle),
           onTap: () {
             Navigator.pop(context);
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (context) => NetworkSettingsPage(settings: networkSettings)));
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => NetworkSettingsPage(settings: networkSettings),
+              ),
+            );
           },
         ),
         ListTile(
@@ -407,7 +415,9 @@ class _DrawerContent extends StatelessWidget {
           title: Text('Derived Data', style: enabledStyle),
           onTap: () {
             Navigator.pop(context);
-            Navigator.of(context).push(MaterialPageRoute(builder: (context) => EditDerivedElementsPage()));
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (context) => EditDerivedElementsPage()));
           },
         ),
         ListTile(
@@ -423,7 +433,9 @@ class _DrawerContent extends StatelessWidget {
           title: Text('User Interface', style: enabledStyle),
           onTap: () {
             Navigator.pop(context);
-            Navigator.of(context).push(MaterialPageRoute(builder: (context) => UiSettingsPage(settings: uiSettings)));
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (context) => UiSettingsPage(settings: uiSettings)));
           },
         ),
         ListTile(
@@ -441,8 +453,11 @@ class _DrawerContent extends StatelessWidget {
             Navigator.pop(context);
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) =>
-                    ViewHelpPage(title: 'Help Overview & License', filename: 'overview.md', linkToReleaseNotes: true),
+                builder: (context) => ViewHelpPage(
+                  title: 'Help Overview & License',
+                  filename: 'overview.md',
+                  linkToReleaseNotes: true,
+                ),
               ),
             );
           },

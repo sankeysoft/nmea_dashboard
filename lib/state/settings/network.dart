@@ -5,6 +5,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/settings/common.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -101,11 +102,15 @@ enum NetworkMode {
 
 // The supported protocol modes.
 enum NetworkProtocol {
-  nmea0183('NMEA0183 Text'),
-  nmea2000ngt('NMEA2000 ActiSense NGT'),
-  nmea2000raw('NMEA2000 YD RAW');
-  //nmea2000assembled('NMEA2000 Packets');
+  nmea0183('NMEA0183 Text', NetworkStandard.nmea0183),
+  nmea2000ngt('NMEA2000 ActiSense NGT', NetworkStandard.nmea2000),
+  nmea2000raw('NMEA2000 YD RAW', NetworkStandard.nmea2000);
+
+  //nmea2000assembled('NMEA2000 Packets', NetworkStandard.nmea2000);
 
   final String description;
-  const NetworkProtocol(this.description);
+
+  final NetworkStandard standard;
+
+  const NetworkProtocol(this.description, this.standard);
 }

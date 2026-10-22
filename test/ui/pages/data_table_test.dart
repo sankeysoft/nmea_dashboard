@@ -40,6 +40,7 @@ void main() {
     late DataSet dataSet;
     late DataPageSpec pageSpec;
     late PageSettings pageSettings;
+    late NetworkSettings networkSettings;
 
     Future<void> setUpWith(WidgetTester tester, Map<String, Object> initialPrefs) async {
       SharedPreferences.setMockInitialValues(initialPrefs);
@@ -50,6 +51,7 @@ void main() {
         final prefs = await SharedPreferences.getInstance();
         manager = AlarmManager();
         uiSettings = UiSettings(prefs);
+        networkSettings = NetworkSettings(prefs);
         dataSet = DataSet(
           NetworkSettings(prefs),
           DerivedDataSettings(prefs),
@@ -87,6 +89,7 @@ void main() {
           providers: [
             ChangeNotifierProvider<DataSet>.value(value: dataSet),
             ChangeNotifierProvider<UiSettings>.value(value: uiSettings),
+            ChangeNotifierProvider<NetworkSettings>.value(value: networkSettings),
             ChangeNotifierProvider<DataPageSpec>.value(value: pageSpec),
             ChangeNotifierProvider<PageSettings>.value(value: pageSettings),
             Provider<AlarmManager>.value(value: manager),
@@ -158,6 +161,68 @@ void main() {
 
       expect(uiSettings.alarmSilenceTime, const Duration(minutes: 5));
       expect(manager.unacknowledgedWarnings.isEmpty, isTrue);
+    });
+  });
+
+  group('DataTablePage unsupported properties', () {
+    late DataSet dataSet;
+    late NetworkSettings networkSettings;
+    late UiSettings uiSettings;
+    late PageSettings pageSettings;
+
+    Future<void> pumpPage(WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await tester.runAsync(() async {
+        final prefs = await SharedPreferences.getInstance();
+        dataSet = DataSet(
+          NetworkSettings(prefs),
+          DerivedDataSettings(prefs),
+          AlarmSettings(prefs),
+          HistoryManagerImpl(prefs),
+          AlarmManager(),
+        );
+        // Use separate network settings for the page so changing the protocol does not
+        // restart the dataset's network connection.
+        networkSettings = NetworkSettings(prefs);
+        uiSettings = UiSettings(prefs);
+        pageSettings = PageSettings(prefs, '[]');
+      });
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<DataSet>.value(value: dataSet),
+            ChangeNotifierProvider<UiSettings>.value(value: uiSettings),
+            ChangeNotifierProvider<NetworkSettings>.value(value: networkSettings),
+            ChangeNotifierProvider<DataPageSpec>.value(
+              value: DataPageSpec('Test page', [
+                DataCellSpec('network', 'battery1Voltage', 'current', 'volts'),
+              ]),
+            ),
+            ChangeNotifierProvider<PageSettings>.value(value: pageSettings),
+            Provider<AlarmManager>.value(value: AlarmManager()),
+          ],
+          child: const MaterialApp(home: DataTablePage()),
+        ),
+      );
+      await tester.pump();
+    }
+
+    testWidgets('shows fixed text only while the standard cannot supply the property', (
+      tester,
+    ) async {
+      await pumpPage(tester);
+      expect(find.text('Batt 1'), findsOneWidget);
+      expect(find.text('--.-'), findsOneWidget);
+
+      networkSettings.set(protocol: NetworkProtocol.nmea2000raw);
+      await tester.pump();
+      expect(find.text('Batt 1'), findsOneWidget);
+      expect(find.text('Not available\nfor NMEA2000'), findsOneWidget);
+      expect(find.text('--.-'), findsNothing);
+
+      networkSettings.set(protocol: NetworkProtocol.nmea0183);
+      await tester.pump();
+      expect(find.text('--.-'), findsOneWidget);
     });
   });
 }

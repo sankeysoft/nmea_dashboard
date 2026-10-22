@@ -5,6 +5,7 @@
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/settings/network.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -108,5 +109,11 @@ void main() {
     s.addListener(() => count++);
     s.set(port: 9999);
     expect(count, 1);
+  });
+
+  test('each protocol reports its standard', () {
+    expect(NetworkProtocol.nmea0183.standard, NetworkStandard.nmea0183);
+    expect(NetworkProtocol.nmea2000ngt.standard, NetworkStandard.nmea2000);
+    expect(NetworkProtocol.nmea2000raw.standard, NetworkStandard.nmea2000);
   });
 }

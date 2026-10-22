@@ -139,7 +139,7 @@ class Nmea2000Parser extends MessageParser<ByteData, int> {
     }
     final values = parser.parse(message.payload);
     assert(
-      values.every((v) => v.property.supportedBy2000),
+      values.every((v) => v.property.supportedBy(NetworkStandard.nmea2000)),
       '${message.type} generated a property missing from property_sets.g.dart, '
       'run dart run build_runner build',
     );
