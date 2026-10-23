@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-# Copyright Jody M Sankey 2022-2023
+# Copyright Jody M Sankey 2022
 # This software may be modified and distributed under the terms
 # of the MIT license. See the LICENCE.md file for details.
 

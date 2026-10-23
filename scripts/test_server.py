@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-# Copyright Jody M Sankey 2022-2026
+# Copyright Jody M Sankey 2022
 # This software may be modified and distributed under the terms
 # of the MIT license. See the LICENCE.md file for details.
 
@@ -402,7 +402,7 @@ def create_parser() -> ArgumentParser:
         "data from a file as UDP packets to localhost on the supplied port. "
         "Supports both ASCII NMEA0183 files and Yacht Devices RAW format "
         "NMEA2000 files.",
-        epilog="Copyright Jody Sankey 2022-2026",
+        epilog="Copyright Jody Sankey 2022",
         add_help=False,
     )
     parser.add_argument(

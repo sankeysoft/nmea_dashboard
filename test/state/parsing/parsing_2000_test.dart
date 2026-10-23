@@ -784,16 +784,6 @@ void main() {
     expect(Nmea2000Parser().parse(message), isEmpty);
   });
 
-  // TODO: Add support and tests for waypoint name (PGN 129285).
-  // Adding properties that only apply to one protocol probably requires notifying in the data
-  // cell when the selected property will never be available on the selected protocol, which is
-  // a significant change.
-
-  // TODO: Add support and tests for VHF channel (PGN 129799).
-  // Adding properties that only apply to one protocol probably requires notifying in the data
-  // cell when the selected property will never be available on the selected protocol, which is
-  // a significant change.
-
   test('should parse valid apparent wind packet', () {
     final message = _testMsg(130306, [0x04, ..._u16(1020), ..._u16(7854), 0x02, 0xFF, 0xFF]);
     expect(
