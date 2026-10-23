@@ -211,13 +211,13 @@ void main() {
       tester,
     ) async {
       await pumpPage(tester);
-      expect(find.text('Batt 1 Amp'), findsOneWidget);
+      expect(find.text('Batt 1'), findsOneWidget);
       expect(find.text('Not available\nfor NMEA0183'), findsOneWidget);
       expect(find.text('--.-'), findsNothing);
 
       networkSettings.set(protocol: NetworkProtocol.nmea2000raw);
       await tester.pump();
-      expect(find.text('Batt 1 Amp'), findsOneWidget);
+      expect(find.text('Batt 1'), findsOneWidget);
       expect(find.text('--.-'), findsOneWidget);
 
       networkSettings.set(protocol: NetworkProtocol.nmea0183);
