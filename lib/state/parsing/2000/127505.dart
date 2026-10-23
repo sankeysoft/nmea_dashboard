@@ -17,8 +17,10 @@ class Parser127505 extends PacketParser {
 
     final property = switch ((tankType, instance)) {
       (0, 0) => Property.fuelLevel,
+      (0, 1) => Property.fuel2Level,
       (1, 0) => Property.water1Level,
       (1, 1) => Property.water2Level,
+      (5, 0) => Property.blackWaterLevel,
       _ => null,
     };
 

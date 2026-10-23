@@ -30,7 +30,23 @@ void main() {
   });
 
   test('should report expected protocol support for network properties', () {
-    const only2000 = {Property.battery1Current, Property.battery2Current};
+    const only2000 = {
+      Property.anchorRode,
+      Property.battery1Current,
+      Property.battery2Current,
+      Property.battery1Charge,
+      Property.battery2Charge,
+      Property.blackWaterLevel,
+      Property.engine1FuelRate,
+      Property.engine2FuelRate,
+      Property.engine1Hours,
+      Property.engine2Hours,
+      Property.fuel2Level,
+      Property.trimPort,
+      Property.trimStarboard,
+      Property.waypointTime,
+      Property.vhfChannel,
+    };
     for (final property in Property.values.where((p) => p.sources.contains(Source.network))) {
       expect(
         property.supportedBy(NetworkStandard.nmea0183),

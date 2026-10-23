@@ -230,8 +230,22 @@ void main() {
     );
   });
 
+  test('should parse fluid level packet for second fuel and black water tanks', () {
+    final parser = Nmea2000Parser();
+    final fuelMessage = _testMsg(127505, [0x01, ..._i16(12500), 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
+    expect(
+      parser.parse(fuelMessage),
+      BoundValueListMatches([boundSingleValue(50.0, Property.fuel2Level)]),
+    );
+    final blackMessage = _testMsg(127505, [0x50, ..._i16(5000), 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
+    expect(
+      parser.parse(blackMessage),
+      BoundValueListMatches([boundSingleValue(20.0, Property.blackWaterLevel)]),
+    );
+  });
+
   test('should not parse fluid level packet for unsupported tank', () {
-    final message = _testMsg(127505, [0x50, ..._i16(12500), 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
+    final message = _testMsg(127505, [0x30, ..._i16(12500), 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
     expect(Nmea2000Parser().parse(message), isEmpty);
   });
 
@@ -262,15 +276,22 @@ void main() {
     expect(parser.parse(message2), isEmpty);
   });
 
-  List<int> engineDynamicPayload(int instance, List<int> oilPres, List<int> temp, List<int> alt) {
+  List<int> engineDynamicPayload(
+    int instance,
+    List<int> oilPres,
+    List<int> temp,
+    List<int> alt, {
+    List<int> fuelRate = const [0xFF, 0x7F],
+    List<int> hours = const [0xFF, 0xFF, 0xFF, 0xFF],
+  }) {
     return [
       instance,
       ...oilPres,
       0xFF, 0xFF, // Oil temperature
       ...temp,
       ...alt,
-      0xFF, 0x7F, // Fuel rate
-      0xFF, 0xFF, 0xFF, 0xFF, // Engine hours
+      ...fuelRate,
+      ...hours,
       0xFF, 0xFF, // Coolant pressure
       0xFF, 0xFF, // Fuel pressure
       0xFF, // Reserved
@@ -297,6 +318,28 @@ void main() {
         boundSingleValue(250000.0, Property.engine2OilPressure),
         boundSingleValue(90.0, Property.engine2Temperature),
         boundSingleValue(28.2, Property.alternator2Voltage),
+      ]),
+    );
+  });
+
+  test('should parse engine dynamic packet with fuel rate and hours', () {
+    final noData = [0xFF, 0xFF];
+    final message = _testMsg(
+      127489,
+      engineDynamicPayload(
+        1,
+        noData,
+        noData,
+        [0xFF, 0x7F],
+        fuelRate: _i16(123),
+        hours: _u32(4500000),
+      ),
+    );
+    expect(
+      Nmea2000Parser().parse(message),
+      BoundValueListMatches([
+        boundSingleValue(12.3, Property.engine2FuelRate),
+        boundSingleValue(4500000.0, Property.engine2Hours),
       ]),
     );
   });
@@ -353,6 +396,120 @@ void main() {
     expect(parser.parse(message1), isEmpty);
     final message2 = _testMsg(127508, [0x00, 0xFF, 0x7F, 0xFF, 0x7F, 0xFF, 0xFF, 0x01]);
     expect(parser.parse(message2), isEmpty);
+  });
+
+  List<int> dcDetailedPayload(int instance, int dcType, int stateOfCharge) {
+    return [0xFF, instance, dcType, stateOfCharge, 0xFF, ..._u16(120), 0xFF, 0xFF, 0xFF, 0xFF];
+  }
+
+  test('should parse valid DC detailed status packet for each battery', () {
+    final parser = Nmea2000Parser();
+    expect(
+      parser.parse(_testMsg(127506, dcDetailedPayload(0, 0, 85))),
+      BoundValueListMatches([boundSingleValue(85.0, Property.battery1Charge)]),
+    );
+    expect(
+      parser.parse(_testMsg(127506, dcDetailedPayload(1, 0, 42))),
+      BoundValueListMatches([boundSingleValue(42.0, Property.battery2Charge)]),
+    );
+  });
+
+  test(
+    'should not parse DC detailed status packet for non-battery, other instance, or no data',
+    () {
+      final parser = Nmea2000Parser();
+      expect(parser.parse(_testMsg(127506, dcDetailedPayload(0, 3, 85))), isEmpty);
+      expect(parser.parse(_testMsg(127506, dcDetailedPayload(2, 0, 85))), isEmpty);
+      expect(parser.parse(_testMsg(127506, dcDetailedPayload(0, 0, 0xFF))), isEmpty);
+    },
+  );
+
+  test('should reject DC detailed status packet outside valid range', () {
+    final message = _testMsg(127506, dcDetailedPayload(0, 0, 150));
+    expect(() => Nmea2000Parser().parse(message), throwsFormatException);
+  });
+
+  test('should parse valid anchor windlass operating status packet', () {
+    final message = _testMsg(128777, [0xFF, 0x00, 0x00, ..._u16(254), ..._u16(50), 0xFF]);
+    expect(
+      Nmea2000Parser().parse(message),
+      BoundValueListMatches([boundSingleValue(25.4, Property.anchorRode)]),
+    );
+  });
+
+  test('should not parse anchor windlass operating status packet without rode count', () {
+    final message = _testMsg(128777, [0xFF, 0x00, 0x00, 0xFF, 0xFF, ..._u16(50), 0xFF]);
+    expect(Nmea2000Parser().parse(message), isEmpty);
+  });
+
+  test('should parse valid time to mark packet', () {
+    final message = _testMsg(129301, [0xFF, ..._i32(5400000), 0x04, ..._u32(12)]);
+    expect(
+      Nmea2000Parser().parse(message),
+      BoundValueListMatches([boundSingleValue(5400.0, Property.waypointTime)]),
+    );
+  });
+
+  test('should not parse time to mark packet with elapsed time or no data', () {
+    final parser = Nmea2000Parser();
+    expect(parser.parse(_testMsg(129301, [0xFF, ..._i32(-5000), 0x04, ..._u32(12)])), isEmpty);
+    expect(
+      parser.parse(_testMsg(129301, [0xFF, 0xFF, 0xFF, 0xFF, 0x7F, 0x04, ..._u32(12)])),
+      isEmpty,
+    );
+  });
+
+  List<int> radioPayload(String channel) {
+    return [
+      ..._u32(15680000), // Rx frequency
+      ..._u32(15680000), // Tx frequency
+      ...channel.codeUnits,
+      ..._u16(25), // Tx power
+      0x00, // Mode
+      ..._u16(25000), // Bandwidth
+    ];
+  }
+
+  test('should parse VHF channel from radio frequency packet', () {
+    final parser = Nmea2000Parser();
+    expect(
+      parser.parse(_testMsg(129799, radioPayload('900016'))),
+      BoundValueListMatches([boundSingleValue(16, Property.vhfChannel)]),
+    );
+    expect(
+      parser.parse(_testMsg(129799, radioPayload('902072'))),
+      BoundValueListMatches([boundSingleValue(72, Property.vhfChannel)]),
+    );
+  });
+
+  test('should not parse radio frequency packet for non-VHF or private channels', () {
+    final parser = Nmea2000Parser();
+    expect(parser.parse(_testMsg(129799, radioPayload('300123'))), isEmpty);
+    expect(parser.parse(_testMsg(129799, radioPayload('9000L1'))), isEmpty);
+  });
+
+  test('should parse valid small craft status packet', () {
+    final message = _testMsg(130576, [30, 45, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
+    expect(
+      Nmea2000Parser().parse(message),
+      BoundValueListMatches([
+        boundSingleValue(30.0, Property.trimPort),
+        boundSingleValue(45.0, Property.trimStarboard),
+      ]),
+    );
+  });
+
+  test('should parse small craft status packet with one tab missing', () {
+    final message = _testMsg(130576, [0x7F, 45, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
+    expect(
+      Nmea2000Parser().parse(message),
+      BoundValueListMatches([boundSingleValue(45.0, Property.trimStarboard)]),
+    );
+  });
+
+  test('should reject small craft status packet outside valid range', () {
+    final message = _testMsg(130576, [0xF6, 45, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
+    expect(() => Nmea2000Parser().parse(message), throwsFormatException);
   });
 
   test('should parse valid speed packet', () {

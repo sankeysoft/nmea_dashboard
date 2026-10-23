@@ -18,10 +18,12 @@ part '127258.dart';
 part '127488.dart';
 part '127489.dart';
 part '127505.dart';
+part '127506.dart';
 part '127508.dart';
 part '128259.dart';
 part '128267.dart';
 part '128275.dart';
+part '128777.dart';
 part '129025.dart';
 part '129026.dart';
 part '129029.dart';
@@ -29,7 +31,9 @@ part '129033.dart';
 part '129283.dart';
 part '129284.dart';
 part '129291.dart';
+part '129301.dart';
 part '129539.dart';
+part '129799.dart';
 part '130306.dart';
 part '130310.dart';
 part '130311.dart';
@@ -37,6 +41,7 @@ part '130312.dart';
 part '130313.dart';
 part '130314.dart';
 part '130316.dart';
+part '130576.dart';
 part '130577.dart';
 
 /// A validator for assembled NMEA2000 messages with a 16 byte header.
@@ -80,10 +85,12 @@ class Nmea2000Parser extends MessageParser<ByteData, int> {
     Parser127488(),
     Parser127489(),
     Parser127505(),
+    Parser127506(),
     Parser127508(),
     Parser128259(),
     Parser128267(),
     Parser128275(),
+    Parser128777(),
     Parser129025(),
     Parser129026(),
     Parser129029(),
@@ -91,7 +98,9 @@ class Nmea2000Parser extends MessageParser<ByteData, int> {
     Parser129283(),
     Parser129284(),
     Parser129291(),
+    Parser129301(),
     Parser129539(),
+    Parser129799(),
     Parser130306(),
     Parser130310(),
     Parser130311(),
@@ -99,6 +108,7 @@ class Nmea2000Parser extends MessageParser<ByteData, int> {
     Parser130313(),
     Parser130314(),
     Parser130316(),
+    Parser130576(),
     Parser130577(),
   ];
 
@@ -190,6 +200,20 @@ sealed class PacketParser {
       throw FormatException('PGN $pgn value $value above maximum of $max}');
     }
   }
+}
+
+/// Reads a Uint8 from the supplied offset in payload, returning null if the content matches
+/// the NMEA2000 "data not available" sentinel.
+int? _readUint8(ByteData payload, int offset) {
+  final value = payload.getUint8(offset);
+  return (value == 0xFF) ? null : value;
+}
+
+/// Reads an Int8 from the supplied offset in payload, returning null if the content matches
+/// the NMEA2000 "data not available" sentinel.
+int? _readInt8(ByteData payload, int offset) {
+  final value = payload.getInt8(offset);
+  return (value >= 0x7D) ? null : value;
 }
 
 /// Reads a Uint16 from the supplied offset in payload, returning null if the content matches
