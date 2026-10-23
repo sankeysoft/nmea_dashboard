@@ -36,6 +36,7 @@ void main() {
 
   group('DataTablePage warning dialog', () {
     late AlarmManager manager;
+    late AlarmSettings alarmSettings;
     late UiSettings uiSettings;
     late DataSet dataSet;
     late DataPageSpec pageSpec;
@@ -50,12 +51,13 @@ void main() {
       await tester.runAsync(() async {
         final prefs = await SharedPreferences.getInstance();
         manager = AlarmManager();
+        alarmSettings = AlarmSettings(prefs);
         uiSettings = UiSettings(prefs);
         networkSettings = NetworkSettings(prefs);
         dataSet = DataSet(
           NetworkSettings(prefs),
           DerivedDataSettings(prefs),
-          AlarmSettings(prefs),
+          alarmSettings,
           HistoryManagerImpl(prefs),
           manager,
         );
@@ -92,6 +94,7 @@ void main() {
             ChangeNotifierProvider<NetworkSettings>.value(value: networkSettings),
             ChangeNotifierProvider<DataPageSpec>.value(value: pageSpec),
             ChangeNotifierProvider<PageSettings>.value(value: pageSettings),
+            ChangeNotifierProvider<AlarmSettings>.value(value: alarmSettings),
             Provider<AlarmManager>.value(value: manager),
           ],
           child: const MaterialApp(home: DataTablePage()),
@@ -192,6 +195,31 @@ void main() {
       expect(find.text('Warning'), findsNothing);
     });
 
+    testWidgets('notifications off button is hidden while notifications are enabled', (
+      tester,
+    ) async {
+      await setUpWith(tester, {});
+      await pumpPage(tester);
+      expect(find.byIcon(Icons.notifications_off), findsNothing);
+    });
+
+    testWidgets('tapping notifications off button re-enables notifications', (tester) async {
+      await setUpWith(tester, {'alarm_notifications_enabled': false});
+      manager.setAlarm(_warning());
+      await pumpPage(tester);
+      expect(find.text('Warning'), findsNothing);
+
+      await tester.tap(find.byIcon(Icons.notifications_off));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(alarmSettings.notificationsEnabled, isTrue);
+      expect(find.byIcon(Icons.notifications_off), findsNothing);
+      expect(find.textContaining('Alarm notifications enabled'), findsOneWidget);
+      // The warning that was active while disabled is resurfaced.
+      expect(find.text('Warning'), findsOneWidget);
+    });
+
     testWidgets('dialog defaults its silence duration from settings', (tester) async {
       // A stored 5 minute silence should pre-select that option, so silencing keeps it.
       await setUpWith(tester, {'ui_alarm_silence_seconds': 300});
@@ -212,15 +240,17 @@ void main() {
     late NetworkSettings networkSettings;
     late UiSettings uiSettings;
     late PageSettings pageSettings;
+    late AlarmSettings alarmSettings;
 
     Future<void> pumpPage(WidgetTester tester) async {
       SharedPreferences.setMockInitialValues({});
       await tester.runAsync(() async {
         final prefs = await SharedPreferences.getInstance();
+        alarmSettings = AlarmSettings(prefs);
         dataSet = DataSet(
           NetworkSettings(prefs),
           DerivedDataSettings(prefs),
-          AlarmSettings(prefs),
+          alarmSettings,
           HistoryManagerImpl(prefs),
           AlarmManager(),
         );
@@ -242,6 +272,7 @@ void main() {
               ]),
             ),
             ChangeNotifierProvider<PageSettings>.value(value: pageSettings),
+            ChangeNotifierProvider<AlarmSettings>.value(value: alarmSettings),
             Provider<AlarmManager>.value(value: AlarmManager()),
           ],
           child: const MaterialApp(home: DataTablePage()),

@@ -7,12 +7,14 @@ import 'package:flutter/material.dart';
 import 'package:nmea_dashboard/state/alarms.dart';
 import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/data_set.dart';
+import 'package:nmea_dashboard/state/settings/alarm.dart';
 import 'package:nmea_dashboard/state/settings/network.dart';
 import 'package:nmea_dashboard/state/settings/page.dart';
 import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:nmea_dashboard/state/settings/ui.dart';
 import 'package:nmea_dashboard/ui/cells/abstract.dart';
 import 'package:nmea_dashboard/ui/cells/creation.dart';
+import 'package:nmea_dashboard/ui/forms/abstract.dart';
 import 'package:nmea_dashboard/ui/forms/edit_alarms.dart';
 import 'package:nmea_dashboard/ui/forms/edit_derived_elements.dart';
 import 'package:nmea_dashboard/ui/forms/edit_page.dart';
@@ -90,7 +92,10 @@ class _DataTablePageState extends State<DataTablePage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(pageSpec.name), actions: [_EditPageButton()]),
+      appBar: AppBar(
+        title: Text(pageSpec.name),
+        actions: [_NotificationsOffButton(), _EditPageButton()],
+      ),
       drawer: Drawer(child: _DrawerContent()),
       body: SafeArea(
         child: LayoutBuilder(
@@ -333,6 +338,25 @@ class _SilenceSplitButton extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// A button to re-enable alarm notifications. Only shown while alarm notifications are disabled.
+class _NotificationsOffButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final enabled = context.select<AlarmSettings, bool>((s) => s.notificationsEnabled);
+    if (enabled) {
+      return const SizedBox.shrink();
+    }
+    return IconButton(
+      icon: const Icon(Icons.notifications_off),
+      tooltip: 'Alarm notifications are disabled',
+      onPressed: () {
+        Provider.of<AlarmSettings>(context, listen: false).setNotificationsEnabled(true);
+        showSnackBar(ScaffoldMessenger.of(context), 'Alarm notifications are now enabled.');
+      },
     );
   }
 }
