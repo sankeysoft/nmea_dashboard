@@ -169,8 +169,16 @@ class _WarningDialogState extends State<_WarningDialog> {
     if (_popped || !mounted) {
       return;
     }
+    final route = ModalRoute.of(context);
+    if (route == null) {
+      return;
+    }
     _popped = true;
-    Navigator.of(context).pop();
+    // Other routes (e.g. the silence duration menu) may be above this dialog, remove those
+    // first so we pop the dialog itself rather than whatever happens to be on top.
+    final navigator = Navigator.of(context);
+    navigator.popUntil((r) => r == route);
+    navigator.pop();
   }
 
   @override

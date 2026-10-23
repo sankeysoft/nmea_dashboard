@@ -149,6 +149,28 @@ void main() {
       expect(manager.unacknowledgedWarnings.isEmpty, isTrue);
     });
 
+    testWidgets('dialog dismisses when warnings clear while the dropdown is open', (tester) async {
+      await setUpWith(tester, {});
+      final alarm = _warning();
+      manager.setAlarm(alarm);
+      await pumpPage(tester);
+
+      await tester.tap(find.byIcon(Icons.arrow_drop_down));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byWidgetPredicate((w) => w is PopupMenuItem), findsNWidgets(3));
+
+      // Clearing the alarm removes the warning once the latch delay has passed.
+      manager.clearAlarm(alarm);
+      await tester.pump(AlarmManager.latchDelay + const Duration(seconds: 1));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(manager.unacknowledgedWarnings.isEmpty, isTrue);
+      expect(find.byWidgetPredicate((w) => w is PopupMenuItem), findsNothing);
+      expect(find.text('Warning'), findsNothing);
+    });
+
     testWidgets('dialog defaults its silence duration from settings', (tester) async {
       // A stored 5 minute silence should pre-select that option, so silencing keeps it.
       await setUpWith(tester, {'ui_alarm_silence_seconds': 300});
