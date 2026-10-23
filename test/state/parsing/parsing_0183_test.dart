@@ -43,9 +43,7 @@ void main() {
   test('should fail non-ASCII content with a specific message', () {
     expect(
       () => Nmea0183Validator(true).validate('\$YDDPT,18.56,-1.61,140.0\uFFFD,*67'),
-      throwsA(
-        isA<FormatException>().having((e) => e.message, 'message', contains('non-ASCII')),
-      ),
+      throwsA(isA<FormatException>().having((e) => e.message, 'message', contains('non-ASCII'))),
     );
   });
 
@@ -101,10 +99,7 @@ void main() {
   });
 
   test('should skip empty RMB ', () {
-    expect(
-      Nmea0183Parser().parse(_testMsg('BWR', ',,N,,E,,T,,M,,N,')),
-      BoundValueListMatches([]),
-    );
+    expect(Nmea0183Parser().parse(_testMsg('BWR', ',,N,,E,,T,,M,,N,')), BoundValueListMatches([]));
   });
 
   test('should support DBT', () {
@@ -364,10 +359,7 @@ void main() {
   });
 
   test('should skip empty RMB ', () {
-    expect(
-      Nmea0183Parser().parse(_testMsg('RMB', 'A,,R,,,,N,,E,,,,,')),
-      BoundValueListMatches([]),
-    );
+    expect(Nmea0183Parser().parse(_testMsg('RMB', 'A,,R,,,,N,,E,,,,,')), BoundValueListMatches([]));
   });
 
   test('should parse RMC', () {

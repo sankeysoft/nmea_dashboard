@@ -69,16 +69,14 @@ void main() {
         MaterialApp(
           navigatorObservers: [observer],
           home: Builder(
-            builder:
-                (context) => ElevatedButton(
-                  onPressed:
-                      () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => ViewHelpPage(filename: 'edit_cell.md', title: 'Help'),
-                        ),
-                      ),
-                  child: const Text('Open'),
+            builder: (context) => ElevatedButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ViewHelpPage(filename: 'edit_cell.md', title: 'Help'),
                 ),
+              ),
+              child: const Text('Open'),
+            ),
           ),
         ),
       );

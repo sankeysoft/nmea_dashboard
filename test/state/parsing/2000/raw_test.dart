@@ -23,8 +23,7 @@ String _header({
   int pduSpecific = 0,
   required int source,
 }) {
-  final id =
-      (priority << 26) | (dataPage << 24) | (pduFormat << 16) | (pduSpecific << 8) | source;
+  final id = (priority << 26) | (dataPage << 24) | (pduFormat << 16) | (pduSpecific << 8) | source;
   return id.toRadixString(16).padLeft(8, '0').toUpperCase();
 }
 
@@ -147,9 +146,7 @@ void main() {
     test('keeps extracting valid lines after a line that fails to parse', () {
       final header = _header(pduFormat: 0x01, source: 0x01);
       final goodLine = _line(header, data: [0x11]);
-      final messages = splitter.read(
-        _pkt('16:23:23.404 R NOTAHEX0 01\n$goodLine\nunterminated'),
-      );
+      final messages = splitter.read(_pkt('16:23:23.404 R NOTAHEX0 01\n$goodLine\nunterminated'));
       expect(messages, hasLength(1));
     });
 
@@ -328,30 +325,27 @@ void main() {
       expect(readFrames(ffHeader, [shortFrame]), isEmpty);
     });
 
-    test(
-      'abandons an in-progress message and starts a new one when a frame with a different '
-      'sequence id begins a new message',
-      () {
-        final abandonedPayload = List<int>.generate(14, (i) => i + 1);
-        final newPayload = List<int>.generate(9, (i) => 100 + i);
-        final abandonedFrames = fastFrames(abandonedPayload);
-        final newFrames = fastFramesWithSeqId(1, newPayload);
+    test('abandons an in-progress message and starts a new one when a frame with a different '
+        'sequence id begins a new message', () {
+      final abandonedPayload = List<int>.generate(14, (i) => i + 1);
+      final newPayload = List<int>.generate(9, (i) => 100 + i);
+      final abandonedFrames = fastFrames(abandonedPayload);
+      final newFrames = fastFramesWithSeqId(1, newPayload);
 
-        // Begin assembling the first message but never finish it.
-        expect(readFrames(ffHeader, [abandonedFrames[0]]), isEmpty);
+      // Begin assembling the first message but never finish it.
+      expect(readFrames(ffHeader, [abandonedFrames[0]]), isEmpty);
 
-        // A frame with a different sequence id but a starting counter (0) arrives on the same
-        // PGN/source before the first message completes. This should abandon the first message
-        // and start assembling the new one from this frame instead of being dropped outright.
-        expect(readFrames(ffHeader, [newFrames[0]]), isEmpty);
+      // A frame with a different sequence id but a starting counter (0) arrives on the same
+      // PGN/source before the first message completes. This should abandon the first message
+      // and start assembling the new one from this frame instead of being dropped outright.
+      expect(readFrames(ffHeader, [newFrames[0]]), isEmpty);
 
-        // The new message should complete normally from here, ignoring the abandoned one.
-        final messages = readFrames(ffHeader, newFrames.skip(1).toList());
-        expect(messages, hasLength(1));
-        final validated = YdRawMessageValidator().validate(messages.single)!;
-        expect(Uint8List.sublistView(validated.payload), newPayload);
-      },
-    );
+      // The new message should complete normally from here, ignoring the abandoned one.
+      final messages = readFrames(ffHeader, newFrames.skip(1).toList());
+      expect(messages, hasLength(1));
+      final validated = YdRawMessageValidator().validate(messages.single)!;
+      expect(Uint8List.sublistView(validated.payload), newPayload);
+    });
 
     test(
       'drops a frame with a different sequence id that is not itself a valid sequence start',

@@ -52,9 +52,11 @@ List<int> _dleFramed(ByteData packet) {
   const stx = 0x02;
   const etx = 0x03;
   return [
-    dle, stx,
+    dle,
+    stx,
     for (final byte in Uint8List.sublistView(packet)) ...(byte == dle ? [dle, dle] : [byte]),
-    dle, etx,
+    dle,
+    etx,
   ];
 }
 
@@ -252,15 +254,8 @@ void main() {
   group('NGT over the network', () {
     test('parses a water depth packet received over udp', () async {
       // PGN 128267 (Water Depth) carrying a depth of 12.34m and an offset of -0.5m.
-      final packet = _makeNgtPacket(128267, 0x23, [
-        0x03,
-        0xD2, 0x04, 0x00, 0x00,
-        0x0C, 0xFE,
-        0xFF,
-      ]);
-      final values = await valuesFromUdpPackets(NetworkProtocol.nmea2000ngt, [
-        _dleFramed(packet),
-      ]);
+      final packet = _makeNgtPacket(128267, 0x23, [0x03, 0xD2, 0x04, 0x00, 0x00, 0x0C, 0xFE, 0xFF]);
+      final values = await valuesFromUdpPackets(NetworkProtocol.nmea2000ngt, [_dleFramed(packet)]);
       expect(
         values,
         BoundValueListMatches([
