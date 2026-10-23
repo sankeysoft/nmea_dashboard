@@ -534,35 +534,45 @@ abstract class StatefulFormState<T extends StatefulWidget> extends State<T> {
     ValueChanged<bool>? onChanged,
     FormFieldSetter<bool>? onSaved,
   }) {
-    final theme = Theme.of(context);
-    final headingStyle = theme.textTheme.labelMedium!.copyWith(
-      color: enabled ? theme.colorScheme.primaryContainer : theme.disabledColor,
-    );
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Text('$label:', style: headingStyle),
-        const Expanded(child: SizedBox()),
-        FormField<bool>(
-          initialValue: initialValue,
-          builder: (FormFieldState<bool> field) {
-            return Switch(
-              value: field.value ?? true,
-              activeThumbColor: theme.colorScheme.tertiary,
-              onChanged: enabled
-                  ? (val) {
-                      field.didChange(val);
-                      if (onChanged != null) {
-                        onChanged(val);
-                      }
-                    }
-                  : null,
-            );
-          },
-          onSaved: onSaved,
-        ),
-      ],
+    return FormField<bool>(
+      initialValue: initialValue,
+      builder: (FormFieldState<bool> field) {
+        return buildStatelessSwitch(
+          context: context,
+          label: label,
+          value: field.value ?? true,
+          onChanged: enabled
+              ? (val) {
+                  field.didChange(val);
+                  if (onChanged != null) {
+                    onChanged(val);
+                  }
+                }
+              : null,
+        );
+      },
+      onSaved: onSaved,
     );
   }
+}
+
+/// Builds a labeled switch, disabled if onChanged is null.
+Widget buildStatelessSwitch({
+  required BuildContext context,
+  required String label,
+  required bool value,
+  ValueChanged<bool>? onChanged,
+}) {
+  final theme = Theme.of(context);
+  final headingStyle = theme.textTheme.labelMedium!.copyWith(
+    color: onChanged != null ? theme.colorScheme.primaryContainer : theme.disabledColor,
+  );
+  return Row(
+    crossAxisAlignment: CrossAxisAlignment.center,
+    children: [
+      Text('$label:', style: headingStyle),
+      const Expanded(child: SizedBox()),
+      Switch(value: value, activeThumbColor: theme.colorScheme.tertiary, onChanged: onChanged),
+    ],
+  );
 }

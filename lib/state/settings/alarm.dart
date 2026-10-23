@@ -18,10 +18,12 @@ class AlarmSettings with ChangeNotifier {
   static const String _prefKey = 'alarm_v1';
   final SharedPreferences _prefs;
   final Map<SpecKey, AlarmSpec> _alarmSpecs = {};
+  final PrefValue<bool> _notificationsEnabled;
 
   /// Creates settings from the supplied prefs, starting empty if
   /// the shared prefs are missing or invalid.
-  AlarmSettings(this._prefs) {
+  AlarmSettings(this._prefs)
+    : _notificationsEnabled = PrefValue(_prefs, 'alarm_notifications_enabled', true) {
     final specs = validateJsonList(
       prefJson(_prefs, _prefKey, _log),
       (e) => AlarmSpec.fromJson(e),
@@ -36,6 +38,17 @@ class AlarmSettings with ChangeNotifier {
 
   /// An iterator over the alarm specs in order.
   Iterable<AlarmSpec> get alarmSpecs => _alarmSpecs.values;
+
+  /// Whether alarms may be notified with a dialog and sound.
+  bool get notificationsEnabled => _notificationsEnabled.value;
+
+  /// Sets whether alarms may be notified with a dialog and sound.
+  void setNotificationsEnabled(bool enabled) {
+    if (enabled != _notificationsEnabled.value) {
+      _notificationsEnabled.set(enabled);
+      notifyListeners();
+    }
+  }
 
   /// Replaces the current set of alarms with the supplied specifications.
   void replaceElements(Iterable<AlarmSpec> alarmSpecs) {

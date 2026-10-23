@@ -59,6 +59,14 @@ class _EditAlarmsContent extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Consumer<AlarmSettings>(
+            builder: (context, settings, child) => buildStatelessSwitch(
+              context: context,
+              label: 'Alarm notifications',
+              value: settings.notificationsEnabled,
+              onChanged: settings.setNotificationsEnabled,
+            ),
+          ),
           Expanded(
             // Need an intermediate `Material` between the form and the
             // list tiles so the tile background renders correctly (see

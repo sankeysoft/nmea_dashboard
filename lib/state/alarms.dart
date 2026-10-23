@@ -346,6 +346,29 @@ class AlarmManager {
   /// Map from inactive alarms to a timer that will clear thier latched on status.
   final Map<Alarm, Timer> _clearTimers = {};
 
+  /// Whether new warnings are added to unacknowledgedWarnings, triggering notification.
+  bool _notificationsEnabled = true;
+
+  bool get notificationsEnabled => _notificationsEnabled;
+
+  /// Enables or disables warning notifications. Disabling clears all unacknowledged warnings,
+  /// enabling resurfaces any latched warnings that are not currently silenced.
+  set notificationsEnabled(bool enabled) {
+    if (enabled == _notificationsEnabled) {
+      return;
+    }
+    _notificationsEnabled = enabled;
+    _log.info("${enabled ? 'Enabling' : 'Disabling'} warning notifications");
+    if (enabled) {
+      final now = clock.now();
+      for (final alarm in latchedAlarms.alarms) {
+        _maybeAddWarning(alarm, now);
+      }
+    } else {
+      unacknowledgedWarnings.clear();
+    }
+  }
+
   /// Marks an alarm as active.
   void setAlarm(Alarm alarm) {
     activeAlarms.add(alarm);
@@ -355,11 +378,18 @@ class AlarmManager {
       final now = clock.now();
       _lastActivationTimes[alarm] = now;
       _log.info("Setting ${alarm.level.name} on ${alarm.elementName}");
-      if (alarm.level == AlarmLevel.warning) {
-        final nextWarningTime = _nextWarningTimes[alarm];
-        if (nextWarningTime == null || nextWarningTime.isBefore(now)) {
-          unacknowledgedWarnings.add(alarm);
-        }
+      if (_notificationsEnabled) {
+        _maybeAddWarning(alarm, now);
+      }
+    }
+  }
+
+  /// Adds the alarm to unacknowledgedWarnings if it is a warning that is not currently silenced.
+  void _maybeAddWarning(Alarm alarm, DateTime now) {
+    if (alarm.level == AlarmLevel.warning) {
+      final nextWarningTime = _nextWarningTimes[alarm];
+      if (nextWarningTime == null || nextWarningTime.isBefore(now)) {
+        unacknowledgedWarnings.add(alarm);
       }
     }
   }

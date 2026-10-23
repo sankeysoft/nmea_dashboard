@@ -23,6 +23,10 @@ HEAR THE ALARM.*
 
 # Controls
 
+**Alarm notifications**: This switch controls whether warnings display a popup
+and play audio. When off, cells are still highlighted, but no popups are
+displayed and no audio is played for any alarm.
+
 The middle of the form lists the alarms that are currently defined. If you
 opened the form from the menu it displays all alarms. If you opened the form
 from a data cell it diplays only alarms for the property in the cell.

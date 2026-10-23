@@ -66,6 +66,17 @@ void main() {
       expect(find.text('Add new alarm'), findsOneWidget);
     });
 
+    testWidgets('notifications switch reflects and updates settings', (tester) async {
+      await pumpPage(tester);
+      expect(find.text('Alarm notifications:'), findsOneWidget);
+      expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
+
+      await tester.tap(find.byType(Switch));
+      await tester.pump();
+      expect(alarmSettings.notificationsEnabled, isFalse);
+      expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse);
+    });
+
     testWidgets('shows existing alarms', (tester) async {
       alarmSettings.setAlarm(makeSpec('speedOverGround'));
       await pumpPage(tester);

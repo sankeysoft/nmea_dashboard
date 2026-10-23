@@ -776,6 +776,47 @@ void main() {
       expect(manager.latchedAlarms.contains(warning), isTrue);
     });
 
+    test('notifications are enabled by default', () {
+      expect(manager.notificationsEnabled, isTrue);
+    });
+
+    test('setAlarm latches but does not raise warnings while notifications disabled', () {
+      manager.notificationsEnabled = false;
+      manager.setAlarm(warning);
+      expect(manager.activeAlarms.contains(warning), isTrue);
+      expect(manager.latchedAlarms.contains(warning), isTrue);
+      expect(manager.unacknowledgedWarnings.isEmpty, isTrue);
+    });
+
+    test('disabling notifications clears unacknowledged warnings', () {
+      manager.setAlarm(warning);
+      manager.notificationsEnabled = false;
+      expect(manager.latchedAlarms.contains(warning), isTrue);
+      expect(manager.unacknowledgedWarnings.isEmpty, isTrue);
+    });
+
+    test('enabling notifications resurfaces latched warnings but not cautions', () {
+      manager.notificationsEnabled = false;
+      manager.setAlarm(caution);
+      manager.setAlarm(warning);
+      manager.notificationsEnabled = true;
+      expect(manager.unacknowledgedWarnings.alarms, [warning]);
+    });
+
+    test('enabling notifications does not resurface silenced warnings', () {
+      fakeAsync((fake) {
+        manager.setAlarm(warning);
+        manager.acknowledgeWarnings(const Duration(minutes: 5));
+        manager.notificationsEnabled = false;
+        manager.notificationsEnabled = true;
+        expect(manager.unacknowledgedWarnings.isEmpty, isTrue);
+        fake.elapse(const Duration(minutes: 6));
+        manager.notificationsEnabled = false;
+        manager.notificationsEnabled = true;
+        expect(manager.unacknowledgedWarnings.contains(warning), isTrue);
+      });
+    });
+
     test('acknowledgeWarnings is a no-op when no unacknowledged warnings', () {
       manager.setAlarm(caution);
       expect(() => manager.acknowledgeWarnings(null), returnsNormally);

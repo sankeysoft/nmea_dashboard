@@ -162,4 +162,29 @@ void main() {
     expect(s2.alarmSpecs.first.min, 10.0);
     expect(s2.alarmSpecs.first.max, 150.0);
   });
+
+  test('notifications are enabled by default', () async {
+    expect(AlarmSettings(await _prefs()).notificationsEnabled, isTrue);
+  });
+
+  test('setNotificationsEnabled persists and notifies only on change', () async {
+    final p = await _prefs();
+    final s = AlarmSettings(p);
+    int count = 0;
+    s.addListener(() => count++);
+    s.setNotificationsEnabled(false);
+    expect(s.notificationsEnabled, isFalse);
+    expect(p.getBool('alarm_notifications_enabled'), isFalse);
+    expect(count, 1);
+    s.setNotificationsEnabled(false);
+    expect(count, 1);
+    expect(AlarmSettings(p).notificationsEnabled, isFalse);
+  });
+
+  test('notifications enabled state is not included in clipboard or json', () async {
+    final s = AlarmSettings(await _prefs());
+    s.setNotificationsEnabled(false);
+    expect(s.toClipboard(), isNot(contains('notification')));
+    expect(s.toJson(), isNot(contains('notification')));
+  });
 }

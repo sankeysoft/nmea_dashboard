@@ -171,6 +171,27 @@ void main() {
       expect(find.text('Warning'), findsNothing);
     });
 
+    testWidgets('does not show the dialog while notifications are disabled', (tester) async {
+      await setUpWith(tester, {});
+      manager.notificationsEnabled = false;
+      manager.setAlarm(_warning());
+      await pumpPage(tester);
+      expect(find.text('Warning'), findsNothing);
+    });
+
+    testWidgets('disabling notifications dismisses an open dialog', (tester) async {
+      await setUpWith(tester, {});
+      manager.setAlarm(_warning());
+      await pumpPage(tester);
+      expect(find.text('Warning'), findsOneWidget);
+
+      manager.notificationsEnabled = false;
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Warning'), findsNothing);
+    });
+
     testWidgets('dialog defaults its silence duration from settings', (tester) async {
       // A stored 5 minute silence should pre-select that option, so silencing keeps it.
       await setUpWith(tester, {'ui_alarm_silence_seconds': 300});

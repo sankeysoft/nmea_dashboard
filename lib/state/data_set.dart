@@ -90,7 +90,9 @@ class DataSet with ChangeNotifier {
 
     // Create all known alarms register to rebuild if the specs for these change.
     _createAndBindAlarms();
+    _alarmManager.notificationsEnabled = _alarmSettings.notificationsEnabled;
     _alarmSettings.addListener(() {
+      _alarmManager.notificationsEnabled = _alarmSettings.notificationsEnabled;
       _createAndBindAlarms();
       notifyListeners();
     });

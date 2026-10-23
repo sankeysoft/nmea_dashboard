@@ -31,13 +31,14 @@ DataSet _makeDataSet(
   SharedPreferences prefs, {
   DerivedDataSettings? derivedSettings,
   AlarmSettings? alarmSettings,
+  AlarmManager? alarmManager,
 }) {
   return DataSet(
     NetworkSettings(prefs),
     derivedSettings ?? DerivedDataSettings(prefs),
     alarmSettings ?? AlarmSettings(prefs),
     HistoryManagerImpl(prefs),
-    AlarmManager(),
+    alarmManager ?? AlarmManager(),
   );
 }
 
@@ -337,6 +338,31 @@ void main() {
       // Updating to a value inside the safe range clears the alarm.
       (element as DataElement).updateValue(_depthMeters(50.0 / metersToFeet));
       expect(element.alarmState.level, isNull);
+    });
+
+    test('notifications setting is applied to the alarm manager', () async {
+      SharedPreferences.setMockInitialValues({'alarm_notifications_enabled': false});
+      final prefs = await SharedPreferences.getInstance();
+      final alarms = AlarmSettings(prefs);
+      final manager = AlarmManager();
+      _makeDataSet(prefs, alarmSettings: alarms, alarmManager: manager);
+      expect(manager.notificationsEnabled, isFalse);
+      alarms.setNotificationsEnabled(true);
+      expect(manager.notificationsEnabled, isTrue);
+    });
+
+    test('alarms still set element state while notifications disabled', () async {
+      final prefs = await _prefs();
+      final alarms = AlarmSettings(prefs);
+      final manager = AlarmManager();
+      final dataSet = _makeDataSet(prefs, alarmSettings: alarms, alarmManager: manager);
+      alarms.replaceElements([depthAlarmSpec(min: 10.0, type: 'warning')]);
+      alarms.setNotificationsEnabled(false);
+
+      final element = dataSet.find(Source.network, 'depthWithOffset') as WithAlarms;
+      (element as DataElement).updateValue(_depthMeters(5.0 / metersToFeet));
+      expect(element.alarmState.level, AlarmLevel.warning);
+      expect(manager.unacknowledgedWarnings.isEmpty, isTrue);
     });
 
     test('alarm with unknown element is silently ignored', () async {
