@@ -87,13 +87,11 @@ class _EditAlarmsContent extends StatelessWidget {
     }
     return ReorderableListView(
       buildDefaultDragHandles: false,
-      onReorder: (oldIndex, newIndex) {
+      onReorderItem: (oldIndex, newIndex) {
         // In filtered mode it doesn't make sense to manage ordering of the global list, ignore.
         if (_dataElement == null) {
           List<AlarmSpec> specs = settings.alarmSpecs.toList();
           final moved = specs.removeAt(oldIndex);
-          // Correct the newIndex for the deleted item if we're moving down.
-          if (newIndex > oldIndex) newIndex -= 1;
           specs.insert(newIndex, moved);
           settings.replaceElements(specs);
         }

@@ -97,11 +97,9 @@ class _EditPagesContent extends StatelessWidget {
     }
     return ReorderableListView(
       buildDefaultDragHandles: false,
-      onReorder: (oldIndex, newIndex) {
+      onReorderItem: (oldIndex, newIndex) {
         List<DataPageSpec> specs = settings.dataPageSpecs.toList();
         final moved = specs.removeAt(oldIndex);
-        // Correct the newIndex for the deleted item if we're moving down.
-        if (newIndex > oldIndex) newIndex -= 1;
         specs.insert(newIndex, moved);
         settings.replacePages(specs);
       },
