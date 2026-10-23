@@ -20,6 +20,8 @@ import 'package:nmea_dashboard/state/settings/specs.dart';
 import 'package:nmea_dashboard/state/values.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'utils.dart';
+
 Future<SharedPreferences> _prefs() async {
   SharedPreferences.setMockInitialValues({});
   return SharedPreferences.getInstance();
@@ -132,6 +134,42 @@ void main() {
           );
         }
       }
+    });
+  });
+
+  group('DataSet default variation', () {
+    test('default variation from settings is used and tracks setting changes', () async {
+      final prefs = await _prefs();
+      final networkSettings = NetworkSettings(prefs);
+      final dataSet = DataSet(
+        networkSettings,
+        DerivedDataSettings(prefs),
+        AlarmSettings(prefs),
+        HistoryManagerImpl(prefs),
+        AlarmManager(),
+      );
+      final variation = dataSet.find(Source.network, 'variation')!;
+      expect(variation, isA<VariationDataElement>());
+      expect(variation.value, isNull);
+
+      networkSettings.set(defaultVariationEnabled: true, defaultVariationValue: -4.5);
+      expect(variation.value, ValueMatches(SingleValue(-4.5)));
+
+      networkSettings.set(defaultVariationValue: 2.0);
+      expect(variation.value, ValueMatches(SingleValue(2.0)));
+
+      networkSettings.set(defaultVariationEnabled: false);
+      expect(variation.value, isNull);
+      dataSet.dispose();
+    });
+
+    test('default variation is applied when the data set is created', () async {
+      final prefs = await _prefs();
+      await prefs.setBool('default_variation_enabled', true);
+      await prefs.setDouble('default_variation_value', 7.0);
+      final dataSet = _makeDataSet(prefs);
+      expect(dataSet.find(Source.network, 'variation')!.value, ValueMatches(SingleValue(7.0)));
+      dataSet.dispose();
     });
   });
 
@@ -319,10 +357,11 @@ void main() {
     test('alarm on a non-WithAlarms element is silently ignored', () async {
       final prefs = await _prefs();
       final alarms = AlarmSettings(prefs);
-      // The 'variation' element is a plain ConsistentDataElement and does not
-      // have the WithAlarms mixin, so a valid Alarm.fromSpec for it must be
-      // skipped at bind time. Pair it with a valid alarm to ensure binding of
-      // other alarms still proceeds.
+      // Variation is used here simply as an example of an element that doesn't
+      // support alarms (it deliberately lacks the WithAlarms mixin since alarms
+      // on variation aren't useful). Alarm.fromSpec succeeds for it, so the spec
+      // must instead be skipped at bind time. Pair it with a valid alarm to
+      // ensure binding of other alarms still proceeds.
       alarms.replaceElements([
         AlarmSpec('network', 'variation', 'caution', 'degrees', min: -30.0),
         depthAlarmSpec(min: 10.0),

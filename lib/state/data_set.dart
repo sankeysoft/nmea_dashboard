@@ -95,8 +95,12 @@ class DataSet with ChangeNotifier {
       notifyListeners();
     });
 
-    // Register to restart network if network settings change.
-    _networkSettings.addListener(() => _collectNetworkData());
+    // Register to update the default variation and restart network if network settings change.
+    _applyDefaultVariation();
+    _networkSettings.addListener(() {
+      _applyDefaultVariation();
+      _collectNetworkData();
+    });
     // Start collecting data
     _collectNetworkData();
     _collectLocalData();
@@ -115,11 +119,7 @@ class DataSet with ChangeNotifier {
     /// Create a special data element to let all bearings on this source handle
     /// mag/true conversion. If no elements use it (e.g. source==local) it just
     /// falls out of scope.
-    final variation = ConsistentDataElement<SingleValue<double>>(
-      source,
-      Property.variation,
-      staleness,
-    );
+    final variation = VariationDataElement(source, staleness);
 
     Map<String, DataElement> elementMap = {};
     for (final property in Property.values) {
@@ -144,6 +144,14 @@ class DataSet with ChangeNotifier {
       }
     }
     return elementMap;
+  }
+
+  /// Passes the default variation from network settings to the network variation element.
+  void _applyDefaultVariation() {
+    final element = sources[Source.network]![Property.variation.name] as VariationDataElement;
+    element.defaultValue = _networkSettings.defaultVariationEnabled
+        ? SingleValue(_networkSettings.defaultVariationValue)
+        : null;
   }
 
   /// Create all known derived data elements as a map keyed by the name.

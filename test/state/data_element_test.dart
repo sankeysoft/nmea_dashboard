@@ -150,6 +150,79 @@ void main() {
     expect(bearing.value, ValueMatches(AugmentedBearing(351.0, -10.0)));
   });
 
+  group('variation data element', () {
+    BoundValue<SingleValue<double>> variationAtTier(double value, int tier) =>
+        BoundValue(_testSource, Property.variation, SingleValue(value), tier: tier);
+
+    test('should be null with no data and no default', () {
+      final element = VariationDataElement(_testSource, _staleness);
+      expect(element.value, isNull);
+    });
+
+    test('should use default until variation is received', () {
+      final element = VariationDataElement(_testSource, _staleness);
+      element.defaultValue = SingleValue(-3.0);
+      expect(element.value, ValueMatches(SingleValue(-3.0)));
+      element.defaultValue = null;
+      expect(element.value, isNull);
+    });
+
+    test('should retain received variation indefinitely in preference to default', () {
+      fakeAsync((fake) {
+        final element = VariationDataElement(_testSource, _staleness);
+        element.defaultValue = SingleValue(-3.0);
+        expect(element.updateValue(_boundVariation(5.0)), isTrue);
+        expect(element.value, ValueMatches(SingleValue(5.0)));
+
+        fake.elapse(const Duration(days: 30));
+        expect(element.value, ValueMatches(SingleValue(5.0)));
+
+        // Changing the default after variation was received has no effect.
+        element.defaultValue = SingleValue(-7.0);
+        expect(element.value, ValueMatches(SingleValue(5.0)));
+      });
+    });
+
+    test('should accept lower tier variation once higher tier data is stale', () {
+      fakeAsync((fake) {
+        final element = VariationDataElement(_testSource, _staleness);
+        expect(element.updateValue(variationAtTier(5.0, 1)), isTrue);
+        expect(element.updateValue(variationAtTier(6.0, 2)), isFalse);
+        expect(element.value, ValueMatches(SingleValue(5.0)));
+
+        fake.elapse(const Duration(seconds: 1));
+        expect(element.value, ValueMatches(SingleValue(5.0)));
+        expect(element.updateValue(variationAtTier(6.0, 2)), isTrue);
+        expect(element.value, ValueMatches(SingleValue(6.0)));
+      });
+    });
+
+    test('should notify when default changes only while it is in use', () {
+      final element = VariationDataElement(_testSource, _staleness);
+      int count = 0;
+      element.addListener(() => count++);
+      element.defaultValue = SingleValue(-3.0);
+      expect(count, 1);
+      element.defaultValue = SingleValue(-3.0);
+      expect(count, 1);
+      element.updateValue(_boundVariation(5.0));
+      expect(count, 2);
+      element.defaultValue = SingleValue(-4.0);
+      expect(count, 2);
+    });
+
+    test('should let bearing elements convert magnetic inputs using the default', () {
+      final variation = VariationDataElement(_testSource, _staleness);
+      final bearing = BearingDataElement(_testSource, variation, Property.heading, _staleness);
+      expect(bearing.updateValue(_boundMagHeading(45)), isFalse);
+
+      // Default variation is 10 degrees West.
+      variation.defaultValue = SingleValue(-10.0);
+      expect(bearing.updateValue(_boundMagHeading(45)), isTrue);
+      expect(bearing.value, ValueMatches(AugmentedBearing(35.0, -10.0)));
+    });
+  });
+
   test('bearing data element should accept true inputs', () {
     final variation = ConsistentDataElement<SingleValue<double>>(
       _testSource,

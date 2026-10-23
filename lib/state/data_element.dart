@@ -169,6 +169,43 @@ class ConsistentDataElement<V extends Value> extends DataElement<V, V> {
   }
 }
 
+/// A special case element for magnetic variation. Variation from the networks is retained
+/// indefinitely without the normal staleness gate, and variation may be initialized from an
+/// optional user-controlled default.
+class VariationDataElement extends ConsistentDataElement<SingleValue<double>> {
+  /// The most recent value accepted by this element, retained after it becomes stale.
+  SingleValue<double>? _lastReceived;
+
+  /// The value to use if no variation has ever been received, or null if there is no default.
+  SingleValue<double>? _defaultValue;
+
+  VariationDataElement(Source source, Staleness staleness)
+    : super(source, Property.variation, staleness);
+
+  @override
+  SingleValue<double>? get value => _value ?? _lastReceived ?? _defaultValue;
+
+  /// Sets the value to use if no variation has ever been received, or null for no default.
+  set defaultValue(SingleValue<double>? newDefault) {
+    if (newDefault?.data == _defaultValue?.data) {
+      return;
+    }
+    _defaultValue = newDefault;
+    if (_value == null && _lastReceived == null) {
+      notifyListeners();
+    }
+  }
+
+  @override
+  bool updateValue(final BoundValue<SingleValue<double>> newValue) {
+    final accepted = super.updateValue(newValue);
+    if (accepted) {
+      _lastReceived = _value;
+    }
+    return accepted;
+  }
+}
+
 mixin WithHistory<V extends Value, U extends Value> on DataElement<V, U> {
   late final Map<HistoryInterval, OptionalHistory<V>> _histories = Map.fromEntries(
     HistoryInterval.values.map((i) => MapEntry(i, OptionalHistory<V>(i, id))),
