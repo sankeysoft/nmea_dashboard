@@ -441,7 +441,7 @@ abstract class StatefulFormState<T extends StatefulWidget> extends State<T> {
     final theme = Theme.of(context);
     final textStyle = theme.textTheme.labelMedium!;
     final fieldColor = enabled ? theme.colorScheme.primary : theme.disabledColor;
-    final headingColor = theme.colorScheme.primaryContainer;
+    final headingColor = enabled ? theme.colorScheme.primaryContainer : theme.disabledColor;
 
     final labelWidget = (label == null)
         ? null
@@ -487,7 +487,7 @@ abstract class StatefulFormState<T extends StatefulWidget> extends State<T> {
     final theme = Theme.of(context);
     final textColor = theme.colorScheme.primary;
     final disabledColor = theme.disabledColor;
-    final headingColor = theme.colorScheme.primaryContainer;
+    final headingColor = enabled ? theme.colorScheme.primaryContainer : disabledColor;
     final textStyle = theme.textTheme.labelMedium!.copyWith(
       color: enabled ? textColor : disabledColor,
     );
@@ -536,7 +536,7 @@ abstract class StatefulFormState<T extends StatefulWidget> extends State<T> {
   }) {
     final theme = Theme.of(context);
     final headingStyle = theme.textTheme.labelMedium!.copyWith(
-      color: theme.colorScheme.primaryContainer,
+      color: enabled ? theme.colorScheme.primaryContainer : theme.disabledColor,
     );
 
     return Row(

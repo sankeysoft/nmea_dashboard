@@ -203,29 +203,6 @@ void main() {
     expect(element.stats(StatsInterval.oneMin), isNotNull);
   });
 
-  test('WithHistory elements should accumulate.', () {
-    // TODO: If we get a DataSet initializable in a test, would be better to
-    // run this test on that.
-    final staleness = Staleness(const Duration(seconds: 1));
-    final variation = ConsistentDataElement<SingleValue<double>>(
-      Source.network,
-      Property.variation,
-      staleness,
-    );
-
-    for (final property in Property.values) {
-      final DataElement element;
-      if (property.dimension == Dimension.bearing) {
-        element = BearingDataElement(Source.network, variation, property, staleness);
-      } else {
-        element = ConsistentDataElement.newForProperty(Source.network, property, staleness);
-      }
-      if (element is WithHistory) {
-        ValueAccumulator.forType(element.storedType);
-      }
-    }
-  });
-
   group('WithAlarms', () {
     late AlarmManager manager;
     late SingleValueDoubleConsistentDataElement element;

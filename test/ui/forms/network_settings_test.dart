@@ -44,17 +44,27 @@ void main() {
       await tester.pump();
     }
 
-    Switch getChecksumSwitch(WidgetTester tester) {
-      final finder = find.byType(Switch);
-      expect(finder, findsOneWidget);
-      return tester.widget(finder);
+    Switch getDefaultVariationSwitch(WidgetTester tester) => tester.widget(find.byType(Switch));
+
+    TextField getDefaultVariationField(WidgetTester tester) =>
+        tester.widget(find.widgetWithText(TextField, '0.0'));
+
+    // The direction enum is private so we can't name the SegmentedButton's type parameter.
+    bool isDirectionButtonEnabled(WidgetTester tester) {
+      final dynamic button = tester.widget(find.byWidgetPredicate((w) => w is SegmentedButton));
+      return button.onSelectionChanged != null;
     }
 
-    Future<void> selectProtocol(WidgetTester tester, NetworkProtocol protocol) async {
-      await tester.tap(find.byType(DropdownButtonFormField<NetworkProtocol>));
+    Future<void> selectProtocol(WidgetTester tester, String text) async {
+      await tester.tap(find.byWidgetPredicate((w) => w is DropdownButtonFormField).at(1));
       await tester.pumpAndSettle();
-      await tester.tap(find.text(protocol.description).last);
+      await tester.tap(find.text(text).last);
       await tester.pumpAndSettle();
+    }
+
+    Future<void> saveForm(WidgetTester tester) async {
+      await tester.tap(find.text('SAVE'));
+      await tester.pump();
     }
 
     testWidgets('shows title', (tester) async {
@@ -80,33 +90,39 @@ void main() {
       expect(find.text('30'), findsOneWidget);
     });
 
-    testWidgets('enables checksum switch when protocol is NMEA0183', (tester) async {
-      await pumpForm(tester);
-      expect(getChecksumSwitch(tester).onChanged, isNotNull);
+    testWidgets('shows NMEA0183 checksum setting in protocol', (tester) async {
+      await pumpForm(tester, initialPrefs: {'network_checksum': false});
+      expect(find.text('NMEA0183 (no checksum)'), findsOneWidget);
     });
 
-    testWidgets('disables checksum switch when an NMEA2000 protocol is selected', (tester) async {
+    testWidgets('SAVE persists NMEA0183 without checksum', (tester) async {
       await pumpForm(tester);
-      await selectProtocol(tester, NetworkProtocol.nmea2000ngt);
-      expect(getChecksumSwitch(tester).onChanged, isNull);
+      expect(find.text('NMEA0183 (checksum)'), findsOneWidget);
+      await selectProtocol(tester, 'NMEA0183 (no checksum)');
+      await saveForm(tester);
+      expect(settings.protocol, NetworkProtocol.nmea0183);
+      expect(settings.requireChecksum, isFalse);
+    });
 
-      await selectProtocol(tester, NetworkProtocol.nmea0183);
-      expect(getChecksumSwitch(tester).onChanged, isNotNull);
+    testWidgets('SAVE persists NMEA0183 with checksum', (tester) async {
+      await pumpForm(tester, initialPrefs: {'network_checksum': false});
+      await selectProtocol(tester, 'NMEA0183 (checksum)');
+      await saveForm(tester);
+      expect(settings.protocol, NetworkProtocol.nmea0183);
+      expect(settings.requireChecksum, isTrue);
     });
 
     testWidgets('fails to save when port is out of range', (tester) async {
       await pumpForm(tester);
       await tester.enterText(find.text('2000'), '0');
-      await tester.tap(find.text('SAVE'));
-      await tester.pump();
+      await saveForm(tester);
       expect(find.text('Port must be between 1 and 65536'), findsOneWidget);
     });
 
     testWidgets('fails to save when IP address is invalid in TCP mode', (tester) async {
       await pumpForm(tester, initialPrefs: {'network_mode': NetworkMode.tcpConnect.index});
       await tester.enterText(find.text('192.168.4.1'), '999.1.1.1');
-      await tester.tap(find.text('SAVE'));
-      await tester.pump();
+      await saveForm(tester);
       expect(
         find.text('IP address must be a valid IPv4 address such as 192.168.1.1'),
         findsOneWidget,
@@ -118,25 +134,56 @@ void main() {
       await pumpForm(tester, observer: observer);
 
       await tester.enterText(find.text('2000'), '3000');
-      await selectProtocol(tester, NetworkProtocol.nmea2000ngt);
+      await selectProtocol(tester, 'NMEA2000 ActiSense NGT');
       // Selecting from the dropdown menu pops its own route, so count only the save.
       final popsBefore = observer.popCount;
-      await tester.tap(find.text('SAVE'));
-      await tester.pump();
+      await saveForm(tester);
 
       expect(observer.popCount, popsBefore + 1);
       expect(settings.port, 3000);
       expect(settings.protocol, NetworkProtocol.nmea2000ngt);
     });
 
-    testWidgets('SAVE preserves checksum value while switch is disabled', (tester) async {
-      await pumpForm(tester);
-      await selectProtocol(tester, NetworkProtocol.nmea2000ngt);
-      await tester.tap(find.text('SAVE'));
-      await tester.pump();
+    testWidgets('SAVE preserves checksum value when selecting NMEA2000', (tester) async {
+      await pumpForm(tester, initialPrefs: {'network_checksum': false});
+      await selectProtocol(tester, 'NMEA2000 ActiSense NGT');
+      await saveForm(tester);
 
       expect(settings.protocol, NetworkProtocol.nmea2000ngt);
-      expect(settings.requireChecksum, isTrue);
+      expect(settings.requireChecksum, isFalse);
+    });
+
+    testWidgets('disables default variation fields until switch is enabled', (tester) async {
+      await pumpForm(tester);
+      expect(getDefaultVariationSwitch(tester).value, isFalse);
+      expect(getDefaultVariationField(tester).enabled, isFalse);
+      expect(isDirectionButtonEnabled(tester), isFalse);
+      expect(find.text('W'), findsOneWidget);
+      expect(find.text('E'), findsOneWidget);
+
+      await tester.tap(find.byType(Switch));
+      await tester.pump();
+      expect(getDefaultVariationSwitch(tester).value, isTrue);
+      expect(getDefaultVariationField(tester).enabled, isTrue);
+      expect(isDirectionButtonEnabled(tester), isTrue);
+    });
+
+    testWidgets('validates default variation when enabled', (tester) async {
+      await pumpForm(tester);
+      await tester.tap(find.byType(Switch));
+      await tester.pump();
+      const error = 'Must be between 0 and 30 with at most one decimal';
+
+      for (final valid in ['0', '12.5', '30', '30.0']) {
+        await tester.enterText(find.widgetWithText(TextField, '°'), valid);
+        await tester.pump();
+        expect(find.text(error), findsNothing, reason: valid);
+      }
+      for (final invalid in ['30.1', '-5', '1.25', '', '.']) {
+        await tester.enterText(find.widgetWithText(TextField, '°'), invalid);
+        await tester.pump();
+        expect(find.text(error), findsOneWidget, reason: invalid);
+      }
     });
   });
 }

@@ -102,7 +102,7 @@ enum NetworkMode {
 
 // The supported protocol modes.
 enum NetworkProtocol {
-  nmea0183('NMEA0183 Text', NetworkStandard.nmea0183),
+  nmea0183('NMEA0183', NetworkStandard.nmea0183),
   nmea2000ngt('NMEA2000 ActiSense NGT', NetworkStandard.nmea2000),
   nmea2000raw('NMEA2000 YD RAW', NetworkStandard.nmea2000);
 

@@ -18,6 +18,13 @@ class NetworkSettingsPage extends StatefulFormPage {
       );
 }
 
+/// An entry in the protocol dropdown. NMEA0183 is split into entries with and without checksum
+/// validation, other protocols do not use the checksum setting so leave it null.
+typedef _ProtocolOption = ({NetworkProtocol protocol, bool? requireChecksum});
+
+/// The direction of a magnetic variation.
+enum _VariationDirection { west, east }
+
 /// The stateful form itself
 class _NetworkSettingsForm extends StatefulWidget {
   // Pass settings explicitly since we don't have
@@ -37,6 +44,10 @@ class _NetworkSettingsFormState extends StatefulFormState<_NetworkSettingsForm> 
   late NetworkProtocol _protocol;
   late bool _requireChecksum;
   late Duration _staleness;
+  // TODO: Read and write the default variation fields from settings.
+  bool _allowDefaultVariation = false;
+  double _defaultVariation = 0;
+  _VariationDirection _variationDirection = _VariationDirection.west;
 
   @override
   void initState() {
@@ -64,8 +75,9 @@ class _NetworkSettingsFormState extends StatefulFormState<_NetworkSettingsForm> 
                 _buildIpField(),
                 _buildPortField(),
                 _buildProtocolField(),
-                _buildRequireChecksumField(),
                 _buildStalenessField(),
+                _buildAllowDefaultVariationField(),
+                _buildDefaultVariationField(),
               ],
             ),
           ),
@@ -149,31 +161,42 @@ class _NetworkSettingsFormState extends StatefulFormState<_NetworkSettingsForm> 
   }
 
   Widget _buildProtocolField() {
-    buildItem(NetworkProtocol protocol) =>
-        DropdownEntry(value: protocol, text: protocol.description);
-    return buildDropdownBox(
+    final List<DropdownEntry<_ProtocolOption>> items = [];
+    for (final protocol in NetworkProtocol.values) {
+      if (protocol == NetworkProtocol.nmea0183) {
+        items.add(
+          DropdownEntry(
+            value: (protocol: protocol, requireChecksum: true),
+            text: '${protocol.description} (checksum)',
+          ),
+        );
+        items.add(
+          DropdownEntry(
+            value: (protocol: protocol, requireChecksum: false),
+            text: '${protocol.description} (no checksum)',
+          ),
+        );
+      } else {
+        items.add(
+          DropdownEntry(
+            value: (protocol: protocol, requireChecksum: null),
+            text: protocol.description,
+          ),
+        );
+      }
+    }
+    return buildDropdownBox<_ProtocolOption>(
       label: 'Protocol',
-      items: NetworkProtocol.values.map(buildItem).toList(),
-      initialValue: _protocol,
+      items: items,
+      initialValue: (
+        protocol: _protocol,
+        requireChecksum: _protocol == NetworkProtocol.nmea0183 ? _requireChecksum : null,
+      ),
       onChanged: (value) {
-        setState(() {
-          // Setting state lets us change enable on the checksum field.
-          if (value != null) {
-            _protocol = value;
-          }
-        });
-      },
-    );
-  }
-
-  Widget _buildRequireChecksumField() {
-    return buildSwitch(
-      label: 'Require checksum',
-      initialValue: _requireChecksum,
-      enabled: _protocol == NetworkProtocol.nmea0183,
-      onSaved: (value) {
         if (value != null) {
-          _requireChecksum = value;
+          _protocol = value.protocol;
+          // Retain the previous checksum setting when selecting a protocol that doesn't use it.
+          _requireChecksum = value.requireChecksum ?? _requireChecksum;
         }
       },
     );
@@ -198,6 +221,77 @@ class _NetworkSettingsFormState extends StatefulFormState<_NetworkSettingsForm> 
           _staleness = Duration(seconds: int.parse(value));
         }
       },
+    );
+  }
+
+  Widget _buildAllowDefaultVariationField() {
+    return buildSwitch(
+      label: 'Default magnetic variation',
+      initialValue: _allowDefaultVariation,
+      onChanged: (value) {
+        // Setting state lets us change enable on the default variation field.
+        setState(() => _allowDefaultVariation = value);
+      },
+      onSaved: (value) {
+        if (value != null) {
+          _allowDefaultVariation = value;
+        }
+      },
+    );
+  }
+
+  Widget _buildDefaultVariationField() {
+    final regex = RegExp(r'^\d{1,2}(\.\d)?$');
+    final enabled = _allowDefaultVariation;
+    final textStyle = Theme.of(context).textTheme.labelMedium!;
+    // Indent the row with no label so it appears to belong to the switch above.
+    return Padding(
+      padding: const EdgeInsets.only(left: 40),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        spacing: 10,
+        children: [
+          Expanded(
+            child: buildTextField(
+              initialValue: _defaultVariation.toStringAsFixed(1),
+              suffix: '°',
+              maxLength: 4,
+              alphabet: Alphabet.floatingPoint,
+              enabled: enabled,
+              validator: (value) {
+                if (!enabled) {
+                  return null;
+                }
+                final number = double.tryParse(value ?? '');
+                if (!regex.hasMatch(value ?? '') || number == null || number > 30) {
+                  return 'Must be between 0.0 and 30.0';
+                }
+                return null;
+              },
+              onSaved: (value) {
+                final number = double.tryParse(value ?? '');
+                if (number != null) {
+                  _defaultVariation = number;
+                }
+              },
+            ),
+          ),
+          SegmentedButton<_VariationDirection>(
+            showSelectedIcon: false,
+            style: SegmentedButton.styleFrom(textStyle: textStyle),
+            segments: const [
+              ButtonSegment<_VariationDirection>(value: _VariationDirection.west, label: Text('W')),
+              ButtonSegment<_VariationDirection>(value: _VariationDirection.east, label: Text('E')),
+            ],
+            selected: {_variationDirection},
+            onSelectionChanged: enabled
+                ? (Set<_VariationDirection> values) {
+                    setState(() => _variationDirection = values.first);
+                  }
+                : null,
+          ),
+        ],
+      ),
     );
   }
 }

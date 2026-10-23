@@ -108,6 +108,24 @@ void main() {
         }
       }
     });
+
+    test('all WithHistory elements have a value accumulator', () async {
+      final prefs = await _prefs();
+      final derived = DerivedDataSettings(prefs);
+      final dataSet = _makeDataSet(prefs, derivedSettings: derived);
+      // Add a derived element so the derived source is covered too.
+      derived.replaceElements([_depthSpec('Offset Depth')]);
+
+      for (final MapEntry(key: source, value: elements) in dataSet.sources.entries) {
+        for (final element in elements.values.whereType<WithHistory>()) {
+          expect(
+            () => ValueAccumulator.forType(element.storedType),
+            returnsNormally,
+            reason: '$source:${element.property.name} has no accumulator',
+          );
+        }
+      }
+    });
   });
 
   group('DataSet find()', () {
