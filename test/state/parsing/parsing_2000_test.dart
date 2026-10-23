@@ -145,7 +145,7 @@ void main() {
       Nmea2000Parser().parse(message),
       BoundValueListMatches([
         boundSingleValue(-1.9996, Property.variation),
-        boundSingleValue(91.9998, Property.heading),
+        boundSingleValue(88.0006, Property.heading),
       ]),
     );
   });

@@ -283,7 +283,7 @@ double _parseCrossTrackError(String valueString, String direction) {
   }
 }
 
-/// Parses a variation magnitude and sign, returning a positive value for West.
+/// Parses a variation magnitude and sign, returning a positive value for East.
 double _parseVariation(String valueString, String direction) {
   if (valueString.isEmpty) {
     throw const FormatException('Varation not populated');
@@ -291,9 +291,9 @@ double _parseVariation(String valueString, String direction) {
   final value = double.parse(valueString);
   switch (direction) {
     case 'E':
-      return -value;
-    case 'W':
       return value;
+    case 'W':
+      return -value;
     default:
       throw FormatException('Invalid varation direction $direction');
   }

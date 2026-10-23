@@ -11,6 +11,7 @@ import 'package:nmea_dashboard/state/common.dart';
 import 'package:nmea_dashboard/state/data_element.dart';
 import 'package:nmea_dashboard/state/data_element_history.dart';
 import 'package:nmea_dashboard/state/data_set.dart';
+import 'package:nmea_dashboard/state/formatting.dart';
 import 'package:nmea_dashboard/state/settings/alarm.dart';
 import 'package:nmea_dashboard/state/settings/derived_data.dart';
 import 'package:nmea_dashboard/state/settings/network.dart';
@@ -65,10 +66,16 @@ void main() {
             isNotNull,
             reason: '"${cell.source}" in page "${page.name}" is not a valid source',
           );
+          final element = dataSet.find(source!, cell.element);
           expect(
-            dataSet.find(source!, cell.element),
+            element,
             isNotNull,
             reason: '"${cell.source}:${cell.element}" in page "${page.name}" not found in dataset',
+          );
+          expect(
+            formattersFor(element!.property.dimension)[cell.format],
+            isNotNull,
+            reason: '"${cell.format}" in page "${page.name}" is not a valid format',
           );
         }
       }

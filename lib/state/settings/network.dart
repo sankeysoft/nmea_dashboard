@@ -17,6 +17,8 @@ class NetworkSettings with ChangeNotifier {
   final PrefMappedValue<int, NetworkProtocol> _protocol;
   final PrefValue<bool> _requireChecksum;
   final PrefMappedValue<int, Duration> _staleness;
+  final PrefValue<bool> _defaultVariationEnabled;
+  final PrefValue<double> _defaultVariationValue;
 
   NetworkSettings(SharedPreferences prefs)
     : _mode = PrefMappedValue(
@@ -52,7 +54,9 @@ class NetworkSettings with ChangeNotifier {
         const Duration(seconds: 10),
         (p) => Duration(seconds: p),
         (n) => n.inSeconds,
-      );
+      ),
+      _defaultVariationEnabled = PrefValue(prefs, 'default_variation_enabled', false),
+      _defaultVariationValue = PrefValue(prefs, 'default_variation_value', 0.0);
 
   NetworkMode get mode => _mode.value;
   InternetAddress get ipAddress => _ipAddress.value;
@@ -61,6 +65,13 @@ class NetworkSettings with ChangeNotifier {
   bool get requireChecksum => _requireChecksum.value;
   Duration get staleness => _staleness.value;
 
+  /// Whether defaultVariation should be used when no variation is received from the network.
+  bool get defaultVariationEnabled => _defaultVariationEnabled.value;
+
+  /// The magnetic variation to use when none is received from the network, in degrees with east
+  /// positive and west negative. Only used if defaultVariationEnabled is true.
+  double get defaultVariationValue => _defaultVariationValue.value;
+
   void set({
     NetworkMode? mode,
     int? port,
@@ -68,6 +79,8 @@ class NetworkSettings with ChangeNotifier {
     NetworkProtocol? protocol,
     bool? requireChecksum,
     Duration? staleness,
+    bool? defaultVariationEnabled,
+    double? defaultVariationValue,
   }) {
     if (mode != null) {
       _mode.set(mode);
@@ -86,6 +99,12 @@ class NetworkSettings with ChangeNotifier {
     }
     if (staleness != null) {
       _staleness.set(staleness);
+    }
+    if (defaultVariationEnabled != null) {
+      _defaultVariationEnabled.set(defaultVariationEnabled);
+    }
+    if (defaultVariationValue != null) {
+      _defaultVariationValue.set(defaultVariationValue);
     }
     notifyListeners();
   }

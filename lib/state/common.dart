@@ -100,7 +100,7 @@ enum Property {
   trueWindDirection('True wind direction', 'TWD', Dimension.bearing, group: Group.environment),
   trueWindSpeed('True wind speed', 'TWS', Dimension.speed, group: Group.environment),
   utcTime('UTC datetime', 'UTC', Dimension.time, sources: {Source.local, Source.network}),
-  variation('Magnetic variation', 'MagVar', Dimension.angle, group: Group.navigation),
+  variation('Magnetic variation', 'MagVar', Dimension.variation, group: Group.navigation),
   vhfChannel('VHF channel', 'VHF', Dimension.integer, group: Group.systems),
   vmgWind('Speed to/from wind', 'VMG Wind', Dimension.speed, sources: {}),
   vmgWaypoint('Speed to waypoint', 'VMG Wpt', Dimension.speed, sources: {}),
@@ -291,6 +291,8 @@ enum Dimension {
     minValue: SingleValue(-273.15),
   ),
   time(type: SingleValue<DateTime>, nativeUnits: 'datetime'),
+  // Magnetic variation, positive for East.
+  variation(type: SingleValue<double>, nativeUnits: 'degrees', derivationFriendly: true),
   voltage(
     type: SingleValue<double>,
     nativeUnits: 'volts',

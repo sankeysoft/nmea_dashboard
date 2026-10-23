@@ -127,10 +127,10 @@ void main() {
     expect(format(null, null, 'true'), '---');
     expect(format(null, null, 'mag'), '---');
     expect(format(0, 10, 'true'), equals('000T'));
-    expect(format(123.4, 10, 'true'), equals('123T'));
-    expect(format(123.4, 10, 'mag'), equals('133M'));
-    expect(format(359.8, 10, 'mag'), equals('010M'));
-    expect(format(5, -10, 'mag'), equals('355M'));
+    expect(format(123.4, -10, 'true'), equals('123T'));
+    expect(format(123.4, -10, 'mag'), equals('133M'));
+    expect(format(359.8, -10, 'mag'), equals('010M'));
+    expect(format(5, 10, 'mag'), equals('355M'));
     expect(format(10, null, 'true'), equals('010T'));
     expect(format(10, null, 'mag'), equals('no magnetic\nvariation'));
   });
@@ -143,12 +143,38 @@ void main() {
     }
 
     expect(toNumber(0, 10, 'true'), equals(0.0));
-    expect(toNumber(123.4, 10, 'true'), equals(123.4));
-    expect(toNumber(123.4, 10, 'mag'), equals(133.4));
-    expect(toNumber(359.8, 10, 'mag'), closeTo(9.8, 0.0001));
-    expect(toNumber(5, -10, 'mag'), equals(355.0));
+    expect(toNumber(123.4, -10, 'true'), equals(123.4));
+    expect(toNumber(123.4, -10, 'mag'), equals(133.4));
+    expect(toNumber(359.8, -10, 'mag'), closeTo(9.8, 0.0001));
+    expect(toNumber(5, 10, 'mag'), equals(355.0));
     expect(toNumber(10, null, 'true'), equals(10.0));
     expect(toNumber(10, null, 'mag'), null);
+  });
+
+  test('variation should be formatted with E/W suffix', () {
+    String format(double? number) {
+      return formattersFor(
+        Property.variation.dimension,
+      )['degrees']!.format(number == null ? null : SingleValue(number));
+    }
+
+    expect(format(null), equals('--.-'));
+    expect(format(0.0), equals('0.0'));
+    expect(format(-0.0), equals('0.0'));
+    expect(format(0.04), equals('0.0'));
+    expect(format(-0.04), equals('0.0'));
+    expect(format(0.05), equals('0.1E'));
+    expect(format(13.14), equals('13.1E'));
+    expect(format(-2.26), equals('2.3W'));
+    expect(format(-20.0), equals('20.0W'));
+  });
+
+  test('variation should be the only format for its dimension and convert as signed', () {
+    final formatters = formattersFor(Property.variation.dimension);
+    expect(formatters.keys, equals(['degrees']));
+    final fmt = formatters['degrees']! as NumericFormatter;
+    expect(fmt.toNumber(SingleValue(-2.5)), equals(-2.5));
+    expect(fmt.fromNumber(3.5), ValueMatches(SingleValue(3.5)));
   });
 
   test('XTE should be formatted appropriately', () {

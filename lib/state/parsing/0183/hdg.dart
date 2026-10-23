@@ -19,7 +19,7 @@ class HdgParser extends SentenceParser {
       return [boundSingleValue(magHdg, Property.headingMag)];
     }
     final variation = _parseVariation(fields[3], fields[4]);
-    final trueHdg = (magHdg - variation) % 360.0;
+    final trueHdg = (magHdg + variation) % 360.0;
     return [
       boundSingleValue(variation, Property.variation),
       boundSingleValue(trueHdg, Property.heading),

@@ -47,13 +47,17 @@ void main() {
     Switch getDefaultVariationSwitch(WidgetTester tester) => tester.widget(find.byType(Switch));
 
     TextField getDefaultVariationField(WidgetTester tester) =>
-        tester.widget(find.widgetWithText(TextField, '0.0'));
+        tester.widget(find.widgetWithText(TextField, '°'));
 
-    // The direction enum is private so we can't name the SegmentedButton's type parameter.
-    bool isDirectionButtonEnabled(WidgetTester tester) {
-      final dynamic button = tester.widget(find.byWidgetPredicate((w) => w is SegmentedButton));
-      return button.onSelectionChanged != null;
-    }
+    SegmentedButton<bool> getDirectionButton(WidgetTester tester) =>
+        tester.widget(find.byType(SegmentedButton<bool>));
+
+    bool isDirectionButtonEnabled(WidgetTester tester) =>
+        getDirectionButton(tester).onSelectionChanged != null;
+
+    // The direction button holds true for west (negative) and false for east (positive).
+    String selectedDirection(WidgetTester tester) =>
+        getDirectionButton(tester).selected.first ? 'west' : 'east';
 
     Future<void> selectProtocol(WidgetTester tester, String text) async {
       await tester.tap(find.byWidgetPredicate((w) => w is DropdownButtonFormField).at(1));
@@ -172,7 +176,7 @@ void main() {
       await pumpForm(tester);
       await tester.tap(find.byType(Switch));
       await tester.pump();
-      const error = 'Must be between 0 and 30 with at most one decimal';
+      const error = 'Must be between 0.0 and 30.0';
 
       for (final valid in ['0', '12.5', '30', '30.0']) {
         await tester.enterText(find.widgetWithText(TextField, '°'), valid);
@@ -184,6 +188,87 @@ void main() {
         await tester.pump();
         expect(find.text(error), findsOneWidget, reason: invalid);
       }
+    });
+
+    testWidgets('shows east default variation from settings', (tester) async {
+      await pumpForm(
+        tester,
+        initialPrefs: {'default_variation_enabled': true, 'default_variation_value': 12.5},
+      );
+      expect(getDefaultVariationSwitch(tester).value, isTrue);
+      expect(getDefaultVariationField(tester).controller!.text, '12.5');
+      expect(selectedDirection(tester), 'east');
+    });
+
+    testWidgets('shows west default variation from settings', (tester) async {
+      await pumpForm(
+        tester,
+        initialPrefs: {'default_variation_enabled': true, 'default_variation_value': -4.0},
+      );
+      expect(getDefaultVariationSwitch(tester).value, isTrue);
+      expect(getDefaultVariationField(tester).controller!.text, '4.0');
+      expect(selectedDirection(tester), 'west');
+    });
+
+    testWidgets('SAVE persists west default variation as negative', (tester) async {
+      await pumpForm(tester);
+      await tester.tap(find.byType(Switch));
+      await tester.pump();
+      await tester.enterText(find.widgetWithText(TextField, '°'), '7.5');
+      await tester.tap(find.text('W'));
+      await tester.pump();
+      await saveForm(tester);
+      expect(settings.defaultVariationEnabled, isTrue);
+      expect(settings.defaultVariationValue, -7.5);
+    });
+
+    testWidgets('SAVE persists zero west default variation', (tester) async {
+      await pumpForm(tester);
+      await tester.tap(find.byType(Switch));
+      await tester.pump();
+      await tester.tap(find.text('W'));
+      await tester.pump();
+      await saveForm(tester);
+      expect(settings.defaultVariationValue, 0.0);
+      expect(settings.defaultVariationValue.isNegative, isTrue);
+    });
+
+    testWidgets('SAVE persists east default variation as positive', (tester) async {
+      await pumpForm(tester);
+      await tester.tap(find.byType(Switch));
+      await tester.pump();
+      await tester.enterText(find.widgetWithText(TextField, '°'), '7.5');
+      await tester.tap(find.text('E'));
+      await tester.pump();
+      await saveForm(tester);
+      expect(settings.defaultVariationValue, 7.5);
+    });
+
+    testWidgets('shows disabled default variation value from settings', (tester) async {
+      await pumpForm(tester, initialPrefs: {'default_variation_value': -4.0});
+      expect(getDefaultVariationSwitch(tester).value, isFalse);
+      expect(getDefaultVariationField(tester).controller!.text, '4.0');
+      expect(selectedDirection(tester), 'west');
+    });
+
+    testWidgets('defaults to zero east', (tester) async {
+      await pumpForm(tester);
+      expect(getDefaultVariationField(tester).controller!.text, '0.0');
+      expect(selectedDirection(tester), 'east');
+    });
+
+    testWidgets('SAVE disables default variation and retains value', (tester) async {
+      await pumpForm(
+        tester,
+        initialPrefs: {'default_variation_enabled': true, 'default_variation_value': 12.5},
+      );
+      await tester.tap(find.byType(Switch));
+      await tester.pump();
+      // An invalid value in the disabled field should not be saved.
+      await tester.enterText(find.widgetWithText(TextField, '°'), '99');
+      await saveForm(tester);
+      expect(settings.defaultVariationEnabled, isFalse);
+      expect(settings.defaultVariationValue, 12.5);
     });
   });
 }

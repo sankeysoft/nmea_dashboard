@@ -33,6 +33,8 @@ void main() {
     expect(s.protocol, NetworkProtocol.nmea0183);
     expect(s.requireChecksum, isTrue);
     expect(s.staleness, const Duration(seconds: 10));
+    expect(s.defaultVariationEnabled, isFalse);
+    expect(s.defaultVariationValue, 0.0);
   });
 
   test('reads stored values from prefs', () async {
@@ -44,6 +46,8 @@ void main() {
         'network_protocol': 1,
         'network_checksum': false,
         'network_staleness_seconds': 30,
+        'default_variation_enabled': true,
+        'default_variation_value': -5.5,
       }),
     );
     expect(s.mode, NetworkMode.tcpConnect);
@@ -52,6 +56,8 @@ void main() {
     expect(s.protocol, NetworkProtocol.nmea2000ngt);
     expect(s.requireChecksum, isFalse);
     expect(s.staleness, const Duration(seconds: 30));
+    expect(s.defaultVariationEnabled, isTrue);
+    expect(s.defaultVariationValue, -5.5);
   });
 
   test('out-of-range mode index falls back to udpListen', () async {
@@ -80,6 +86,8 @@ void main() {
       protocol: NetworkProtocol.nmea2000ngt,
       requireChecksum: false,
       staleness: const Duration(seconds: 20),
+      defaultVariationEnabled: true,
+      defaultVariationValue: 12.5,
     );
     expect(s.mode, NetworkMode.tcpConnect);
     expect(s.port, 5000);
@@ -93,6 +101,10 @@ void main() {
     expect(p.getInt('network_protocol'), 1);
     expect(p.getBool('network_checksum'), isFalse);
     expect(p.getInt('network_staleness_seconds'), 20);
+    expect(s.defaultVariationEnabled, isTrue);
+    expect(s.defaultVariationValue, 12.5);
+    expect(p.getBool('default_variation_enabled'), isTrue);
+    expect(p.getDouble('default_variation_value'), 12.5);
   });
 
   test('set() with only some fields leaves others unchanged', () async {
@@ -101,6 +113,16 @@ void main() {
     expect(s.mode, NetworkMode.udpListen);
     expect(s.port, 9999);
     expect(s.requireChecksum, isTrue);
+    expect(s.defaultVariationEnabled, isFalse);
+  });
+
+  test('set() can disable default variation without changing its value', () async {
+    final s = NetworkSettings(
+      await _prefs({'default_variation_enabled': true, 'default_variation_value': 7.0}),
+    );
+    s.set(defaultVariationEnabled: false);
+    expect(s.defaultVariationEnabled, isFalse);
+    expect(s.defaultVariationValue, 7.0);
   });
 
   test('set() notifies listeners', () async {

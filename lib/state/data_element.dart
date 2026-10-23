@@ -391,7 +391,7 @@ class BearingDataElement extends DataElement<AugmentedBearing, SingleValue<doubl
         }
         return false;
       }
-      final trueHeading = (newValue.value.data - variationValue.data) % 360.0;
+      final trueHeading = (newValue.value.data + variationValue.data) % 360.0;
       accepted = super.updateValue(
         BoundValue(
           newValue.source,

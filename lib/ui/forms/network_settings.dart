@@ -22,9 +22,6 @@ class NetworkSettingsPage extends StatefulFormPage {
 /// validation, other protocols do not use the checksum setting so leave it null.
 typedef _ProtocolOption = ({NetworkProtocol protocol, bool? requireChecksum});
 
-/// The direction of a magnetic variation.
-enum _VariationDirection { west, east }
-
 /// The stateful form itself
 class _NetworkSettingsForm extends StatefulWidget {
   // Pass settings explicitly since we don't have
@@ -44,10 +41,8 @@ class _NetworkSettingsFormState extends StatefulFormState<_NetworkSettingsForm> 
   late NetworkProtocol _protocol;
   late bool _requireChecksum;
   late Duration _staleness;
-  // TODO: Read and write the default variation fields from settings.
-  bool _allowDefaultVariation = false;
-  double _defaultVariation = 0;
-  _VariationDirection _variationDirection = _VariationDirection.west;
+  late bool _allowDefaultVariation;
+  late double _defaultVariation;
 
   @override
   void initState() {
@@ -57,6 +52,8 @@ class _NetworkSettingsFormState extends StatefulFormState<_NetworkSettingsForm> 
     _protocol = widget._settings.protocol;
     _requireChecksum = widget._settings.requireChecksum;
     _staleness = widget._settings.staleness;
+    _allowDefaultVariation = widget._settings.defaultVariationEnabled;
+    _defaultVariation = widget._settings.defaultVariationValue;
     super.initState();
   }
 
@@ -90,6 +87,10 @@ class _NetworkSettingsFormState extends StatefulFormState<_NetworkSettingsForm> 
                 protocol: _protocol,
                 requireChecksum: _requireChecksum,
                 staleness: _staleness,
+                defaultVariationEnabled: _allowDefaultVariation,
+                // The variation field isn't validated while disabled, so retain the previous
+                // value rather than saving it.
+                defaultVariationValue: _allowDefaultVariation ? _defaultVariation : null,
               );
               Navigator.pop(context);
             },
@@ -253,7 +254,7 @@ class _NetworkSettingsFormState extends StatefulFormState<_NetworkSettingsForm> 
         children: [
           Expanded(
             child: buildTextField(
-              initialValue: _defaultVariation.toStringAsFixed(1),
+              initialValue: _defaultVariation.abs().toStringAsFixed(1),
               suffix: '°',
               maxLength: 4,
               alphabet: Alphabet.floatingPoint,
@@ -271,22 +272,26 @@ class _NetworkSettingsFormState extends StatefulFormState<_NetworkSettingsForm> 
               onSaved: (value) {
                 final number = double.tryParse(value ?? '');
                 if (number != null) {
-                  _defaultVariation = number;
+                  _defaultVariation = _defaultVariation.isNegative ? -number : number;
                 }
               },
             ),
           ),
-          SegmentedButton<_VariationDirection>(
+          // The selector sets the sign of _defaultVariation, with true meaning negative (west). We
+          // use isNegative rather than < 0 so -0.0 can represent zero west.
+          SegmentedButton<bool>(
             showSelectedIcon: false,
             style: SegmentedButton.styleFrom(textStyle: textStyle),
             segments: const [
-              ButtonSegment<_VariationDirection>(value: _VariationDirection.west, label: Text('W')),
-              ButtonSegment<_VariationDirection>(value: _VariationDirection.east, label: Text('E')),
+              ButtonSegment<bool>(value: true, label: Text('W')),
+              ButtonSegment<bool>(value: false, label: Text('E')),
             ],
-            selected: {_variationDirection},
+            selected: {_defaultVariation.isNegative},
             onSelectionChanged: enabled
-                ? (Set<_VariationDirection> values) {
-                    setState(() => _variationDirection = values.first);
+                ? (Set<bool> values) {
+                    if (values.first != _defaultVariation.isNegative) {
+                      setState(() => _defaultVariation = -_defaultVariation);
+                    }
                   }
                 : null,
           ),

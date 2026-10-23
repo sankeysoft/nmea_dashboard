@@ -25,7 +25,7 @@ class Parser127250 extends PacketParser {
       } else if (reference == 1) {
         // Prefer to output in true when we have variation. Only use mag if we can't use true.
         if (variation != null) {
-          final trueHdg = (heading - variation) % 360.0;
+          final trueHdg = (heading + variation) % 360.0;
           values.add(boundSingleValue(trueHdg, Property.heading));
         } else {
           values.add(boundSingleValue(heading, Property.headingMag));

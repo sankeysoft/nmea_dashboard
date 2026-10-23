@@ -268,7 +268,7 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
       'magnetic',
       '°M',
       conversion: (value) =>
-          (value.variation == null) ? null : (value.bearing + value.variation!) % 360.0,
+          (value.variation == null) ? null : (value.bearing - value.variation!) % 360.0,
       // Not possible to construct an augmented bearing without adding variation.
       unconversion: (number) => null,
       formatting: (number) => (number == null) ? '---' : _bearingString(number, 'M'),
@@ -278,7 +278,7 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
         } else if (value.variation == null) {
           return 'no magnetic\nvariation';
         } else {
-          return _bearingString((value.bearing + value.variation!) % 360.0, 'M');
+          return _bearingString((value.bearing - value.variation!) % 360.0, 'M');
         }
       },
       isDefault: true,
@@ -495,6 +495,17 @@ final Map<Dimension, Map<String, Formatter>> _formatters = {
           val == null ? '-------\n--:--:--' : DateFormat('yyyy-MM-dd\nHH:mm:ss').format(val.data),
     ),
   },
+  Dimension.variation: {
+    'degrees': CustomNumericFormatter<SingleValue<double>>(
+      Dimension.variation,
+      'degrees E/W',
+      '°',
+      conversion: (value) => value.data,
+      unconversion: (number) => SingleValue(number),
+      formatting: (number) => (number == null) ? '--.-' : _variationString(number),
+      isDefault: true,
+    ),
+  },
   Dimension.voltage: {
     'volts': SimpleSvdFormatter(Dimension.voltage, 'volts', 'V', '--.-', 1.0, 1, isDefault: true),
   },
@@ -529,6 +540,15 @@ String _xteString(double number, String units) {
   }
   final guidance = (number < 0) ? 'Steer Left' : 'Steer Right';
   return '${number.round().abs()} $units\n$guidance';
+}
+
+String _variationString(double number) {
+  // Round before choosing the suffix so values that display as zero have no direction.
+  final tenths = (number * 10).round();
+  if (tenths == 0) {
+    return '0.0';
+  }
+  return '${(tenths.abs() / 10).toStringAsFixed(1)}${tenths > 0 ? 'E' : 'W'}';
 }
 
 double _normalizeLateralAngle(double number) {

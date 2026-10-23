@@ -131,7 +131,7 @@ void main() {
     expect(
       Nmea0183Parser().parse(_testMsg('HDG', '7.3,,,13.1,E')),
       BoundValueListMatches([
-        boundSingleValue(-13.1, Property.variation),
+        boundSingleValue(13.1, Property.variation),
         boundSingleValue(20.4, Property.heading),
       ]),
     );
@@ -372,7 +372,7 @@ void main() {
         boundSingleValue(DateTime.utc(2003, 08, 25, 23, 08, 30), Property.utcTime, tier: 2),
         boundSingleValue(2.82945, Property.speedOverGround, tier: 2),
         boundSingleValue(357.0, Property.courseOverGround, tier: 2),
-        boundSingleValue(3.0, Property.variation, tier: 2),
+        boundSingleValue(-3.0, Property.variation, tier: 2),
       ]),
     );
   });

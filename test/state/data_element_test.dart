@@ -142,12 +142,12 @@ void main() {
     expect(bearing.value, null);
 
     // Once variation is set we accept them.
-    variation.updateValue(_boundVariation(10.0));
+    variation.updateValue(_boundVariation(-10.0));
     expect(bearing.value, null);
     expect(bearing.updateValue(_boundMagHeading(45)), true);
-    expect(bearing.value, ValueMatches(AugmentedBearing(35.0, 10.0)));
+    expect(bearing.value, ValueMatches(AugmentedBearing(35.0, -10.0)));
     expect(bearing.updateValue(_boundMagHeading(1)), true);
-    expect(bearing.value, ValueMatches(AugmentedBearing(351.0, 10.0)));
+    expect(bearing.value, ValueMatches(AugmentedBearing(351.0, -10.0)));
   });
 
   test('bearing data element should accept true inputs', () {
