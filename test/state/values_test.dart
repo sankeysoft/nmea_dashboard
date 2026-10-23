@@ -210,16 +210,16 @@ void main() {
     expect(acc.max(), null);
   });
 
-  test('AugmentedBearingAccumulator min and max should use naive bearing and last variation', () {
+  test('AugmentedBearingAccumulator min/max should handle wraparound and use last variation', () {
     final acc = ValueAccumulator.forType(AugmentedBearing);
     expect(acc.min(), null);
     expect(acc.max(), null);
     acc.add(AugmentedBearing(350.0, 5.0));
     acc.add(AugmentedBearing(10.0, 6.0));
     acc.add(AugmentedBearing(180.0, null));
-    // Wraparound is deliberately not considered.
-    expect(acc.min(), ValueMatches(AugmentedBearing(10.0, 6.0)));
-    expect(acc.max(), ValueMatches(AugmentedBearing(350.0, 6.0)));
+    // Stored as 350, 370, 540.
+    expect(acc.min(), ValueMatches(AugmentedBearing(350.0, 6.0)));
+    expect(acc.max(), ValueMatches(AugmentedBearing(180.0, 6.0)));
     acc.removeFirst();
     expect(acc.min(), ValueMatches(AugmentedBearing(10.0, 6.0)));
     expect(acc.max(), ValueMatches(AugmentedBearing(180.0, 6.0)));
@@ -292,6 +292,47 @@ void main() {
     expect(acc.mean(), ValueMatches(AugmentedBearing(230.0, null)));
     acc.removeFirst();
     expect(acc.mean(), null);
+  });
+
+  test('AugmentedBearingAccumulator should handle wraparound in both directions', () {
+    final acc = ValueAccumulator.forType(AugmentedBearing);
+    // Increasing through north.
+    for (final b in [358.0, 359.0, 0.0, 1.0]) {
+      acc.add(AugmentedBearing(b, null));
+    }
+    expect(acc.mean(), ValueMatches(AugmentedBearing(359.5, null)));
+    expect(acc.min(), ValueMatches(AugmentedBearing(358.0, null)));
+    expect(acc.max(), ValueMatches(AugmentedBearing(1.0, null)));
+    expect(acc.last(), ValueMatches(AugmentedBearing(1.0, null)));
+    acc.clear();
+    // Decreasing through north.
+    for (final b in [2.0, 1.0, 359.0, 356.0]) {
+      acc.add(AugmentedBearing(b, null));
+    }
+    expect(acc.mean(), ValueMatches(AugmentedBearing(359.5, null)));
+    expect(acc.min(), ValueMatches(AugmentedBearing(356.0, null)));
+    expect(acc.max(), ValueMatches(AugmentedBearing(2.0, null)));
+    expect(acc.last(), ValueMatches(AugmentedBearing(356.0, null)));
+    acc.clear();
+    // Crossing south should not be treated as a wrap.
+    acc.add(AugmentedBearing(170.0, null));
+    acc.add(AugmentedBearing(190.0, null));
+    expect(acc.mean(), ValueMatches(AugmentedBearing(180.0, null)));
+    expect(acc.min(), ValueMatches(AugmentedBearing(170.0, null)));
+    expect(acc.max(), ValueMatches(AugmentedBearing(190.0, null)));
+  });
+
+  test('AugmentedBearingAccumulator should restart unwrapping once emptied', () {
+    final acc = ValueAccumulator.forType(AugmentedBearing);
+    acc.add(AugmentedBearing(350.0, null));
+    acc.add(AugmentedBearing(10.0, null));
+    acc.removeFirst();
+    acc.removeFirst();
+    acc.add(AugmentedBearing(20.0, null));
+    acc.add(AugmentedBearing(30.0, null));
+    expect(acc.mean(), ValueMatches(AugmentedBearing(25.0, null)));
+    expect(acc.min(), ValueMatches(AugmentedBearing(20.0, null)));
+    expect(acc.max(), ValueMatches(AugmentedBearing(30.0, null)));
   });
 
   test('BoundValue toString should include source, tier, property, and value', () {

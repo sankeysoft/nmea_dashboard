@@ -250,27 +250,23 @@ class AugmentedBearingAccumulator extends ValueAccumulator<AugmentedBearing> {
       variation = NumericAccumulator(),
       variationPresent = Queue();
 
-  // Currently mean, min, and max are calculated naively on the bearings,
-  // ignoring wraparound at 360 degrees.
-  // TODO: Consider improving this.
-
   @override
   AugmentedBearing? mean() {
     final b = bearing.mean();
     final v = variation.mean();
-    return b == null ? null : AugmentedBearing(b, v);
+    return b == null ? null : AugmentedBearing(b % 360, v);
   }
 
   @override
   AugmentedBearing? min() {
     final b = bearing.min();
-    return b == null ? null : AugmentedBearing(b, variation.last());
+    return b == null ? null : AugmentedBearing(b % 360, variation.last());
   }
 
   @override
   AugmentedBearing? max() {
     final b = bearing.max();
-    return b == null ? null : AugmentedBearing(b, variation.last());
+    return b == null ? null : AugmentedBearing(b % 360, variation.last());
   }
 
   @override
@@ -279,12 +275,21 @@ class AugmentedBearingAccumulator extends ValueAccumulator<AugmentedBearing> {
     // Note we deliberately use the last available variation, even if it isn't from the
     // most recent bearing.
     final v = variation.last();
-    return b == null ? null : AugmentedBearing(b, v);
+    return b == null ? null : AugmentedBearing(b % 360, v);
   }
 
   @override
   add(AugmentedBearing value) {
-    bearing.add(value.bearing);
+    // Accumulate based on the closest input%360 to the previous input to better handle wrapping
+    // around at zero.
+    final prev = bearing.last();
+    if (prev == null) {
+      bearing.add(value.bearing % 360);
+    } else {
+      // Signed shortest angle from the previous bearing, in the range [-180, 180).
+      final delta = (value.bearing - prev + 180) % 360 - 180;
+      bearing.add(prev + delta);
+    }
     if (value.variation != null) {
       variationPresent.add(true);
       variation.add(value.variation!);
