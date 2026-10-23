@@ -40,12 +40,14 @@ class DataTablePage extends StatefulWidget {
 class _DataTablePageState extends State<DataTablePage> {
   AlarmManager? _alarmManager;
   UiSettings? _uiSettings;
+  AlarmSettings? _alarmSettings;
   bool _isWarningDialogOpen = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _uiSettings ??= Provider.of<UiSettings>(context, listen: false);
+    _alarmSettings ??= Provider.of<AlarmSettings>(context, listen: false);
     if (_alarmManager == null) {
       _alarmManager = Provider.of<AlarmManager>(context, listen: false);
       _alarmManager!.unacknowledgedWarnings.addListener(_handleWarningsChanged);
@@ -74,7 +76,11 @@ class _DataTablePageState extends State<DataTablePage> {
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => _WarningDialog(alarmManager: _alarmManager!, uiSettings: _uiSettings!),
+      builder: (_) => _WarningDialog(
+        alarmManager: _alarmManager!,
+        alarmSettings: _alarmSettings!,
+        uiSettings: _uiSettings!,
+      ),
     ).whenComplete(() => _isWarningDialogOpen = false);
   }
 
@@ -115,12 +121,13 @@ class _DataTablePageState extends State<DataTablePage> {
   }
 }
 
-/// The available options for silencing warnings. For now all options behave
-/// identically; the duration is purely cosmetic until silence timing is added.
+/// The available options for silencing warnings. Each option acknowledges the current warnings
+/// for some duration, except disableAll which turns off all alarm notifications.
 enum _SilenceOption {
   oneTime('Silence one time', null),
   fiveMinutes('Silence for 5 minutes', Duration(minutes: 5)),
-  oneHour('Silence for 1 hour', Duration(hours: 1));
+  oneHour('Silence for 1 hour', Duration(hours: 1)),
+  disableAll('Disable all notifications', null);
 
   const _SilenceOption(this.label, this.duration);
   final String label;
@@ -128,7 +135,7 @@ enum _SilenceOption {
 
   static _SilenceOption fromDuration(Duration? duration) {
     for (final opt in _SilenceOption.values) {
-      if (opt.duration == duration) {
+      if (opt != disableAll && opt.duration == duration) {
         return opt;
       }
     }
@@ -139,9 +146,14 @@ enum _SilenceOption {
 /// A modal popup listing currently unacknowledged warnings.
 class _WarningDialog extends StatefulWidget {
   final AlarmManager alarmManager;
+  final AlarmSettings alarmSettings;
   final UiSettings uiSettings;
 
-  const _WarningDialog({required this.alarmManager, required this.uiSettings});
+  const _WarningDialog({
+    required this.alarmManager,
+    required this.alarmSettings,
+    required this.uiSettings,
+  });
 
   @override
   State<_WarningDialog> createState() => _WarningDialogState();
@@ -249,8 +261,13 @@ class _WarningDialogState extends State<_WarningDialog> {
               selected: _silenceOption,
               onPressed: () {
                 _popOnce();
-                widget.uiSettings.setAlarmSilenceTime(_silenceOption.duration);
-                widget.alarmManager.acknowledgeWarnings(_silenceOption.duration);
+                if (_silenceOption == _SilenceOption.disableAll) {
+                  // Disabling notifications clears all unacknowledged warnings.
+                  widget.alarmSettings.setNotificationsEnabled(false);
+                } else {
+                  widget.uiSettings.setAlarmSilenceTime(_silenceOption.duration);
+                  widget.alarmManager.acknowledgeWarnings(_silenceOption.duration);
+                }
               },
               onSelected: (option) => setState(() => _silenceOption = option),
             ),
@@ -351,7 +368,7 @@ class _NotificationsOffButton extends StatelessWidget {
       return const SizedBox.shrink();
     }
     return IconButton(
-      icon: const Icon(Icons.notifications_off),
+      icon: const Icon(Icons.notifications_off_outlined),
       tooltip: 'Alarm notifications are disabled',
       onPressed: () {
         Provider.of<AlarmSettings>(context, listen: false).setNotificationsEnabled(true);

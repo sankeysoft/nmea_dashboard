@@ -25,7 +25,9 @@ HEAR THE ALARM.*
 
 **Alarm notifications**: This switch controls whether warnings display a popup
 and play audio. When off, cells are still highlighted, but no popups are
-displayed and no audio is played for any alarm.
+displayed and no audio is played for any alarm. While notifications are off
+a crossed out bell is shown at the top of each data page, tapping this turns
+notifications back on.
 
 The middle of the form lists the alarms that are currently defined. If you
 opened the form from the menu it displays all alarms. If you opened the form

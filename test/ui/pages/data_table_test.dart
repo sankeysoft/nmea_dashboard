@@ -152,6 +152,31 @@ void main() {
       expect(manager.unacknowledgedWarnings.isEmpty, isTrue);
     });
 
+    testWidgets('selecting disable all notifications disables them and dismisses', (tester) async {
+      await setUpWith(tester, {'ui_alarm_silence_seconds': 300});
+      manager.setAlarm(_warning());
+      await pumpPage(tester);
+
+      await tester.tap(find.byIcon(Icons.arrow_drop_down));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.text('Disable all notifications').last);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.tap(find.byType(ElevatedButton));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(alarmSettings.notificationsEnabled, isFalse);
+      expect(manager.notificationsEnabled, isFalse);
+      expect(manager.unacknowledgedWarnings.isEmpty, isTrue);
+      expect(find.text('Warning'), findsNothing);
+      expect(find.byIcon(Icons.notifications_off_outlined), findsOneWidget);
+      // The remembered silence duration is left unchanged.
+      expect(uiSettings.alarmSilenceTime, const Duration(minutes: 5));
+    });
+
     testWidgets('dialog dismisses when warnings clear while the dropdown is open', (tester) async {
       await setUpWith(tester, {});
       final alarm = _warning();
@@ -161,7 +186,7 @@ void main() {
       await tester.tap(find.byIcon(Icons.arrow_drop_down));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
-      expect(find.byWidgetPredicate((w) => w is PopupMenuItem), findsNWidgets(3));
+      expect(find.byWidgetPredicate((w) => w is PopupMenuItem), findsNWidgets(4));
 
       // Clearing the alarm removes the warning once the latch delay has passed.
       manager.clearAlarm(alarm);
@@ -200,7 +225,7 @@ void main() {
     ) async {
       await setUpWith(tester, {});
       await pumpPage(tester);
-      expect(find.byIcon(Icons.notifications_off), findsNothing);
+      expect(find.byIcon(Icons.notifications_off_outlined), findsNothing);
     });
 
     testWidgets('tapping notifications off button re-enables notifications', (tester) async {
@@ -209,13 +234,13 @@ void main() {
       await pumpPage(tester);
       expect(find.text('Warning'), findsNothing);
 
-      await tester.tap(find.byIcon(Icons.notifications_off));
+      await tester.tap(find.byIcon(Icons.notifications_off_outlined));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(alarmSettings.notificationsEnabled, isTrue);
-      expect(find.byIcon(Icons.notifications_off), findsNothing);
-      expect(find.textContaining('Alarm notifications enabled'), findsOneWidget);
+      expect(find.byIcon(Icons.notifications_off_outlined), findsNothing);
+      expect(find.text('Alarm notifications are now enabled.'), findsOneWidget);
       // The warning that was active while disabled is resurfaced.
       expect(find.text('Warning'), findsOneWidget);
     });
