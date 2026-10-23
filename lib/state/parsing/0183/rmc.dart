@@ -45,7 +45,7 @@ class RmcParser extends SentenceParser {
       ret.add(_parseSingleValue(fields[7], Property.courseOverGround, tier: 2));
     }
     if (fields[9].isNotEmpty) {
-      final variation = _parseVariation(fields[9], fields[10]);
+      final variation = _parseEastWest(fields[9], fields[10], 'Variation');
       ret.add(boundSingleValue(variation, Property.variation, tier: 2));
     }
     return ret.nonNulls.toList();

@@ -150,6 +150,43 @@ void main() {
     );
   });
 
+  test('should apply deviation to magnetic vessel heading', () {
+    // Heading 90.0002, deviation 1.9996 W, variation 1.9996 W.
+    final withVariation = _testMsg(127250, [
+      0x01,
+      ..._u16(15708),
+      ..._i16(-349),
+      ..._i16(-349),
+      0x01,
+    ]);
+    expect(
+      Nmea2000Parser().parse(withVariation),
+      BoundValueListMatches([
+        boundSingleValue(-1.9996, Property.variation),
+        boundSingleValue(86.0010, Property.heading),
+      ]),
+    );
+    final withoutVariation = _testMsg(127250, [
+      0x01,
+      ..._u16(15708),
+      ..._i16(-349),
+      ..._i16(0x7FFF),
+      0x01,
+    ]);
+    expect(
+      Nmea2000Parser().parse(withoutVariation),
+      BoundValueListMatches([boundSingleValue(88.0006, Property.headingMag)]),
+    );
+  });
+
+  test('should not apply deviation to true vessel heading', () {
+    final message = _testMsg(127250, [0x01, ..._u16(15708), ..._i16(-349), ..._i16(0x7FFF), 0x00]);
+    expect(
+      Nmea2000Parser().parse(message),
+      BoundValueListMatches([boundSingleValue(90.0002, Property.heading)]),
+    );
+  });
+
   test('should parse magnetic vessel heading packet without variation', () {
     final message = _testMsg(127250, [
       0x01,

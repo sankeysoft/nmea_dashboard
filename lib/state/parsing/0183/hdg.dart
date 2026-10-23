@@ -11,18 +11,23 @@ class HdgParser extends SentenceParser {
   @override
   List<BoundValue> parse(List<String> fields) {
     _validateFieldCount(fields, 5);
-    // TODO: Currently we support mag-only but not true-only. Consider
-    //       supporting mag heading being missing if this ever arises.
-    final magHdg = double.parse(fields[0]);
-    if (fields[3].isEmpty) {
-      // Support equipment which does not know variation.
-      return [boundSingleValue(magHdg, Property.headingMag)];
+    var ret = <BoundValue<SingleValue<double>>>[];
+    double? variation;
+    if (fields[3].isNotEmpty) {
+      variation = _parseEastWest(fields[3], fields[4], 'Variation');
+      ret.add(boundSingleValue(variation, Property.variation));
     }
-    final variation = _parseVariation(fields[3], fields[4]);
-    final trueHdg = (magHdg + variation) % 360.0;
-    return [
-      boundSingleValue(variation, Property.variation),
-      boundSingleValue(trueHdg, Property.heading),
-    ];
+    if (fields[0].isNotEmpty) {
+      // Subtract any deviation from sensor heading to get magnetic heading.
+      final deviation = fields[1].isEmpty ? 0.0 : _parseEastWest(fields[1], fields[2], 'Deviation');
+      final magHdg = (double.parse(fields[0]) + deviation) % 360.0;
+      if (variation == null) {
+        ret.add(boundSingleValue(magHdg, Property.headingMag));
+      } else {
+        final trueHdg = (magHdg + variation) % 360.0;
+        ret.add(boundSingleValue(trueHdg, Property.heading));
+      }
+    }
+    return ret;
   }
 }

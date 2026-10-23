@@ -12,6 +12,7 @@ class Parser127250 extends PacketParser {
   List<BoundValue> parse(ByteData payload) {
     _validatePayloadLength(payload, 8);
     final heading = _scaleIfNotNull(_readUint16(payload, 1), 0.0001 * radiansToDegrees);
+    final deviation = _scaleIfNotNull(_readInt16(payload, 3), 0.0001 * radiansToDegrees);
     final variation = _scaleIfNotNull(_readInt16(payload, 5), 0.0001 * radiansToDegrees);
     final reference = payload.getUint8(7) & 0x03;
 
@@ -23,12 +24,14 @@ class Parser127250 extends PacketParser {
       if (reference == 0) {
         values.add(boundSingleValue(heading, Property.heading));
       } else if (reference == 1) {
+        // Subtract any deviation from sensor heading to get magnetic heading.
+        final magHdg = (heading + (deviation ?? 0.0)) % 360.0;
         // Prefer to output in true when we have variation. Only use mag if we can't use true.
         if (variation != null) {
-          final trueHdg = (heading + variation) % 360.0;
+          final trueHdg = (magHdg + variation) % 360.0;
           values.add(boundSingleValue(trueHdg, Property.heading));
         } else {
-          values.add(boundSingleValue(heading, Property.headingMag));
+          values.add(boundSingleValue(magHdg, Property.headingMag));
         }
       }
     }

@@ -144,6 +144,35 @@ void main() {
     );
   });
 
+  test('should apply deviation to HDG heading', () {
+    expect(
+      Nmea0183Parser().parse(_testMsg('HDG', '7.3,2.0,W,13.1,E')),
+      BoundValueListMatches([
+        boundSingleValue(13.1, Property.variation),
+        boundSingleValue(18.4, Property.heading),
+      ]),
+    );
+    expect(
+      Nmea0183Parser().parse(_testMsg('HDG', '359.0,3.5,E,,')),
+      BoundValueListMatches([boundSingleValue(2.5, Property.headingMag)]),
+    );
+  });
+
+  test('should parse HDG with variation but no heading', () {
+    expect(
+      Nmea0183Parser().parse(_testMsg('HDG', ',,,13.1,W')),
+      BoundValueListMatches([boundSingleValue(-13.1, Property.variation)]),
+    );
+  });
+
+  test('should parse HDG with neither heading nor variation', () {
+    expect(Nmea0183Parser().parse(_testMsg('HDG', ',,,,')), BoundValueListMatches([]));
+  });
+
+  test('should reject HDG with invalid deviation direction', () {
+    expect(() => Nmea0183Parser().parse(_testMsg('HDG', '7.3,2.0,X,,')), throwsFormatException);
+  });
+
   test('should reject HDG with wrong field count', () {
     expect(() => Nmea0183Parser().parse(_testMsg('HDG', '7.3,X,Y')), throwsFormatException);
   });
