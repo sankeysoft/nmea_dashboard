@@ -44,6 +44,7 @@ class State:
         self.wind_speed_kt = 0.0
         self.boat_speed_kt = 0.0
         self.rudder_angle = 0.0
+        self.hdop = 0.0
         self.distance_trip_nm = 0.0
         self.rate_of_turn = 0.0
         self.pressure_mb = 0.0
@@ -86,6 +87,7 @@ class State:
         self.depth_with_offset_ft = 10.0 + t * 90.0
         self.wind_speed_kt = 30.0 - t * 20.0
         self.rudder_angle = 2.0 + t * 2.0
+        self.hdop = 0.8 + t * 1.2
 
         phase_5m = (elapsed % 300.0) / 300.0
         t = 2.0 * phase_5m if phase_5m < 0.5 else 2.0 * (1.0 - phase_5m)
@@ -133,8 +135,8 @@ class State:
         self._last_true_heading = self.true_heading
 
 
-def gll_sentence(state: State) -> str:
-    """Creates an NMEA GLL sentence with the current GPS position."""
+def position_fields(state: State) -> str:
+    """Returns the four comma separated NMEA latitude and longitude fields for the position."""
     lat_abs = abs(state.lat)
     lat_deg = int(lat_abs)
     lat_min = (lat_abs - lat_deg) * 60.0
@@ -143,7 +145,19 @@ def gll_sentence(state: State) -> str:
     lon_deg = int(lon_abs)
     lon_min = (lon_abs - lon_deg) * 60.0
     lon_hem = "E" if state.lon >= 0 else "W"
-    body = f"YDGLL,{lat_deg:02d}{lat_min:07.4f},{lat_hem},{lon_deg:03d}{lon_min:07.4f},{lon_hem},,A"
+    return f"{lat_deg:02d}{lat_min:07.4f},{lat_hem},{lon_deg:03d}{lon_min:07.4f},{lon_hem}"
+
+
+def gga_sentence(state: State) -> str:
+    """Creates an NMEA GGA sentence with the current GPS position and HDOP."""
+    utc = time.strftime("%H%M%S", time.gmtime())
+    body = f"YDGGA,{utc}.00,{position_fields(state)},1,10,{state.hdop:.2f},2.5,M,-29.7,M,,"
+    return f"${body}*{nmea_checksum(body)}\r\n"
+
+
+def gll_sentence(state: State) -> str:
+    """Creates an NMEA GLL sentence with the current GPS position."""
+    body = f"YDGLL,{position_fields(state)},,A"
     return f"${body}*{nmea_checksum(body)}\r\n"
 
 
@@ -391,6 +405,7 @@ def main():
         state.update(time.time() - start_time)
 
         for sentence in [
+            gga_sentence(state),
             gll_sentence(state),
             dpt_sentence(state),
             hdg_sentence(state),
