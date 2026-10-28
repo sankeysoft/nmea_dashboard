@@ -54,14 +54,27 @@ void main() {
       expect(splitter.read(_pkt('${msg.substring(10)}\n')), [msg]);
     });
 
+    test('returns the last terminated message in a packet', () {
+      expect(splitter.read(_pkt('\$YDMWV,184.6,R,1.4,M,A*2D\r\n\$YDMWV,182.8,T,2.4,M,A*20\r\n')), [
+        '\$YDMWV,184.6,R,1.4,M,A*2D',
+        '\$YDMWV,182.8,T,2.4,M,A*20',
+      ]);
+    });
+
+    test('does not merge the last message of a packet into the next packet', () {
+      final splitter = CrlfMessageSplitter();
+      expect(splitter.read(_pkt('first line\r\nsecond line\r\n')), ['first line', 'second line']);
+      expect(splitter.read(_pkt('third line\r\nfourth line\r\n')), ['third line', 'fourth line']);
+      expect(splitter.discardCount, 0);
+    });
+
     test('salvages messages from a packet containing invalid UTF-8', () {
-      // 0xC3 0x28 is an invalid two byte UTF-8 sequence, the trailing fragment forces the second
-      // valid message to be flushed in this call rather than buffered awaiting a terminator.
+      // 0xC3 0x28 is an invalid two byte UTF-8 sequence.
       final data = Uint8List.fromList([
         ...'\$YDMWV,184.6,R,1.4,M,A*2D\n'.codeUnits,
         0xC3,
         0x28,
-        ...'\n\$YDMWV,182.8,T,2.4,M,A*20\n\$YD'.codeUnits,
+        ...'\n\$YDMWV,182.8,T,2.4,M,A*20\n'.codeUnits,
       ]);
       expect(
         splitter.read(data),

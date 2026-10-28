@@ -48,7 +48,8 @@ class CrlfMessageSplitter extends MessageSplitter<String> {
     var nextSplit = _findSplit(remaining);
     while (nextSplit >= 0) {
       final potentialMessage = remaining.substring(0, nextSplit).trim();
-      remaining = remaining.substring(nextSplit).trim();
+      // Only trim the start, trimming the end would remove the terminator of the last message.
+      remaining = remaining.substring(nextSplit).trimLeft();
       nextSplit = _findSplit(remaining);
       if (potentialMessage.isNotEmpty) {
         messages.add(potentialMessage);

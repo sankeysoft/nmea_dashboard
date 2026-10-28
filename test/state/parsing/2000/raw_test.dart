@@ -99,12 +99,18 @@ void main() {
     test('extracts multiple frames from one packet', () {
       final header1 = _header(pduFormat: 0x01, source: 0x01);
       final header2 = _header(pduFormat: 0x02, source: 0x02);
-      // A trailing unterminated fragment forces the CrlfMessageSplitter to flush both complete
-      // lines in this call rather than buffering the last of them awaiting a terminator.
       final messages = splitter.read(
-        _pkt('${_line(header1, data: [0x11])}\n${_line(header2, data: [0x22])}\nunterminated'),
+        _pkt('${_line(header1, data: [0x11])}\r\n${_line(header2, data: [0x22])}\r\n'),
       );
       expect(messages, hasLength(2));
+    });
+
+    test('extracts multiple frames from consecutive packets', () {
+      final header = _header(pduFormat: 0x01, source: 0x01);
+      final packet = _pkt('${_line(header, data: [0x11])}\r\n${_line(header, data: [0x22])}\r\n');
+      expect(splitter.read(packet), hasLength(2));
+      expect(splitter.read(packet), hasLength(2));
+      expect(splitter.discardCount, 0);
     });
 
     test('ignores a line with no data bytes', () {
